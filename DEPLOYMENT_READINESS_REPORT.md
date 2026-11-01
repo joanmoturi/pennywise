@@ -10,26 +10,26 @@ No commit, push, live deployment, real browser profile or existing financial dat
 
 Versions below are the actual lockfile/installed versions, not inferred framework presets.
 
-| Item                                | Finding                                                          |
-| ----------------------------------- | ---------------------------------------------------------------- |
-| Frontend                            | React and React DOM **19.3.1**, client-rendered TypeScript       |
-| Bundler                             | Vite **7.3.7**, verified from configuration and lockfile         |
-| TypeScript                          | **5.9.3**                                                        |
-| PWA plugin                          | `vite-plugin-pwa` **1.1.0**, generated Workbox worker            |
-| App / financial schema              | **1.1.0** / **3**                                                |
-| Package manager                     | npm; local version **11.20.0**                                   |
-| Reproducibility                     | `package-lock.json`, lockfile format **3**                       |
-| Tested Node runtime                 | **26.13.0**, pinned in Pennywise `.node-version`                 |
-| npm production build                | `npm run build` = `tsc --noEmit && vite build`                   |
-| Pages build command                 | `npm ci && npm run build`                                        |
-| Project / output                    | Root directory `pennywise`; output field `dist`                  |
-| Production artifact                 | `pennywise\dist`; only its public contents are deployed          |
-| Routing                             | React state navigation; no mandatory history-based URL router    |
-| Hosting fallback                    | Pages' default SPA fallback, with no top-level `404.html`        |
-| Application environment variables   | None at build time or runtime                                    |
-| Hosting build controls              | `NODE_VERSION=26.13.0`; `SKIP_DEPENDENCY_INSTALL=1`              |
-| Mandatory external application APIs | None identified                                                  |
-| Financial storage                   | Origin-local IndexedDB `pennywise-private`, object store `state` |
+| Item                                | Finding                                                               |
+| ----------------------------------- | --------------------------------------------------------------------- |
+| Frontend                            | React and React DOM **19.3.1**, client-rendered TypeScript            |
+| Bundler                             | Vite **7.3.7**, verified from configuration and lockfile              |
+| TypeScript                          | **5.9.3**                                                             |
+| PWA plugin                          | `vite-plugin-pwa` **1.1.0**, generated Workbox worker                 |
+| App / financial schema              | **1.1.0** / **3**                                                     |
+| Package manager                     | npm; local version **11.20.0**                                        |
+| Reproducibility                     | `package-lock.json`, lockfile format **3**                            |
+| Tested Node runtime                 | **26.13.0**, pinned in Pennywise `.node-version`                      |
+| npm production build                | `npm run build` = `tsc --noEmit && vite build`                        |
+| Pages build command                 | `npm ci && npm run build`                                             |
+| Project / output                    | Separate `joanmoturi/pennywise` repository; root blank; output `dist` |
+| Production artifact                 | `dist`; only its public contents are deployed                         |
+| Routing                             | React state navigation; no mandatory history-based URL router         |
+| Hosting fallback                    | Pages' default SPA fallback, with no top-level `404.html`             |
+| Application environment variables   | None at build time or runtime                                         |
+| Hosting build controls              | `NODE_VERSION=26.13.0`; `SKIP_DEPENDENCY_INSTALL=1`                   |
+| Mandatory external application APIs | None identified                                                       |
+| Financial storage                   | Origin-local IndexedDB `pennywise-private`, object store `state`      |
 
 The production build emitted `index.html`, `manifest.webmanifest`, `sw.js`, a same-origin content-hashed Workbox helper, bundled JS/CSS, SVG/PNG icons and `_headers`. Workbox reported **12 precache entries, 520.90 KiB** in the final build. No backend, Pages Function, Worker, secret binding, authentication service or paid dependency was added.
 

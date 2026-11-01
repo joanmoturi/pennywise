@@ -4,17 +4,17 @@ Use a **separate Cloudflare Pages project** for Pennywise. Development stays on 
 
 ## 1. Publish the application from your laptop
 
-Pennywise uses the existing **PRIVATE** repository `joanmoturi/MyLearningApp`, production branch `main`. Do not create a replacement repository, change its visibility or include unrelated Engineering Academy changes. Current publishing status, verified commit and hosting blockers are recorded in `DEPLOYMENT_REPORT.md`.
+Pennywise uses its own **PRIVATE** repository `joanmoturi/pennywise`, production branch `main`. Engineering Academy remains in its original repository. Current publishing status, verified commit and hosting blockers are recorded in `DEPLOYMENT_REPORT.md`.
 
 ```powershell
-Set-Location C:\Users\joanmoturi\engineering-academy\pennywise
+Set-Location C:\Users\joanmoturi\pennywise
 npm ci
 npm run build
 npm run test
 npm run test:e2e
 ```
 
-Review your Git changes, commit only the intended Pennywise files, and push them to `main` using your usual Git workflow. Do not commit downloads, financial backups, receipts, passwords or `.env` files. `pennywise\.gitignore` excludes build output, dependencies, test artifacts and the application's normal backup/CSV filenames.
+Review your Git changes, commit only the intended Pennywise files, and push them to `main` using your usual Git workflow. Do not commit downloads, financial backups, receipts, passwords or `.env` files. `.gitignore` excludes build output, dependencies, test artifacts and the application's normal backup/CSV filenames.
 
 Commit `package-lock.json`, `.node-version`, source, public assets, configuration, tests and these guides. Do **not** commit `dist` or `node_modules`.
 
@@ -27,11 +27,11 @@ In the Cloudflare dashboard, choose **Workers & Pages > Create application > Pag
 | Setting                                   | Value to enter                                    |
 | ----------------------------------------- | ------------------------------------------------- |
 | Git provider                              | GitHub                                            |
-| Repository                                | `joanmoturi/MyLearningApp`                        |
+| Repository                                | `joanmoturi/pennywise`                            |
 | Project name                              | `pennywise-joanmoturi`, or another available name |
 | Production branch                         | `main`                                            |
 | Framework preset                          | `None`                                            |
-| Root directory / advanced path            | `pennywise`                                       |
+| Root directory / advanced path            | Leave blank (repository root)                     |
 | Build command                             | `npm ci && npm run build`                         |
 | Build output directory                    | `dist`                                            |
 | Build environment variable                | `NODE_VERSION` = `26.13.0`                        |
@@ -41,7 +41,7 @@ In the Cloudflare dashboard, choose **Workers & Pages > Create application > Pag
 
 Apply the two build variables to both Production and Preview environments. `SKIP_DEPENDENCY_INSTALL=1` prevents a separate automatic install; the explicit `npm ci` then installs the committed lockfile. `.node-version` also records the tested Node version.
 
-**Important:** with root directory `pennywise`, the output field is **`dist`**, not `pennywise/dist`, `.next`, `out`, `public` or the repository root. The npm build script is exactly `tsc --noEmit && vite build`. Select `None` to avoid framework presets silently substituting another build command.
+**Important:** Pennywise is now at the repository root. Leave the root directory field blank; the output field is **`dist`**, not `pennywise/dist`, `.next`, `out`, `public` or the repository root. The npm build script is exactly `tsc --noEmit && vite build`. Select `None` to avoid framework presets silently substituting another build command.
 
 Use the free `pages.dev` hostname; a purchased domain is unnecessary. Do not enable Web Analytics, add analytics snippets, or configure cloud financial storage. The build uses development dependencies as well as runtime dependencies: do not set npm to omit dev dependencies.
 
@@ -121,7 +121,7 @@ Your laptop, another phone and another browser profile have independent local da
 
 | Problem                               | Check                                                                                                                                  |
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare builds Engineering Academy | Root directory must be `pennywise`; output must be `dist`.                                                                             |
+| Cloudflare builds Engineering Academy | Select `joanmoturi/pennywise`, not `MyLearningApp`; leave root directory blank; output must be `dist`.                                 |
 | Missing compiler/Vite                 | Do not omit dev dependencies; check the explicit `npm ci` step.                                                                        |
 | npm TLS, 404 or integrity failure     | Fix registry/network access and verify available package versions. Do not disable TLS, ignore integrity or inject private credentials. |
 | Worker/manifest returns HTML          | Check generated output and MIME headers; do not rewrite existing assets to the SPA entry.                                              |

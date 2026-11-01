@@ -1,13 +1,13 @@
 # Pennywise
 
-Private, offline-first personal financial command centre. Standalone React/TypeScript PWA in this repository's `pennywise` directory; the existing Engineering Academy frontend and backend are unchanged.
+Private, offline-first personal financial command centre. Standalone React/TypeScript PWA in its own private `joanmoturi/pennywise` repository; Engineering Academy remains unchanged in its original repository.
 
 ## Run locally
 
 Requires Node.js 22.12+ (Node 26 was used during implementation) and npm.
 
 ```powershell
-Set-Location C:\Users\joanmoturi\engineering-academy\pennywise
+Set-Location C:\Users\joanmoturi\pennywise
 npm ci
 npm run dev
 ```
@@ -166,7 +166,7 @@ npm ci
 npm run build
 ```
 
-Deploy **the contents of `pennywise\dist`** to the root of a dedicated HTTPS static-host origin so its root-scoped service worker does not interfere with Engineering Academy. Asset and manifest paths are root-absolute, including when a nested URL is refreshed. Subdirectory hosting requires deliberately changing the build base and PWA scope; do not copy this root deployment under Engineering Academy.
+Deploy **the contents of `dist`** to the root of a dedicated HTTPS static-host origin so its root-scoped service worker does not interfere with Engineering Academy. Asset and manifest paths are root-absolute, including when a nested URL is refreshed. Subdirectory hosting requires deliberately changing the build base and PWA scope; do not copy this root deployment under Engineering Academy.
 
 For exact GitHub-connected Cloudflare Pages settings, see `DEPLOYMENT_GUIDE.md`. Current publishing/live-verification status is in `DEPLOYMENT_REPORT.md`. Phone-only installation is covered by `ANDROID_INSTALLATION_GUIDE.md`, with extended backup instructions in `PWA_INSTALLATION_GUIDE.md`; earlier readiness evidence is retained in `DEPLOYMENT_READINESS_REPORT.md`.
 

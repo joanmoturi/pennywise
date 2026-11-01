@@ -6,23 +6,25 @@
 
 ## Target and authentication
 
-| Item                          | Evidence / status                                                                                   |
-| ----------------------------- | --------------------------------------------------------------------------------------------------- |
-| Repository URL                | `https://github.com/joanmoturi/MyLearningApp`                                                       |
-| Repository visibility         | **VERIFIED PRIVATE** using GitHub API/CLI; not changed                                              |
-| GitHub identity / permission  | `joanmoturi` / repository ADMIN                                                                     |
-| Production branch             | `main`                                                                                              |
-| Original local/remote base    | `85de1b75ba0c78c0f2c38c2383831e185dddf023`, freshly fetched main matched local HEAD                 |
-| Implementation commit hash    | `d84c66531c1b5d7c5d65aac1cde732527191a33d` — verified on remote main after push                     |
-| Push                          | **COMPLETED / VERIFIED**, fast-forward from the original base; only Pennywise files committed       |
-| Cloudflare Pages project      | Not created/verified; proposed name is not an actual project                                        |
-| Live HTTPS URL                | **NOT AVAILABLE**                                                                                   |
-| Cloudflare credentials        | No available token/account environment, cached Wrangler CLI or GitHub deployment secrets identified |
-| Physical Android verification | **UNVERIFIED**                                                                                      |
+| Item                          | Evidence / status                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Repository URL                | `https://github.com/joanmoturi/pennywise`                                                                     |
+| Repository visibility         | **VERIFIED PRIVATE** using GitHub API/CLI; not changed                                                        |
+| GitHub identity / permission  | `joanmoturi` / repository ADMIN                                                                               |
+| Production branch             | `main`                                                                                                        |
+| Extracted repository base     | `86578147a2335c71fd2c53fec33e2bf007a9c1de` — Pennywise-only history published to new private main             |
+| Original implementation hash  | `d84c66531c1b5d7c5d65aac1cde732527191a33d` in the original repository; subtree extraction rewrites commit IDs |
+| Push                          | **COMPLETED / VERIFIED**, new private repository contains only the reviewed Pennywise subtree                 |
+| Cloudflare Pages project      | Not created/verified; proposed name is not an actual project                                                  |
+| Live HTTPS URL                | **NOT AVAILABLE**                                                                                             |
+| Cloudflare credentials        | No available token/account environment, cached Wrangler CLI or GitHub deployment secrets identified           |
+| Physical Android verification | **UNVERIFIED**                                                                                                |
 
-The existing repository was retained instead of creating or overwriting another repository. Only the `pennywise` subtree was included in the implementation commit. The pre-existing root README/ignore edits and all Engineering Academy files remain outside it.
+At the user's explicit request, Pennywise was separated into its own private repository on November 1, 2026. `git subtree split --prefix=pennywise` preserved Pennywise-specific history without changing the original repository's branches or deleting files. The extracted root tree `35e58abee5e9d9665fdf57a5c29fba531cdffdc5` exactly matched the previously reviewed and validated Pennywise subtree before documentation updates. No Engineering Academy files, ignored databases, dependencies or backups were copied.
 
-The implementation SHA identifies the validated application commit. This execution report is updated in a subsequent documentation-only commit; that metadata update does not alter production application assets. No Cloudflare deployment SHA is claimed until an actual production build is verified.
+The independent laptop checkout is `C:\Users\joanmoturi\pennywise`. Continue development there, not in the old application's subfolder. The original `MyLearningApp` repository retains its existing history and pre-existing root README/ignore edits unchanged. Its previously published Pennywise copy was not deleted or force-rewritten.
+
+The extracted base identifies the unchanged validated application. Subsequent guide/report changes are documentation-only and do not alter production application assets. No Cloudflare deployment SHA is claimed until an actual production build is verified.
 
 ## Pre-push validation completed
 
@@ -36,11 +38,13 @@ Executed again for this deployment request on November 1, 2026:
 | `npm run test`         | **PASSED**, 101 unit/integration tests across 5 files                                                         |
 | `npm run build`        | **PASSED**, includes `tsc --noEmit`                                                                           |
 | `npm run test:e2e`     | **PASSED**, 14 desktop/Pixel 7 Chromium-emulated browser tests                                                |
-| Output                 | **VERIFIED** `pennywise\dist`                                                                                 |
+| Output                 | **VERIFIED** `dist` relative to the Pennywise application root                                                |
 | PWA artifacts          | **VERIFIED** manifest, actual 192/512 PNG dimensions, worker, root-absolute module URLs and copied `_headers` |
 | Routing fallback       | No root `404.html`; configured Workbox fallback and Pages' documented SPA default                             |
 
-No failing validation or permission controls were disabled. Existing non-fatal Zod build annotation warnings and npm development-tool advisory warnings remain visible. The successful local `npm ci` uses the development environment's configured registry; uncached public npm availability and the Linux Cloudflare build are not yet verified.
+All checks above were rerun successfully from the separate `C:\Users\joanmoturi\pennywise` checkout after separation: locked installation, formatting, lint, 101 unit/integration tests, TypeScript/production build and 14 browser tests. The fresh Windows clone initially lacked dependencies and checked text out as CRLF, causing build/format failures. Dependencies were restored using `npm ci`; `.gitattributes` now pins LF text checkout and the existing formatter normalized local line endings without changing application content. No failing validation or permission controls were disabled.
+
+Existing non-fatal Zod build annotation warnings and npm development-tool advisory warnings remain visible. The successful local `npm ci` uses the development environment's configured registry; uncached public npm availability and the Linux Cloudflare build are not yet verified.
 
 ## Repository security gate
 
@@ -64,21 +68,21 @@ No Cloudflare CLI or API credential is available to this agent, and the GitHub r
 
 1. Source is already pushed to the private repository. Sign in to Cloudflare on your laptop.
 2. Open **Workers & Pages > Create application > Pages > Connect to Git**.
-3. Connect GitHub and authorize the Cloudflare GitHub integration for the existing private `joanmoturi/MyLearningApp` repository. Keep the repository private.
+3. Connect GitHub and authorize the Cloudflare GitHub integration for the separate private `joanmoturi/pennywise` repository. Keep the repository private. Do not select `MyLearningApp`.
 4. Select the settings below, then **Save and Deploy**.
 5. Provide only the resulting non-secret production HTTPS URL and project name. Do not provide an API token, password or backup.
 
-| Pages field                            | Exact value                 |
-| -------------------------------------- | --------------------------- |
-| Repository                             | `joanmoturi/MyLearningApp`  |
-| Production branch                      | `main`                      |
-| Framework preset                       | `None`                      |
-| Root directory                         | `pennywise`                 |
-| Build command                          | `npm ci && npm run build`   |
-| Build output directory                 | `dist`                      |
-| Build variable                         | `NODE_VERSION=26.13.0`      |
-| Build variable                         | `SKIP_DEPENDENCY_INSTALL=1` |
-| Functions / bindings / runtime secrets | None                        |
+| Pages field                            | Exact value                   |
+| -------------------------------------- | ----------------------------- |
+| Repository                             | `joanmoturi/pennywise`        |
+| Production branch                      | `main`                        |
+| Framework preset                       | `None`                        |
+| Root directory                         | Leave blank (repository root) |
+| Build command                          | `npm ci && npm run build`     |
+| Build output directory                 | `dist`                        |
+| Build variable                         | `NODE_VERSION=26.13.0`        |
+| Build variable                         | `SKIP_DEPENDENCY_INSTALL=1`   |
+| Functions / bindings / runtime secrets | None                          |
 
 Use a separate free Pages project, not Engineering Academy's hosting project. Do not enable Web Analytics, paid storage, backend services or a Direct Upload workflow. The complete guide is `DEPLOYMENT_GUIDE.md`.
 

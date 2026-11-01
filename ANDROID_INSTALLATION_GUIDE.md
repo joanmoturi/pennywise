@@ -41,7 +41,7 @@ There is no mandatory registration, automatic sync or hosting-provider backup. C
 
 ## Receive future updates
 
-Continue development and validation on the laptop and push reviewed Pennywise changes to the private repository's `main` branch. Once authorized, Git-connected Cloudflare Pages rebuilds the production site.
+Continue development and validation in `C:\Users\joanmoturi\pennywise` on the laptop and push reviewed changes to the private `joanmoturi/pennywise` repository's `main` branch. Once authorized, Git-connected Cloudflare Pages rebuilds the production site.
 
 When online and visible, Pennywise checks for a waiting worker on registration, foregrounding, reconnection and hourly while open. On **A new version is ready**, download a full backup, save open forms, then tap **Reload update**. Do not clear site storage to update.
 
