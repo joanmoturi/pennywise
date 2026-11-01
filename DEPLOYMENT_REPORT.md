@@ -2,7 +2,7 @@
 
 **Date:** November 1, 2026.
 
-**Status: IN PROGRESS. No live URL has been obtained or verified.**
+**Status: BLOCKED AT CLOUDFLARE AUTHORIZATION. GitHub publishing is completed and verified; no live URL has been obtained or verified.**
 
 ## Target and authentication
 
@@ -13,14 +13,16 @@
 | GitHub identity / permission  | `joanmoturi` / repository ADMIN                                                                     |
 | Production branch             | `main`                                                                                              |
 | Original local/remote base    | `85de1b75ba0c78c0f2c38c2383831e185dddf023`, freshly fetched main matched local HEAD                 |
-| Implementation commit hash    | Security passed; the application commit hash will be recorded immediately after publishing          |
-| Push                          | Pending; no force-push or unrelated change is authorized                                            |
+| Implementation commit hash    | `d84c66531c1b5d7c5d65aac1cde732527191a33d` — verified on remote main after push                     |
+| Push                          | **COMPLETED / VERIFIED**, fast-forward from the original base; only Pennywise files committed       |
 | Cloudflare Pages project      | Not created/verified; proposed name is not an actual project                                        |
 | Live HTTPS URL                | **NOT AVAILABLE**                                                                                   |
 | Cloudflare credentials        | No available token/account environment, cached Wrangler CLI or GitHub deployment secrets identified |
 | Physical Android verification | **UNVERIFIED**                                                                                      |
 
-The existing repository is retained instead of creating or overwriting another repository. Only the `pennywise` subtree is intended for the new commit. The pre-existing root README/ignore edits and all Engineering Academy files remain outside it.
+The existing repository was retained instead of creating or overwriting another repository. Only the `pennywise` subtree was included in the implementation commit. The pre-existing root README/ignore edits and all Engineering Academy files remain outside it.
+
+The implementation SHA identifies the validated application commit. This execution report is updated in a subsequent documentation-only commit; that metadata update does not alter production application assets. No Cloudflare deployment SHA is claimed until an actual production build is verified.
 
 ## Pre-push validation completed
 
@@ -60,7 +62,7 @@ The previous application security review identified no high-confidence exploitab
 
 No Cloudflare CLI or API credential is available to this agent, and the GitHub repository has no deployment secrets. No token/password is requested in chat. Creating the Git-connected project requires your normal dashboard authorization:
 
-1. Sign in to Cloudflare on your laptop.
+1. Source is already pushed to the private repository. Sign in to Cloudflare on your laptop.
 2. Open **Workers & Pages > Create application > Pages > Connect to Git**.
 3. Connect GitHub and authorize the Cloudflare GitHub integration for the existing private `joanmoturi/MyLearningApp` repository. Keep the repository private.
 4. Select the settings below, then **Save and Deploy**.
