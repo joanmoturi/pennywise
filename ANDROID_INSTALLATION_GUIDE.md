@@ -2,13 +2,13 @@
 
 **Physical Android verification: UNVERIFIED.**
 
-**Live production URL: not available yet.** Cloudflare Git integration requires account authorization before a deployment can be created. Use only the actual verified URL recorded in `DEPLOYMENT_REPORT.md`; no hostname is assumed.
+**Live production URL: `https://pennywise-7lz.pages.dev/`.** Use this stable production address, not a commit-specific preview address. Verification evidence is recorded in `DEPLOYMENT_REPORT.md`.
 
 Your phone needs Chrome, not GitHub source code, Git, Node.js, npm or laptop development tools.
 
 ## Install and check the app
 
-1. Open the actual production HTTPS URL from `DEPLOYMENT_REPORT.md` in normal Android Chrome, not Incognito or an embedded messaging-app browser.
+1. Open `https://pennywise-7lz.pages.dev/` in normal Android Chrome, not Incognito or an embedded messaging-app browser.
 2. Stay online for the initial successful load and wait for **Offline ready**.
 3. In Chrome's three-dot menu, select **Install app**, **Install Pennywise**, or **Add to Home screen > Install**, depending on Chrome/device wording.
 4. Confirm installation. Find the Pennywise icon on the home screen or app drawer.
@@ -41,7 +41,7 @@ There is no mandatory registration, automatic sync or hosting-provider backup. C
 
 ## Receive future updates
 
-Continue development and validation in `C:\Users\joanmoturi\pennywise` on the laptop and push reviewed changes to the private `joanmoturi/pennywise` repository's `main` branch. Once authorized, Git-connected Cloudflare Pages rebuilds the production site.
+Continue development and validation in `C:\Users\joanmoturi\pennywise` on the laptop and push reviewed changes to the private `joanmoturi/pennywise` repository's `main` branch. Git-connected Cloudflare Pages rebuilds the production site.
 
 When online and visible, Pennywise checks for a waiting worker on registration, foregrounding, reconnection and hourly while open. On **A new version is ready**, download a full backup, save open forms, then tap **Reload update**. Do not clear site storage to update.
 

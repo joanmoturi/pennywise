@@ -140,7 +140,7 @@ export function ReportsPage() {
             {
               name: "Liquid cash",
               values: report.monthly.map((m) => m.cash),
-              color: "#159f83",
+              color: "var(--chart-primary)",
             },
           ]}
         />
@@ -185,7 +185,7 @@ export function ReportsPage() {
                   .map((t) => t.amount),
               ),
             ),
-            color: "#5c84ce",
+            color: "var(--chart-secondary)",
           },
         ]}
       />
@@ -672,11 +672,12 @@ export function SettingsPage() {
             <select
               aria-label="Theme"
               value={s.settings.theme}
-              onChange={(e) =>
+              onChange={(e) => {
+                const theme = e.target.value as "light" | "dark";
                 void app.mutate("Change theme", (s) => {
-                  s.settings.theme = e.target.value as "light" | "dark";
-                })
-              }
+                  s.settings.theme = theme;
+                });
+              }}
             >
               <option value="light">Light</option>
               <option value="dark">Dark</option>

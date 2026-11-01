@@ -2,6 +2,8 @@
 
 Use a **separate Cloudflare Pages project** for Pennywise. Development stays on your laptop; your Android phone needs only Chrome and the resulting HTTPS URL. Engineering Academy is not deployed or changed by this configuration.
 
+The existing Git-connected Pages project is `pennywise`; its actual production URL is `https://pennywise-7lz.pages.dev/`. Do not create another project or change this origin when updating the installed application.
+
 ## 1. Publish the application from your laptop
 
 Pennywise uses its own **PRIVATE** repository `joanmoturi/pennywise`, production branch `main`. Engineering Academy remains in its original repository. Current publishing status, verified commit and hosting blockers are recorded in `DEPLOYMENT_REPORT.md`.

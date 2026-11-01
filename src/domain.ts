@@ -482,7 +482,7 @@ export function initialState(): State {
     revision: 0,
     settings: {
       currency: "KES",
-      theme: "light",
+      theme: "dark",
       setup: false,
       demo: false,
       activeBudgetId: budgets[0].id,

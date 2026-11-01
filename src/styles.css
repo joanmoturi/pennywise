@@ -1,34 +1,42 @@
 :root {
   font-family: "Segoe UI", system-ui, sans-serif;
-  color: #1b3444;
-  background: #f4f7f8;
-  font-synthesis: none;
-  --bg: #f4f7f8;
-  --surface: #fff;
-  --ink: #1b3444;
-  --muted: #647780;
-  --line: #e1e9eb;
-  --teal: #087d65;
-  --soft: #e7f5f0;
-  --warning-bg: #fff4df;
-  --warning-ink: #815611;
-  --danger: #b53a43;
-  --shadow: 0 3px 18px #172a3605;
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #091923;
-  --surface: #112733;
-  --ink: #e1edef;
-  --muted: #a2b4bc;
-  --line: #29414d;
-  --teal: #3ad4ac;
-  --soft: #173d37;
-  --warning-bg: #3f3320;
-  --warning-ink: #f1c988;
-  --danger: #ff969c;
-  background: var(--bg);
   color: var(--ink);
+  background: var(--bg);
+  color-scheme: dark;
+  font-synthesis: none;
+  --bg: #0b1220;
+  --surface: #141f32;
+  --ink: #f3eee4;
+  --muted: #aab6c9;
+  --line: #2b3950;
+  --teal: #d8b56d;
+  --soft: #292637;
+  --warning-bg: #352a1a;
+  --warning-ink: #f1ce8c;
+  --danger: #ffa0a8;
+  --button-ink: #0b1220;
+  --chart-primary: #d8b56d;
+  --chart-secondary: #95b2e0;
+  --chart-tertiary: #dba48e;
+  --shadow: 0 8px 28px #03081230;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f1e9;
+  --surface: #fffdf8;
+  --ink: #182438;
+  --muted: #616b7a;
+  --line: #ded8cb;
+  --teal: #806022;
+  --soft: #f0e7d5;
+  --warning-bg: #fff0d5;
+  --warning-ink: #795014;
+  --danger: #ae3544;
+  --button-ink: #fffdf8;
+  --chart-primary: #806022;
+  --chart-secondary: #486799;
+  --chart-tertiary: #a65c40;
+  --shadow: 0 8px 28px #18243808;
 }
 * {
   box-sizing: border-box;
@@ -61,7 +69,7 @@ summary {
   outline-offset: 4px;
 }
 :focus-visible {
-  outline: 3px solid #159f83;
+  outline: 3px solid var(--teal);
 }
 h1,
 h2,
@@ -110,8 +118,9 @@ strong {
 .sidebar {
   width: 245px;
   flex-shrink: 0;
-  background: #0b2130;
-  color: #c5d6de;
+  background: linear-gradient(180deg, #101b2e, #0b1220);
+  color: #c7d0df;
+  border-right: 1px solid #2b3950;
   position: fixed;
   height: 100dvh;
   display: flex;
@@ -127,18 +136,18 @@ strong {
   font-size: 1.45rem;
   font-weight: 650;
   padding: 0 8px 36px;
-  color: white;
+  color: #f3eee4;
 }
 .brand small {
   display: block;
   font-size: 0.62rem;
   font-weight: 400;
-  color: #a3bfc8;
+  color: #aab6c9;
   padding-top: 4px;
 }
 .logo-mark {
-  background: #39d7b2;
-  color: #0b2130;
+  background: linear-gradient(135deg, #edcf90, #c49b50);
+  color: #0b1220;
   font-size: 1.3rem;
   width: 39px;
   height: 39px;
@@ -151,7 +160,7 @@ strong {
 .nav-label {
   font-size: 0.6rem;
   letter-spacing: 0.15rem;
-  color: #a3bfc8;
+  color: #aab6c9;
   padding: 0 14px 12px;
 }
 .sidebar nav {
@@ -186,28 +195,29 @@ strong {
   min-height: 42px;
 }
 .sidebar nav button:hover {
-  background: #193443;
+  background: #1c2940;
 }
 .sidebar nav button.active {
-  color: #65e3c4;
-  background: #183a3f;
+  color: #edcf90;
+  background: #292637;
+  box-shadow: inset 3px 0 #d8b56d;
 }
 .sidebar-footer {
-  border-top: 1px solid #28404d;
+  border-top: 1px solid #2b3950;
   margin-top: auto;
   padding: 20px 12px 0;
   display: grid;
   gap: 6px;
 }
 .sidebar-footer svg {
-  color: #65e3c4;
+  color: #d8b56d;
 }
 .sidebar-footer strong {
   font-size: 0.75rem;
 }
 .sidebar-footer small {
   font-size: 0.62rem;
-  color: #a3bfc8;
+  color: #aab6c9;
 }
 .workspace {
   min-width: 0;
@@ -276,14 +286,11 @@ main {
   border-radius: 8px;
   border: 1px solid transparent;
   background: var(--teal);
-  color: white;
+  color: var(--button-ink);
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
   min-height: 42px;
-}
-[data-theme="dark"] .button {
-  color: #091923;
 }
 .button.secondary {
   background: var(--surface);
@@ -354,9 +361,12 @@ main {
 }
 .hero {
   padding: 30px 33px;
-  background: linear-gradient(115deg, #0b2938, #123e43);
+  background:
+    radial-gradient(ellipse at top right, #d8b56d18, transparent 60%),
+    linear-gradient(115deg, #15243c, #0d1729);
+  border: 1px solid #675536;
   border-radius: 14px;
-  color: white;
+  color: #f3eee4;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -364,10 +374,10 @@ main {
   margin-bottom: 22px;
 }
 .hero .eyebrow {
-  color: #9cdbc9;
+  color: #edcf90;
 }
 .hero p {
-  color: #abc9d0;
+  color: #b7c2d3;
   font-size: 0.8rem;
 }
 .hero-amount {
@@ -377,28 +387,28 @@ main {
   margin: 12px 0;
 }
 .hero .badge {
-  background: #25544f;
-  color: #a3f1d6;
+  background: #342c20;
+  color: #edcf90;
   font-size: 0.62rem;
 }
 .hero-aside {
   min-width: 240px;
   padding: 6px 0 6px 28px;
-  border-left: 1px solid #45656a;
+  border-left: 1px solid #675536;
 }
 .hero-aside > span {
-  color: #c1d5db;
+  color: #c7d0df;
   font-size: 0.76rem;
 }
 .hero-aside strong {
   display: block;
   font-size: 1.4rem;
   margin: 15px 0 8px;
-  color: #68e1bd;
+  color: #edcf90;
 }
 .hero-aside small {
   margin-left: 5px;
-  color: #abc9d0;
+  color: #b7c2d3;
   font-size: 0.8rem;
 }
 .hero-aside p {
@@ -540,7 +550,7 @@ dd {
 }
 .bar-track span {
   display: block;
-  background: #159f83;
+  background: var(--chart-primary);
   height: 100%;
   border-radius: inherit;
 }
@@ -548,7 +558,7 @@ dd {
   margin: 4px 0;
 }
 .bar-track.comparison span {
-  background: #6b89bb;
+  background: var(--chart-secondary);
 }
 .line-chart {
   width: 100%;
@@ -760,7 +770,7 @@ dialog {
   padding: 25px;
 }
 dialog::backdrop {
-  background: #071725aa;
+  background: #050b18bb;
   backdrop-filter: blur(3px);
 }
 .dialog-head {
@@ -802,9 +812,9 @@ dialog::backdrop {
   bottom: 24px;
   right: 26px;
   max-width: min(480px, calc(100vw - 30px));
-  background: #0b2130;
-  color: #e0eeef;
-  border: 1px solid #48706c;
+  background: #141f32;
+  color: #f3eee4;
+  border: 1px solid #675536;
   border-radius: 10px;
   padding: 15px 18px;
   box-shadow: 0 10px 35px #0002;
@@ -1083,7 +1093,7 @@ pre {
   .hero-aside {
     padding: 20px 0 0;
     border-left: 0;
-    border-top: 1px solid #45656a;
+    border-top: 1px solid #675536;
   }
   .hero-aside strong {
     margin: 10px 0;

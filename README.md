@@ -2,6 +2,10 @@
 
 Private, offline-first personal financial command centre. Standalone React/TypeScript PWA in its own private `joanmoturi/pennywise` repository; Engineering Academy remains unchanged in its original repository.
 
+Production: `https://pennywise-7lz.pages.dev/`. Financial records remain local to each device/browser; hosting is not a backup service. Download portable full backups and keep encrypted copies outside the device.
+
+New workspaces use a midnight-navy and warm-gold theme. Existing saved preferences are preserved; select **Settings > Theme > Dark** for the premium dark palette, or Light for its warm ivory counterpart.
+
 ## Run locally
 
 Requires Node.js 22.12+ (Node 26 was used during implementation) and npm.

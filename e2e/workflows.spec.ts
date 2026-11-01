@@ -62,6 +62,30 @@ test.beforeEach(async ({ page }) => {
     page.getByRole("heading", { name: "A clearer picture. A calmer plan." }),
   ).toBeVisible();
 });
+test("theme preferences survive reloads without changing financial records", async ({
+  page,
+}) => {
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await account(page, "TEST theme account", "12345");
+  await page.getByLabel("Theme", { exact: true }).selectOption("light");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.reload();
+  await expect(page.locator(".app-shell")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await nav(page, "Settings");
+  await expect(
+    page.getByText("TEST theme account", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Theme", { exact: true }).selectOption("dark");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.reload();
+  await expect(page.locator(".app-shell")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await nav(page, "Settings");
+  await expect(
+    page.getByText("TEST theme account", { exact: true }),
+  ).toBeVisible();
+});
 test("complete accounts, income, liabilities, six bonds, budgets, recovery, windfall and scenario workflow", async ({
   page,
 }) => {

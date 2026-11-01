@@ -35,8 +35,8 @@ export default defineConfig(({ command }) => {
           start_url: "/",
           scope: "/",
           display: "standalone",
-          background_color: "#0b2130",
-          theme_color: "#0b2130",
+          background_color: "#0b1220",
+          theme_color: "#0b1220",
           lang: "en-KE",
           icons: [
             {

@@ -278,7 +278,7 @@ export function OverviewPage() {
             {
               name: "Recorded cash",
               values: report.monthly.map((m) => m.cash),
-              color: "#159f83",
+              color: "var(--chart-primary)",
             },
           ]}
         />
@@ -463,17 +463,17 @@ export function ForecastPage() {
           {
             name: "Conservative / confirmed receipts",
             values: result.lines.map((l) => l.confirmed),
-            color: "#159f83",
+            color: "var(--chart-primary)",
           },
           {
             name: "Expected / reliable receipts",
             values: result.lines.map((l) => l.expected),
-            color: "#5c84ce",
+            color: "var(--chart-secondary)",
           },
           {
             name: "Optimistic / all scheduled receipts",
             values: result.lines.map((l) => l.optimistic),
-            color: "#d6a354",
+            color: "var(--chart-tertiary)",
           },
         ]}
       />
