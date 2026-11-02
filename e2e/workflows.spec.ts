@@ -380,11 +380,9 @@ test("installed shell reloads offline, allows ledger edits and emits no external
   context,
 }) => {
   const external: string[] = [];
+  const origin = new URL(page.url()).origin;
   page.on("request", (r) => {
-    if (
-      !r.url().startsWith("http://127.0.0.1:4179") &&
-      !r.url().startsWith("data:")
-    )
+    if (new URL(r.url()).origin !== origin && !r.url().startsWith("data:"))
       external.push(r.url());
   });
   await account(page, "TEST offline cash", "10000");

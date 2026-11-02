@@ -1,8 +1,10 @@
 # Pennywise deployment execution report
 
-**Date:** November 1, 2026.
+**Updated:** November 2, 2026 (local execution clock). Initial publication: November 1, 2026.
 
-**Status: BLOCKED AT CLOUDFLARE AUTHORIZATION. GitHub publishing is completed and verified; no live URL has been obtained or verified.**
+**Status: LIVE AND VERIFIED in isolated desktop and mobile-emulated Chromium. Physical Android installation remains UNVERIFIED.**
+
+**Production:** `https://pennywise-7lz.pages.dev/`
 
 ## Target and authentication
 
@@ -15,36 +17,42 @@
 | Extracted repository base     | `86578147a2335c71fd2c53fec33e2bf007a9c1de` — Pennywise-only history published to new private main             |
 | Original implementation hash  | `d84c66531c1b5d7c5d65aac1cde732527191a33d` in the original repository; subtree extraction rewrites commit IDs |
 | Push                          | **COMPLETED / VERIFIED**, new private repository contains only the reviewed Pennywise subtree                 |
-| Cloudflare Pages project      | Not created/verified; proposed name is not an actual project                                                  |
-| Live HTTPS URL                | **NOT AVAILABLE**                                                                                             |
-| Cloudflare credentials        | No available token/account environment, cached Wrangler CLI or GitHub deployment secrets identified           |
+| Verified application commit   | `3d3f146d1567827ff573a2530e8c28368274bad8` — midnight navy / warm gold palette and theme persistence fix      |
+| Cloudflare Pages project      | `pennywise`, Git-connected; successful GitHub Cloudflare Pages check for the exact application commit         |
+| Production deployment ID      | `38fc404e-46dd-49d3-a6d2-301c45755ea6`                                                                        |
+| Live HTTPS URL                | `https://pennywise-7lz.pages.dev/`                                                                            |
+| Cloudflare authorization      | User completed dashboard authorization; no credentials shared with the agent                                  |
 | Physical Android verification | **UNVERIFIED**                                                                                                |
 
 At the user's explicit request, Pennywise was separated into its own private repository on November 1, 2026. `git subtree split --prefix=pennywise` preserved Pennywise-specific history without changing the original repository's branches or deleting files. The extracted root tree `35e58abee5e9d9665fdf57a5c29fba531cdffdc5` exactly matched the previously reviewed and validated Pennywise subtree before documentation updates. No Engineering Academy files, ignored databases, dependencies or backups were copied.
 
 The independent laptop checkout is `C:\Users\joanmoturi\pennywise`. Continue development there, not in the old application's subfolder. The original `MyLearningApp` repository retains its existing history and pre-existing root README/ignore edits unchanged. Its previously published Pennywise copy was not deleted or force-rewritten.
 
-The extracted base identifies the unchanged validated application. Subsequent guide/report changes are documentation-only and do not alter production application assets. No Cloudflare deployment SHA is claimed until an actual production build is verified.
+The extracted base identifies the original validated application. The verified application commit above adds the requested midnight-navy/warm-gold presentation, matching icons/chrome, a dark default for new workspaces and a fix that captures theme selection before asynchronous persistence. Existing saved preferences and financial records are preserved; select **Settings > Theme > Dark** if an existing workspace is light. Storage, encryption and accounting engines were not modified.
+
+Verification is a snapshot of that application commit. Subsequent report and origin-portable browser-test commits do not alter application assets.
 
 ## Pre-push validation completed
 
 Executed again for this deployment request on November 1, 2026:
 
-| Check                  | Result                                                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `npm ci`               | **PASSED**, 527 packages installed from the exact lockfile, 528 audited                                       |
-| `npm run lint`         | **PASSED**                                                                                                    |
-| `npm run format:check` | **PASSED**                                                                                                    |
-| `npm run test`         | **PASSED**, 101 unit/integration tests across 5 files                                                         |
-| `npm run build`        | **PASSED**, includes `tsc --noEmit`                                                                           |
-| `npm run test:e2e`     | **PASSED**, 14 desktop/Pixel 7 Chromium-emulated browser tests                                                |
-| Output                 | **VERIFIED** `dist` relative to the Pennywise application root                                                |
-| PWA artifacts          | **VERIFIED** manifest, actual 192/512 PNG dimensions, worker, root-absolute module URLs and copied `_headers` |
-| Routing fallback       | No root `404.html`; configured Workbox fallback and Pages' documented SPA default                             |
+| Check                  | Result                                                                                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm ci`               | **PASSED**, 527 packages installed from the exact lockfile, 528 audited                                                                       |
+| `npm run lint`         | **PASSED**                                                                                                                                    |
+| `npm run format:check` | **PASSED**                                                                                                                                    |
+| `npm run test`         | **PASSED**, 101 unit/integration tests across 5 files                                                                                         |
+| `npm run build`        | **PASSED**, includes `tsc --noEmit`                                                                                                           |
+| `npm run test:e2e`     | Original 14 cases passed; 2 added theme-persistence cases passed after fixing theme selection. Final affected theme/offline rerun: 4/4 passed |
+| Output                 | **VERIFIED** `dist` relative to the Pennywise application root                                                                                |
+| PWA artifacts          | **VERIFIED** manifest, actual 192/512 PNG dimensions, worker, root-absolute module URLs and copied `_headers`                                 |
+| Routing fallback       | No root `404.html`; configured Workbox fallback and Pages' documented SPA default                                                             |
 
 All checks above were rerun successfully from the separate `C:\Users\joanmoturi\pennywise` checkout after separation: locked installation, formatting, lint, 101 unit/integration tests, TypeScript/production build and 14 browser tests. The fresh Windows clone initially lacked dependencies and checked text out as CRLF, causing build/format failures. Dependencies were restored using `npm ci`; `.gitattributes` now pins LF text checkout and the existing formatter normalized local line endings without changing application content. No failing validation or permission controls were disabled.
 
-Existing non-fatal Zod build annotation warnings and npm development-tool advisory warnings remain visible. The successful local `npm ci` uses the development environment's configured registry; uncached public npm availability and the Linux Cloudflare build are not yet verified.
+For the palette update, formatting, lint, 101 unit/integration tests and production build also passed. All 16 local browser cases passed across the full run and targeted reruns; the initial new theme cases exposed an asynchronous selection bug, which was fixed rather than bypassed.
+
+Existing non-fatal Zod build annotation warnings and npm development-tool advisory warnings remain visible. The local install uses the development environment's configured registry. The real Cloudflare Linux build now succeeded; its dashboard logs were not independently downloaded, so this report does not infer a particular registry/network route from success alone.
 
 ## Repository security gate
 
@@ -60,17 +68,13 @@ Intended exclusions include dependency/build/test artifacts, `.env`, databases, 
 
 The previous application security review identified no high-confidence exploitable application vulnerability. There are still **19 development/build advisory entries (2 low, 17 moderate)** from three underlying advisories; no compatible untested forced upgrades are being introduced. Details remain in `DEPLOYMENT_READINESS_REPORT.md`.
 
-## Required Cloudflare action
+## Completed Cloudflare setup
 
-**BLOCKED pending your Cloudflare account/GitHub authorization.**
+**COMPLETED.** The user authorized Git integration and created the separate Pages project. The first Pages build generated the application successfully but failed to locate an output directory entered as `" dist"` with a leading space. Correcting it to `dist` allowed production publication.
 
-No Cloudflare CLI or API credential is available to this agent, and the GitHub repository has no deployment secrets. No token/password is requested in chat. Creating the Git-connected project requires your normal dashboard authorization:
+The project is Pages, not the separate Worker created during dashboard navigation. No Worker configuration, financial-data backend, API token, database or paid infrastructure was added to the source repository. Use the existing Pages project for updates; no new project or hostname is required.
 
-1. Source is already pushed to the private repository. Sign in to Cloudflare on your laptop.
-2. Open **Workers & Pages > Create application > Pages > Connect to Git**.
-3. Connect GitHub and authorize the Cloudflare GitHub integration for the separate private `joanmoturi/pennywise` repository. Keep the repository private. Do not select `MyLearningApp`.
-4. Select the settings below, then **Save and Deploy**.
-5. Provide only the resulting non-secret production HTTPS URL and project name. Do not provide an API token, password or backup.
+The documented build configuration remains:
 
 | Pages field                            | Exact value                   |
 | -------------------------------------- | ----------------------------- |
@@ -84,28 +88,39 @@ No Cloudflare CLI or API credential is available to this agent, and the GitHub r
 | Build variable                         | `SKIP_DEPENDENCY_INSTALL=1`   |
 | Functions / bindings / runtime secrets | None                          |
 
-Use a separate free Pages project, not Engineering Academy's hosting project. Do not enable Web Analytics, paid storage, backend services or a Direct Upload workflow. The complete guide is `DEPLOYMENT_GUIDE.md`.
+The successful GitHub check identifies Cloudflare project `pennywise` and the exact application SHA above. Live HTML references `/assets/index-EnVoWNBp.js`, matching the tested local production artifact. The complete setup/update guide is `DEPLOYMENT_GUIDE.md`.
 
 ## Live verification and remaining work
 
-| Check                                                                           | Status                                                 |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Production build on Cloudflare / intended Git commit match                      | **BLOCKED** until Git integration is authorized        |
-| Actual public HTTPS homepage and nested-route refresh                           | **NOT VERIFIED**                                       |
-| Live JS/CSS, worker/manifest/icon responses                                     | **NOT VERIFIED**                                       |
-| Live MIME, cache and security headers                                           | **NOT VERIFIED**                                       |
-| Live service-worker registration and offline reload                             | **NOT VERIFIED**                                       |
-| Live browser network capture / absence of financial uploads                     | **NOT VERIFIED**                                       |
-| Local simulated offline entry/reopen/reconnect                                  | **VERIFIED** in automated isolated browser contexts    |
-| Local independent-device encrypted backup/restore                               | **VERIFIED** by browser/repository tests               |
-| Local shell update without IndexedDB replacement                                | **VERIFIED** in automated static-deployment simulation |
-| Physical Android installation, standalone launch, downloads and offline restart | **UNVERIFIED**                                         |
+| Check                                                                           | Status                                                                                                    |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Production build on Cloudflare / intended Git commit match                      | **VERIFIED** successful Pages check for `3d3f146d1567827ff573a2530e8c28368274bad8`                        |
+| Actual public HTTPS homepage and nested-route refresh                           | **VERIFIED** root and `/monthly/review/`, desktop and mobile emulation                                    |
+| Live JS/CSS, worker/manifest/icon responses                                     | **VERIFIED** successful loads; no captured JavaScript/console errors                                      |
+| Live MIME, cache and security headers                                           | **VERIFIED** manifest/worker/PNG MIME, CSP/nosniff, no-cache entry/assets metadata, immutable hashed JS   |
+| Live service-worker registration and offline reload                             | **VERIFIED** active controlling worker and offline root/nested reload                                     |
+| Live browser network capture / absence of financial uploads                     | **VERIFIED in exercised workflows** same-origin asset GETs only; no external financial/API calls          |
+| Live theme, navigation and financial workflows                                  | **VERIFIED** 10 workflow tests, 5 desktop and 5 Pixel 7 Chromium-emulated                                 |
+| Live encrypted recovery into empty independent browser                          | **VERIFIED** desktop and mobile emulation; full state comparison, reopen persistence and source isolation |
+| Live failed encrypted restore preserves existing state                          | **VERIFIED** wrong password, damaged ciphertext and unsupported-file rejection; safety download           |
+| Local simulated offline entry/reopen/reconnect                                  | **VERIFIED** in automated isolated browser contexts                                                       |
+| Local independent-device encrypted backup/restore                               | **VERIFIED** by browser/repository tests                                                                  |
+| Local shell update without IndexedDB replacement                                | **VERIFIED** in automated static-deployment simulation                                                    |
+| Physical Android installation, standalone launch, downloads and offline restart | **UNVERIFIED**                                                                                            |
 
-No invented hostname is treated as a deployed URL, and no local simulation is called live Cloudflare verification.
+Two additional live browser smoke runs verified actual manifest/icon dimensions, standalone-compatible display/start/scope, root/nested refresh, worker control, offline startup, navy/gold computed colours, no horizontal overflow and error-free asset loads. Screenshots were inspected at desktop and mobile sizes.
+
+The root, worker, manifest and icons return `Cache-Control: no-cache`; nested SPA fallback returns `public, max-age=0, must-revalidate`, which also requires revalidation. Content-hashed JavaScript returns immutable caching. No CDN setting was weakened to force a check to pass.
+
+The encrypted recovery exercise used only hypothetical records in fresh automated browser contexts at the real origin. It downloaded an encrypted full backup, changed the source afterward, started an independently empty target, rejected three invalid imports without changing state, restored the original snapshot, verified its safety export and reopened the target successfully. Financial records and passphrases were not uploaded to hosting.
+
+Live standalone compatibility is manifest evidence, not proof of actual Android installation. Shell-update preservation and interrupted transactional restoration retain local automated evidence; an actual two-release update on a physical Android device remains unverified. No local simulation is called live Cloudflare verification.
 
 ## Hosting versus financial storage
 
-Cloudflare serves public application assets, not your local financial database. Source inspection and local test network capture support the existing local-first design: IndexedDB, no mandatory registration/cloud synchronization/financial endpoint, local file-based backup encryption and restoration, and no analytics code.
+Cloudflare serves public application assets, not your local financial database. Source inspection and local/live test network capture support the existing local-first design: IndexedDB, no mandatory registration/cloud synchronization/financial endpoint, local file-based backup encryption and restoration, and no application analytics code. Hosting may still process ordinary request metadata and platform network-error telemetry; this is not financial-data synchronization.
+
+The stable production hostname is not a commit-specific temporary preview. It is intended to remain the same across deployments while the Pages project remains available; this is not a guarantee of perpetual hosting or storage durability. Local records normally survive reloads and compatible updates, but browser/site clearing, storage eviction or device loss can remove them. A full backup can be selected in Backup Centre and restored into an empty/reinstalled workspace; encrypted backups require their original passphrase. CSV reports are not complete recovery files.
 
 Each device/browser profile is independent. Installing on Android does not move laptop records; transfer a portable external backup and explicitly restore it. Browser/site storage clearing, eviction, device loss and origin changes can require that backup. Hosting still processes ordinary asset-request metadata such as IP addresses.
 
