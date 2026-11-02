@@ -86,7 +86,7 @@ class QueueStore(context: Context, name: String = "private-queue.db",
     }
 
     @Synchronized
-    fun acknowledge(candidates: List<Candidate>) = transaction {
+    fun acknowledge(candidates: List<Candidate>, confirmedByReceipt: Boolean = false) = transaction {
         candidates.forEach { candidate ->
             // A capture update after the screen loaded must not be deleted by an older receipt.
             val current = writableDatabase.rawQuery("SELECT body FROM queue WHERE id=?", arrayOf(candidate.id)).use {
@@ -96,6 +96,7 @@ class QueueStore(context: Context, name: String = "private-queue.db",
             if (current?.fingerprint == candidate.fingerprint) {
                 writableDatabase.delete("queue", "id=?", arrayOf(candidate.id))
                 count("receipts")
+                if (confirmedByReceipt) count("confirmedImports")
             }
         }
     }
@@ -114,7 +115,9 @@ class QueueStore(context: Context, name: String = "private-queue.db",
 
     @Synchronized
     fun count(name: String) {
-        require(name in setOf("duplicates", "updates", "captured", "receipts", "captureErrors", "overload"))
+        require(name in setOf("duplicates", "updates", "captured", "receipts", "captureErrors", "overload",
+            "processed", "excluded", "unrecognized", "malformed", "unsupportedEncoding", "invalidTimestamp",
+            "confirmedImports"))
         writableDatabase.execSQL("INSERT OR IGNORE INTO stats(name,count) VALUES(?,0)", arrayOf(name))
         writableDatabase.execSQL("UPDATE stats SET count=count+1 WHERE name=?", arrayOf(name))
     }
@@ -122,6 +125,16 @@ class QueueStore(context: Context, name: String = "private-queue.db",
     @Synchronized
     fun stats(): Map<String, Long> = readableDatabase.rawQuery("SELECT name,count FROM stats", null).use {
         buildMap { while (it.moveToNext()) put(it.getString(0), it.getLong(1)) }
+    }
+
+    @Synchronized
+    fun processed(at: Long, candidateCreated: Boolean): Unit = transaction {
+        count("processed")
+        if (candidateCreated) {
+            writableDatabase.insertWithOnConflict("stats", null, ContentValues().apply {
+                put("name", "lastProcessed"); put("count", at)
+            }, SQLiteDatabase.CONFLICT_REPLACE).also { check(it != -1L) }
+        }
     }
 
     @Synchronized

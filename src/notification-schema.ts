@@ -56,6 +56,7 @@ export const notificationCandidateSchema = z
     kind: z.enum(candidateKinds),
     counterparty: z.string().max(200).optional(),
     accountHint: z.string().max(160).optional(),
+    senderId: z.string().min(1).max(80).optional(),
     fee: minor.optional(),
     balance: minor.optional(),
     confidence: z.number().int().min(0).max(100),

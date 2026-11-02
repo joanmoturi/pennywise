@@ -1,5 +1,7 @@
 # Notification integration implementation and test report
 
+**Historical report for `4735052`, not the current SMS implementation.** Listener-specific setup, permissions and native test counts below describe the earlier source revision only. Current acquisition, permission checks, test evidence and remaining blockers are in `SMS_INTEGRATION_TEST_REPORT.md`; the obsolete listener has been removed.
+
 **Date:** November 2, 2026.
 
 **Status: PWA implementation verified locally; Android companion source implemented, but APK build/install and physical notification capture remain BLOCKED/UNVERIFIED. This is not a completed real-device acceptance certification.**

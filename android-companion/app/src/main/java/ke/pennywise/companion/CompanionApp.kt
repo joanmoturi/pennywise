@@ -2,9 +2,12 @@ package ke.pennywise.companion
 
 import android.app.Application
 import android.app.KeyguardManager
-import android.content.ComponentName
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.UserManager
-import android.provider.Settings
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 class CompanionApp : Application() {
     lateinit var store: QueueStore
@@ -12,10 +15,10 @@ class CompanionApp : Application() {
     val stateLock = Any()
     @Volatile var config: Config = Config()
         private set
-    @Volatile var connectedAt: Long = 0
-        private set
     @Volatile var storageAvailable = false
         private set
+    val smsWorker = ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, ArrayBlockingQueue(8),
+        ThreadPoolExecutor.AbortPolicy())
 
     override fun onCreate() {
         super.onCreate()
@@ -23,11 +26,8 @@ class CompanionApp : Application() {
         loadSafely()
     }
 
-    fun permissionGranted(): Boolean {
-        val own = ComponentName(this, CaptureService::class.java)
-        return Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-            ?.split(':')?.any { ComponentName.unflattenFromString(it) == own } == true
-    }
+    fun permissionGranted(): Boolean = checkSelfPermission(Manifest.permission.RECEIVE_SMS) ==
+        PackageManager.PERMISSION_GRANTED
 
     fun deviceReady(): Boolean = CaptureGate.deviceReady(
         getSystemService(UserManager::class.java).isUserUnlocked,
@@ -43,9 +43,8 @@ class CompanionApp : Application() {
         if (storageAvailable) return true
         try {
             val saved = store.readConfig()
-            val safe = saved.copy(paused = true, sources = saved.sources.map {
-                it.copy(enabled = false, activatedAt = System.currentTimeMillis())
-            }, revision = saved.revision + 1)
+            // Version-1 configuration migrates paused in the codec; ordinary SMS process restarts preserve consent.
+            val safe = saved.copy(paused = saved.paused || !permissionGranted(), revision = saved.revision + 1)
             store.saveConfig(safe)
             config = safe
             storageAvailable = true
@@ -70,20 +69,17 @@ class CompanionApp : Application() {
         }
     }
 
-    fun boundary(connected: Boolean) = synchronized(stateLock) {
-        // Fail closed immediately even if the Keystore is temporarily unavailable.
-        connectedAt = if (connected) System.currentTimeMillis() else 0
-        val next = config.copy(paused = true, revision = config.revision + 1,
-            sources = config.sources.map { it.copy(enabled = false, activatedAt = System.currentTimeMillis()) })
+    fun pauseForPermissionLoss() = synchronized(stateLock) {
+        val next = config.copy(paused = true, revision = config.revision + 1)
         config = next
         try {
             if (storageAvailable) store.saveConfig(next)
         } catch (_: Exception) { storageAvailable = false }
     }
 
-    fun observePreview(packageName: String) = synchronized(stateLock) {
+    fun observeSender(sourceId: String, sender: String) = synchronized(stateLock) {
         val next = config.copy(sources = config.sources.map {
-            if (it.packageName == packageName) it.copy(previewAvailable = true) else it
+            if (it.sourceId == sourceId) it.copy(detectedSender = sender) else it
         })
         store.saveConfig(next)
         config = next

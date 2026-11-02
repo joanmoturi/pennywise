@@ -5,6 +5,7 @@ import java.math.RoundingMode
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.UUID
+import java.util.Locale
 
 const val MAX_SAFE_MINOR = 9_007_199_254_740_991L
 val KINDS = setOf("received", "sent", "withdrawal", "deposit", "transfer", "merchant",
@@ -13,21 +14,22 @@ val KINDS = setOf("received", "sent", "withdrawal", "deposit", "transfer", "merc
 val DIRECTIONS = setOf("credit", "debit", "unknown")
 
 data class Source(
-    val packageName: String,
+    val sourceId: String,
     val displayName: String,
     val profile: String = "generic",
     val enabled: Boolean = false,
     val activatedAt: Long = 0,
-    val previewAvailable: Boolean = false,
     val prefix: String = "SYNTHETIC",
     val delimiter: String = "|",
-    val labels: Map<String, String> = DEFAULT_LABELS
+    val labels: Map<String, String> = DEFAULT_LABELS,
+    val senderId: String? = null,
+    val detectedSender: String? = null
 ) {
     companion object {
         val DEFAULT_LABELS = linkedMapOf("amount" to "Amount", "currency" to "Currency",
             "reference" to "Ref", "occurredAt" to "Date", "direction" to "Direction",
             "kind" to "Kind", "counterparty" to "Party", "fee" to "Fee",
-            "balance" to "Balance", "originalReference" to "OriginalRef")
+            "balance" to "Balance", "originalReference" to "OriginalRef", "accountHint" to "Account")
     }
 }
 
@@ -43,7 +45,7 @@ data class Candidate(
     val id: String = UUID.randomUUID().toString(),
     val source: String,
     val parserId: String,
-    val parserVersion: String = "1",
+    val parserVersion: String = "2",
     val capturedAt: String,
     val occurredAt: String? = null,
     val reference: String? = null,
@@ -59,7 +61,9 @@ data class Candidate(
     val validation: String,
     val fingerprint: String,
     val originalReference: String? = null,
-    val raw: String? = null
+    val raw: String? = null,
+    val senderId: String? = null,
+    val accountHint: String? = null
 )
 
 object Hashes {
@@ -75,12 +79,52 @@ object CaptureGate {
     fun deviceReady(userUnlocked: Boolean, secureDevice: Boolean, deviceProtectedStorage: Boolean): Boolean =
         userUnlocked && secureDevice && !deviceProtectedStorage
 
-    fun permits(config: Config, packageName: String, postTime: Long, now: Long,
-                connectedAt: Long, permission: Boolean, summary: Boolean): Boolean {
-        val source = config.sources.firstOrNull { it.packageName == packageName } ?: return false
-        return permission && !config.paused && source.enabled && !summary &&
-            connectedAt > 0 && postTime > maxOf(connectedAt, source.activatedAt) &&
-            postTime <= now + 5_000 && now - postTime <= 120_000
+    fun source(config: Config, sender: String?, receivedAt: Long, permission: Boolean): Source? {
+        if (!permission || config.paused) return null
+        val normalized = SmsSenders.normalize(sender) ?: return null
+        return config.sources.singleOrNull { it.senderId == normalized && it.enabled &&
+            it.sourceId == SmsSenders.sourceId(normalized) && receivedAt > it.activatedAt }
+    }
+}
+
+object SmsSenders {
+    fun normalize(value: String?): String? {
+        if (value == null || value.any { it.code !in 32..126 }) return null
+        val text = value.trim()
+        if (text.isEmpty() || text.length > 80) return null
+        if (text.matches(Regex("\\+?[0-9 ().-]+"))) {
+            val number = text.replace(Regex("[ ().-]"), "")
+            return number.takeIf { it.matches(Regex("\\+?[0-9]{3,20}")) }
+        }
+        return text.takeIf { it.matches(Regex("[A-Za-z0-9][A-Za-z0-9 ._-]{0,39}")) }
+            ?.lowercase(Locale.ROOT)?.replace(Regex(" +"), " ")
+    }
+
+    fun sourceId(normalized: String): String = "sms.s${Hashes.sha256(normalized)}"
+}
+
+data class SmsPart(val sender: String?, val timestamp: Long, val body: String?)
+data class SmsEnvelope(val sender: String, val timestamp: Long, val body: String)
+enum class SmsFailure { MALFORMED, UNSUPPORTED_ENCODING, INVALID_TIMESTAMP }
+class SmsInputException(val reason: SmsFailure) : IllegalArgumentException(reason.name)
+
+object SmsAssembly {
+    fun assemble(parts: List<SmsPart>, format: String?, now: Long): SmsEnvelope {
+        if (format !in setOf("3gpp", "3gpp2")) throw SmsInputException(SmsFailure.UNSUPPORTED_ENCODING)
+        if (parts.isEmpty() || parts.size > 32) throw SmsInputException(SmsFailure.MALFORMED)
+        val sender = SmsSenders.normalize(parts.first().sender) ?: throw SmsInputException(SmsFailure.MALFORMED)
+        if (parts.any { SmsSenders.normalize(it.sender) != sender }) throw SmsInputException(SmsFailure.MALFORMED)
+        if (parts.any { it.timestamp <= 0 || it.timestamp > now + 300_000 } ||
+            parts.maxOf { it.timestamp } - parts.minOf { it.timestamp } > 300_000) {
+            throw SmsInputException(SmsFailure.INVALID_TIMESTAMP)
+        }
+        if (parts.any { it.body == null || it.body.length > 8192 }) throw SmsInputException(SmsFailure.MALFORMED)
+        val text = parts.joinToString("") { it.body!! }
+        if (text.isEmpty() || text.length > 8192) throw SmsInputException(SmsFailure.MALFORMED)
+        if ('\uFFFD' in text || '\u0000' in text || !Charsets.UTF_8.newEncoder().canEncode(text)) {
+            throw SmsInputException(SmsFailure.UNSUPPORTED_ENCODING)
+        }
+        return SmsEnvelope(parts.first().sender!!.trim(), parts.first().timestamp, text)
     }
 }
 
@@ -111,6 +155,7 @@ open class LabelledParser(override val profile: String) : FinancialParser {
                 val key = source.labels.entries.firstOrNull { it.value.equals(pair[0].trim(), true) }?.key
                 if (key != null) {
                     if (fields.containsKey(key)) duplicates.add(key)
+                    if (pair[1].trim().length > 256) duplicates.add(key)
                     fields[key] = pair[1].trim().take(256)
                 }
             }
@@ -134,6 +179,10 @@ open class LabelledParser(override val profile: String) : FinancialParser {
         if (date == null) missing.add("occurredAt")
         val direction = fields["direction"]?.lowercase()?.takeIf { it in DIRECTIONS } ?: "unknown"
         if (direction == "unknown") missing.add("direction")
+        if ((kind in setOf("received", "deposit", "coupon", "refund", "principal") && direction == "debit") ||
+            (kind in setOf("sent", "withdrawal", "merchant", "paybill", "buy_goods", "charge") && direction == "credit")) {
+            missing.add("ambiguous:direction")
+        }
         if (kind == "unknown") missing.add("kind")
         val fee = fields["fee"]?.let(::minorUnits)
         val balance = fields["balance"]?.let(::minorUnits)
@@ -143,16 +192,19 @@ open class LabelledParser(override val profile: String) : FinancialParser {
             it.matches(Regex("[A-Za-z0-9._/-]{1,128}"))
         }
         if (kind == "reversal" && originalReference == null) missing.add("originalReference")
+        if ((fields["counterparty"]?.length ?: 0) > 200) missing.add("counterparty")
+        if ((fields["accountHint"]?.length ?: 0) > 160) missing.add("accountHint")
         duplicates.forEach { missing.add("ambiguous:$it") }
         val incomplete = missing.isNotEmpty() || kind in setOf("failed", "reversal")
-        return Candidate(source = source.packageName, parserId = "$profile-labelled",
+        return Candidate(source = source.sourceId, parserId = "$profile-labelled",
             capturedAt = Instant.ofEpochMilli(now).toString(), occurredAt = date,
             reference = ref, amount = amount, currency = currency, direction = direction,
-            kind = kind, counterparty = fields["counterparty"]?.takeIf { it.isNotBlank() }, fee = fee, balance = balance,
-            confidence = if (incomplete) 35 else 85, missing = missing.distinct(),
+            kind = kind, counterparty = fields["counterparty"]?.takeIf { it.isNotBlank() && it.length <= 200 }, fee = fee, balance = balance,
+            confidence = if (incomplete) 35 else 95, missing = missing.distinct(),
             validation = if (incomplete) "incomplete" else "valid",
-            fingerprint = Hashes.fingerprint(source.packageName, text),
-            originalReference = originalReference, raw = if (retainRaw) text else null)
+            fingerprint = Hashes.fingerprint(source.sourceId, text),
+            originalReference = originalReference, raw = if (retainRaw) text.take(4000) else null,
+            accountHint = fields["accountHint"]?.takeIf { it.isNotBlank() && it.length <= 160 })
     }
 
     companion object {

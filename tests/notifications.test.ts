@@ -109,6 +109,54 @@ function importOne(s: State, c: NotificationCandidate) {
   ingestNotifications(s, batch(c));
   return s.notifications.inbox.at(-1)!;
 }
+describe("SMS companion contract compatibility", () => {
+  it("preserves detected sender/account metadata through import, approval, retry and backup", async () => {
+    const s = mapped();
+    const source = `sms.s${"b".repeat(64)}`;
+    s.notifications.sources[0].source = source;
+    s.notifications.sources[0].accountHint = "TEST wallet";
+    s.notifications.rules.push(rule({ source }));
+    const c = candidate({
+      source,
+      senderId: "TESTBANK",
+      accountHint: "TEST wallet",
+    });
+    const payload = JSON.stringify(batch(c));
+    const parsed = parseNotificationBatch(payload);
+    ingestNotifications(s, parsed, true);
+    expect(s.notifications.inbox[0].status).toBe("approved");
+    expect(s.notifications.inbox[0].candidate.senderId).toBe("TESTBANK");
+    ingestNotifications(s, parsed, true);
+    expect(s.transactions).toHaveLength(1);
+    const restored = await decodeBackup(await fullBackup(s));
+    expect(restored.notifications.inbox[0].candidate.senderId).toBe("TESTBANK");
+    validateState(s);
+  });
+  it("holds an SMS source without trusted mapping rather than reusing an app-source rule", () => {
+    const s = mapped();
+    s.notifications.rules.push(rule());
+    ingestNotifications(
+      s,
+      batch(
+        candidate({ source: `sms.s${"c".repeat(64)}`, senderId: "TESTBANK" }),
+      ),
+      true,
+    );
+    expect(s.notifications.inbox[0].status).toBe("pending");
+    expect(s.transactions).toHaveLength(0);
+  });
+  it("rejects malformed or oversized sender metadata before changing the ledger", () => {
+    for (const senderId of ["", "x".repeat(81), 123]) {
+      expect(() =>
+        parseNotificationBatch(
+          JSON.stringify(
+            batch({ ...candidate(), senderId } as NotificationCandidate),
+          ),
+        ),
+      ).toThrow();
+    }
+  });
+});
 describe("notification financial accounting", () => {
   it("adds KES 5,000 to the selected wallet once, not automatically earned income", () => {
     const s = mapped();

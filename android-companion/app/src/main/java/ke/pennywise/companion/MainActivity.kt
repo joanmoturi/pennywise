@@ -3,6 +3,8 @@ package ke.pennywise.companion
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.KeyguardManager
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.graphics.Color
 import android.net.ConnectivityManager
@@ -47,8 +49,7 @@ class MainActivity : Activity() {
         super.onResume()
         PrivateFileProvider.cleanup(this)
         app.loadSafely()
-        if (!app.permissionGranted() && (app.connectedAt > 0 || !app.config.paused ||
-            app.config.sources.any { it.enabled })) app.boundary(false)
+        if (!app.permissionGranted() && !app.config.paused) app.pauseForPermissionLoss()
         render()
     }
 
@@ -94,9 +95,9 @@ class MainActivity : Activity() {
         page = column()
         setContentView(scroll(page))
         label(page, "PENNYWISE", true)
-        label(page, "Private Android companion · no Internet / SMS / analytics")
+        label(page, "Private SMS companion · future messages only · no Internet / inbox history / analytics")
         if (!app.storageAvailable) {
-            label(page, "Encrypted storage unavailable. Capture stays paused. Unlock your device and retry. If the device key was lost, use a previously saved recovery JSON; do not uninstall to troubleshoot without a recovery file.")
+            label(page, "Protected local storage unavailable. Capture stays paused. Unlock your device and retry. If the device key was lost, use a previously saved recovery JSON; do not uninstall to troubleshoot without a recovery file.")
             button(page, "Retry unlocked storage") { app.loadSafely(); render() }
             return
         }
@@ -108,22 +109,31 @@ class MainActivity : Activity() {
             }
             val stats = app.store.stats()
             label(page, if (app.config.paused) "Capture PAUSED" else "Capture enabled", true)
-            label(page, "Pending ${candidates.size}  ·  Duplicates ${stats["duplicates"] ?: 0}\n" +
-                "Reference updates ${stats["updates"] ?: 0}  ·  Verified receipts ${stats["receipts"] ?: 0}\n" +
-                "Capture/storage errors ${stats["captureErrors"] ?: 0}  ·  Busy/dropped ${stats["overload"] ?: 0}")
+            label(page, "Processed ${stats["processed"] ?: 0}  ·  Awaiting transfer ${candidates.size}\n" +
+                "Imported (receipt-confirmed) ${stats["confirmedImports"] ?: 0}  ·  Duplicates ${stats["duplicates"] ?: 0}\n" +
+                "Last successful processing: ${stats["lastProcessed"]?.let { Instant.ofEpochMilli(it).toString() } ?: "none"}\n" +
+                "No supported financial match / balance-only ${stats["unrecognized"] ?: 0}  ·  Sensitive excluded ${stats["excluded"] ?: 0}\n" +
+                "Malformed ${stats["malformed"] ?: 0}  ·  Invalid timestamp ${stats["invalidTimestamp"] ?: 0}  ·  Unsupported encoding ${stats["unsupportedEncoding"] ?: 0}\n" +
+                "Reference updates ${stats["updates"] ?: 0}  ·  Capture/storage errors ${stats["captureErrors"] ?: 0}  ·  Busy/dropped ${stats["overload"] ?: 0}")
             val permission = app.permissionGranted()
-            label(page, "Notification access: ${if (permission) "granted" else "MISSING"} · " +
-                "Listener: ${if (app.connectedAt > 0) "connected" else "disconnected"}")
-            label(page, "Android grants broad listener access, not per-app access. This companion ignores packages before reading extras. Granting access does NOT activate sources. Disconnect/restart disables sources and pauses capture.")
+            label(page, "Receive new SMS permission: ${if (permission) "granted" else "MISSING / restricted"}")
+            label(page, "RECEIVE_SMS delivers new SMS broadcasts, not inbox history or messages inside other apps. " +
+                "Android's permission is broad; this app checks enabled senders before reading decoded bodies. " +
+                "Granting permission does NOT resume processing. Sender IDs can be spoofed; they are not bank authentication.")
             val locked = !getSystemService(KeyguardManager::class.java).isDeviceSecure
             if (locked) label(page, "Set a device PIN/password first. Capture cannot resume without a secure device lock.")
-            button(page, "Notification access settings") {
-                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            button(page, "Allow receiving new SMS") {
+                app.update { it.copy(paused = true) }
+                requestPermissions(arrayOf(Manifest.permission.RECEIVE_SMS), SMS_PERMISSION)
+            }
+            button(page, "App permission settings / restricted grant") {
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.parse("package:$packageName")))
             }
             button(page, if (app.config.paused) "Resume future capture" else "Pause now") {
                 if (app.config.paused) {
-                    if (!app.permissionGranted() || app.connectedAt <= 0 || locked) {
-                        notifyUser("Grant notification access, wait for connection, and set a device lock first.")
+                    if (!app.permissionGranted() || locked) {
+                        notifyUser("Grant Receive SMS permission and set a device lock first. An installer or policy restriction cannot be bypassed.")
                     } else if (app.config.sources.none { it.enabled }) {
                         notifyUser("Explicitly enable at least one source first.")
                     } else app.update { config ->
@@ -202,14 +212,10 @@ class MainActivity : Activity() {
                     }, SAVE_FILE)
                 }
             }
-            button(page, "I verified receipt in Pennywise") {
-                val chosen = chosen()
-                confirm("Confirm ${chosen.size} verified receipts?", "Only continue after checking these exact candidates " +
-                    "in Pennywise Transaction Inbox. This removes their local pending payloads, not the PWA ledger. " +
-                    "Unselected update versions stay pending; fingerprint receipts remain for local duplicate suppression.") {
-                    synchronized(app.stateLock) { app.store.acknowledge(chosen) }
-                    selected.clear(); PrivateFileProvider.cleanup(this, true); render()
-                }
+            button(page, "Import Pennywise confirmation receipt") {
+                startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    type = "application/json"; addCategory(Intent.CATEGORY_OPENABLE)
+                }, IMPORT_RECEIPT)
             }
             button(page, "Restore pending JSON file") {
                 confirm("Restore pending candidates?", "Choose a previously saved companion handoff JSON (up to 100 entries / 500,000 bytes). " +
@@ -250,43 +256,35 @@ class MainActivity : Activity() {
     }
 
     private fun sourceSection() {
-        label(page, "Sources", true)
+        label(page, "SMS sender allowlist", true)
         app.config.sources.forEach { source ->
-            button(page, "${if (source.enabled) "ON" else "OFF"} · ${source.displayName}\n${source.packageName}\n" +
-                "${source.profile} · preview ${if (source.previewAvailable) "observed" else "not observed"}") {
+            button(page, "${if (source.enabled) "ON" else "OFF"} · ${source.displayName}\n" +
+                "${source.senderId ?: "Legacy parser settings: choose an SMS sender"}\n" +
+                "Last detected: ${source.detectedSender ?: "none"}\n${source.profile} · ${source.sourceId}") {
                 editSource(source)
             }
         }
-        button(page, "Choose launcher-visible app") {
-            val apps = packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
-                .distinctBy { it.activityInfo.packageName }
-                .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-            AlertDialog.Builder(this).setTitle("Select a source (disabled initially)")
-                .setItems(apps.map { "${it.loadLabel(packageManager)}\n${it.activityInfo.packageName}" }.toTypedArray()) { _, index ->
-                    val info = apps[index]
-                    editSource(app.config.sources.firstOrNull { it.packageName == info.activityInfo.packageName }
-                        ?: Source(info.activityInfo.packageName, info.loadLabel(packageManager).toString().take(80)))
-                }.setNegativeButton("Cancel", null).show()
-        }
-        button(page, "Add exact package manually (non-launcher)") {
+        button(page, "Add SMS sender ID / phone number") {
             val form = column()
-            val packageName = input(form, "Exact package, e.g. synthetic.example")
-            val displayName = input(form, "Display name")
-            AlertDialog.Builder(this).setTitle("Manual source").setView(scroll(form))
+            val sender = input(form, "Exact sender ID or phone number (synthetic example: TESTBANK)")
+            label(form, "No sender discovery or inbox scan. Check the actual sender yourself in your SMS app. " +
+                "Letter case and phone punctuation normalize; country prefixes and distinct sender punctuation do not.")
+            AlertDialog.Builder(this).setTitle("Add sender (disabled initially)").setView(scroll(form))
                 .setNegativeButton("Cancel", null).setPositiveButton("Configure") { _, _ -> guarded {
-                    val name = packageName.text.toString().trim()
-                    require(JsonCodec.validPackage(name))
-                    editSource(app.config.sources.firstOrNull { it.packageName == name }
-                        ?: Source(name, displayName.text.toString().trim().take(80).ifEmpty { name }))
+                    val name = SmsSenders.normalize(sender.text.toString())
+                    if (name == null) { notifyUser("Unsupported sender. Use an exact ASCII sender ID or a 3–20 digit phone number."); return@guarded }
+                    editSource(app.config.sources.firstOrNull { it.senderId == name }
+                        ?: Source(SmsSenders.sourceId(name), name, senderId = name))
                 } }.show()
         }
     }
 
     private fun editSource(source: Source) {
         val form = column()
-        label(form, source.packageName)
+        label(form, source.sourceId)
+        val sender = input(form, "Sender ID / phone number", source.senderId ?: "")
         val name = input(form, "Display name", source.displayName)
-        val enabled = check(form, "Explicitly enable this source / parser for FUTURE posts", source.enabled)
+        val enabled = check(form, "Explicitly enable this sender / parser for NEW incoming SMS", source.enabled)
         val profiles = arrayOf("mpesa", "equity", "kcb", "generic")
         label(form, "Source profile (ALL initially synthetic labelled examples)")
         val profile = Spinner(this).apply {
@@ -304,10 +302,15 @@ class MainActivity : Activity() {
         }
         val sample = input(form, "Optional local sample (not saved)", "")
         sample.filters = arrayOf(android.text.InputFilter.LengthFilter(8192))
-        fun edited(): Source = source.copy(displayName = name.text.toString().trim().take(80).ifEmpty { source.packageName },
-            profile = profiles[profile.selectedItemPosition], enabled = enabled.isChecked,
-            activatedAt = System.currentTimeMillis(), prefix = prefix.text.toString(),
-            delimiter = delimiter.text.toString(), labels = labels.mapValues { it.value.text.toString() })
+        fun edited(): Source {
+            val normalized = requireNotNull(SmsSenders.normalize(sender.text.toString()))
+            return source.copy(sourceId = SmsSenders.sourceId(normalized), senderId = normalized,
+                detectedSender = source.detectedSender?.takeIf { SmsSenders.normalize(it) == normalized },
+                displayName = name.text.toString().trim().take(80).ifEmpty { normalized },
+                profile = profiles[profile.selectedItemPosition], enabled = enabled.isChecked,
+                activatedAt = System.currentTimeMillis(), prefix = prefix.text.toString(),
+                delimiter = delimiter.text.toString(), labels = labels.mapValues { it.value.text.toString() })
+        }
         button(form, "Test sample locally (no queue write)") {
             val edit = edited(); require(LabelledParser.validProfile(edit))
             val result = Parsers.forSource(edit).parse(edit, sample.text.toString(), System.currentTimeMillis(), false)
@@ -318,20 +321,23 @@ class MainActivity : Activity() {
         }
         val dialog = AlertDialog.Builder(this).setTitle("Configure source").setView(scroll(form))
             .setNegativeButton("Cancel", null).setNeutralButton("Remove source") { _, _ -> guarded {
-                app.update { it.copy(sources = it.sources.filterNot { old -> old.packageName == source.packageName }) }
+                app.update { it.copy(sources = it.sources.filterNot { old -> old.sourceId == source.sourceId }) }
                 render()
             } }.setPositiveButton("Save", null).create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { guarded {
                 val edit = edited()
                 require(LabelledParser.validProfile(edit))
-                if (edit.enabled && (!app.permissionGranted() || app.connectedAt <= 0)) {
-                    notifyUser("Grant access and wait for listener connection first; save disabled meanwhile.")
+                if (edit.enabled && !app.permissionGranted()) {
+                    notifyUser("Grant Receive SMS permission first; save disabled meanwhile.")
                     return@guarded
                 }
-                require(app.config.sources.size < 200 || app.config.sources.any { it.packageName == edit.packageName })
+                require(app.config.sources.size < 200 || app.config.sources.any { it.sourceId == source.sourceId })
+                if (app.config.sources.any { it.sourceId != source.sourceId && it.senderId == edit.senderId }) {
+                    notifyUser("That normalized sender already exists. Edit its existing configuration."); return@guarded
+                }
                 app.update { config ->
-                    config.copy(sources = config.sources.filterNot { it.packageName == edit.packageName } + edit)
+                    config.copy(sources = config.sources.filterNot { it.sourceId == source.sourceId } + edit)
                 }
                 dialog.dismiss(); render()
             } }
@@ -341,9 +347,9 @@ class MainActivity : Activity() {
 
     private fun retentionSettings() {
         val form = column()
-        label(form, "Raw text is OFF by default. Optional raw is encrypted locally but becomes plaintext in exports. " +
+        label(form, "Raw text is OFF by default. Optional raw uses the local Keystore protection code, whose Android tests remain unverified, and becomes plaintext in exports. " +
             "OTP/PIN/password/login content is excluded even when raw is on. Only matched financial candidates can retain raw.")
-        val raw = check(form, "Retain matched raw notification body", app.config.retainRaw)
+        val raw = check(form, "Retain matched raw SMS text (up to 4,000 characters)", app.config.retainRaw)
         val days = input(form, "Raw retention / pending-age warning days (1–90)", app.config.retentionDays.toString())
         AlertDialog.Builder(this).setTitle("Privacy controls").setView(scroll(form))
             .setNegativeButton("Cancel", null).setPositiveButton("Save") { _, _ -> guarded {
@@ -382,6 +388,19 @@ class MainActivity : Activity() {
                     notifyUser("Recovery merged; IDs retained. Explicitly enable sources and resume future capture when ready.")
                     selected.clear()
                 }
+                IMPORT_RECEIPT -> {
+                    val value = requireNotNull(contentResolver.openInputStream(data.data!!)).use {
+                        BoundedIo.readUtf8(it, 2_500_000)
+                    }
+                    val matched = JsonCodec.readReceipt(value, app.store.pending())
+                    if (matched.isEmpty()) notifyUser("No exact pending candidate IDs and fingerprints matched. Nothing changed.")
+                    else confirm("Confirm ${matched.size} imported candidates?", "Use only a receipt you downloaded from your own Pennywise Transaction Inbox. " +
+                        "A receipt confirms inbox import, not ledger approval; it is local and not cryptographically signed. " +
+                        "Only matching IDs and fingerprints will be removed. Other versions remain retryable.") {
+                        synchronized(app.stateLock) { app.store.acknowledge(matched, confirmedByReceipt = true) }
+                        selected.clear(); PrivateFileProvider.cleanup(this, true); render()
+                    }
+                }
             }
             render()
         }
@@ -390,5 +409,19 @@ class MainActivity : Activity() {
     companion object {
         private const val SAVE_FILE = 40
         private const val RESTORE_FILE = 41
+        private const val IMPORT_RECEIPT = 42
+        private const val SMS_PERMISSION = 43
+    }
+
+    @Deprecated("Platform permission callback keeps runtime dependencies small")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == SMS_PERMISSION) {
+            if (grantResults.firstOrNull() != PackageManager.PERMISSION_GRANTED) {
+                app.pauseForPermissionLoss()
+                notifyUser("SMS permission not granted. Reception remains paused; installer or device policy may restrict this permission.")
+            } else notifyUser("Permission granted. Enable intended senders and explicitly resume; no old SMS will be read.")
+            render()
+        }
     }
 }

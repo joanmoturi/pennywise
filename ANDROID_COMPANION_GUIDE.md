@@ -1,46 +1,93 @@
-# Pennywise Android companion
+# Android SMS companion: setup, build and installation
 
-The companion is a separate native Kotlin application in `android-companion`, not a replacement for the installed Pennywise PWA. Development/build tools belong on the laptop, not your phone. Financial ledger records remain in Pennywise's existing IndexedDB.
+The separate Kotlin app under `android-companion` now receives **new SMS**, not Android notifications. Pennywise's PWA, financial schema, existing Inbox and records are retained. Nothing is pushed, deployed or published by this migration.
 
-## Installation and first use
+**No APK has been built or installed here.** JDK, Gradle, Android SDK/platform/build tools and adb are unavailable; there is no Gradle wrapper. Native compilation, encryption tests, permission behavior and physical-device capture remain unverified. Do not clear existing app/browser data to troubleshoot.
 
-1. Build the companion following `android-companion/README.md`. Android SDK/JDK requirements and actual build results are recorded there and in `NOTIFICATION_INTEGRATION_TEST_REPORT.md`. Do not assume an APK exists until an Android build succeeds.
-2. Transfer the resulting APK privately to your Android phone and install it. Android may require temporary permission to install from the file manager used. Revoke that installation permission afterward.
-3. Configure a secure device PIN/password if needed, unlock once after boot and open **Pennywise Companion**. Read the notification-access explanation. Capture is optional and initially paused.
-4. Open notification-access settings from the companion and enable access for this application. Android's system permission is broad; Pennywise's own package allowlist filters immediately before reading notification contents.
-5. Select the exact source applications on your phone. Enable only the intended M-Pesa/bank/SMS application packages. Set a source profile, parsing preference and preview availability. Never select every application merely to find a bank.
-6. Configure extraction only after inspecting synthetic examples and your actual notification wording. Initial source adapters are not certified parsers for live Safaricom, Equity or KCB messages.
-7. Resume capture. Only new notification posts after activation are eligible. No historical SMS inbox or old notification backlog is requested.
-8. Perform a small controlled transaction and inspect the companion's local captured/pending queue before sharing. Missing previews and unknown formats remain incomplete; they are not invented transactions.
+## Windows prerequisites
 
-## Safe transfer to Pennywise
+Pinned requirements: JDK **17**, Gradle **8.9**, Android SDK platform **35**, Build Tools **34.0.0** (AGP 8.7 default), platform-tools and command-line-tools. Compile/target **35** and minimum **28** are unchanged; Kotlin is 2.1.20 and AGP 8.7.3.
 
-The most portable path is **save a private transaction JSON file**, open Pennywise at `https://pennywise-7lz.pages.dev/`, go to **Transaction Inbox**, and choose **Companion transaction file**. This uses a local file picker, not an upload to Cloudflare.
+These are commands for the developer to run deliberately, not commands already executed:
 
-For Android Sharesheet, first install/open the PWA online and verify Offline ready. Then disconnect the phone from networks (airplane mode with Wi-Fi off) before **Share selected JSON → Pennywise**. The worker must intercept the POST locally. Offline sharing avoids transmitting a file to hosting if the worker has been cleared or the installed target is stale. If the share target is missing or fails, retain the companion queue and use the file picker instead.
+```powershell
+winget install --id Microsoft.OpenJDK.17 --exact --source winget
+winget install --id Google.AndroidStudio --exact --source winget
+```
 
-In the PWA, review the staged batch. Rule processing is opt-in for a selected trusted companion file; otherwise all candidates enter review. Check imported item counts/statuses before explicitly acknowledging successful handoff in the companion. Android's Sharesheet completion is not an import receipt.
+Open Android Studio, review its licenses and use SDK Manager to install Android 15/API 35, Build Tools 34.0.0, Android SDK Platform-Tools and Android SDK Command-line Tools. Select JDK 17 for Gradle. Do not assume the bundled JDK matches the pinned version.
 
-Keep the companion's retained items until verified. A retry preserves candidate IDs, so it must not create another ledger entry.
+Alternatively, after installing the official Android command-line-tools package and setting paths to the actual installations:
 
-## Permission changes, device limits and deletion
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Microsoft\jdk-17.REPLACE-WITH-INSTALLED-VERSION'
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+$env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+$sdkmanager = "$env:ANDROID_HOME\cmdline-tools\latest\bin\sdkmanager.bat"
+& $sdkmanager --licenses
+# Review and accept licenses yourself; do not pipe automatic answers.
+& $sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;34.0.0'
+```
 
-Notification access can be revoked in Android Settings without affecting existing Pennywise ledger records. Pause capture before changing sources. If access is revoked/disconnected, re-enable access and resume deliberately; there is no historical catch-up.
+The current Android SDK documentation also offers `android sdk` as a replacement for sdkmanager; the commands above target the existing official command-line-tools package. Android Studio SDK Manager is an equivalent supported route.
 
-Android may restrict background execution, hide sensitive previews, suppress source notifications, aggregate notifications or stop a listener on some device profiles. Consult the phone's battery/background settings and the source application's notification settings. Do not grant unrelated SMS, accessibility, contacts or Internet permissions to work around missing previews.
+Install the project's pinned Gradle in a user-local directory, verifying its official checksum before extraction:
 
-Capture can continue when the screen relocks after the first unlock following boot. Before that first unlock, credential-encrypted storage is unavailable and capture is blocked. Queue keys do not require per-use authentication or a currently unlocked screen. Source notifications may still have redacted previews while locked; no missing financial details are inferred.
+```powershell
+$tools = "$env:LOCALAPPDATA\PennywiseTools"
+New-Item -ItemType Directory -Path $tools -Force | Out-Null
+$zip = Join-Path $tools 'gradle-8.9-bin.zip'
+Invoke-WebRequest 'https://services.gradle.org/distributions/gradle-8.9-bin.zip' -OutFile $zip
+$expected = (Invoke-RestMethod 'https://services.gradle.org/distributions/gradle-8.9-bin.zip.sha256').Trim()
+if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne $expected) { throw 'Gradle checksum mismatch' }
+Expand-Archive -Path $zip -DestinationPath $tools
+$env:PATH = "$tools\gradle-8.9\bin;$env:JAVA_HOME\bin;$env:PATH"
+java -version
+gradle --version
+& $sdkmanager --list_installed
+```
 
-The dashboard/privacy controls expose pause, retention and explicit queue deletion. Deleting the companion queue does not remove PWA ledger records; deleting PWA records does not remove the companion queue. Keep external full Pennywise backups. Companion export/recovery is separate; an Android Keystore key is device-bound and is not copied by a PWA backup.
+Process-local variables must be set again in a new terminal. There is no fake wrapper or bundled toolchain. Do not store signing keys or secrets in the repository.
 
-**Physical Android installation, source capture and real Sharesheet delivery are UNVERIFIED until tested on an actual device.** Use synthetic records and review-only rules first.
+## Build and inspect
 
-## Build configuration and queue recovery
+```powershell
+Set-Location 'C:\Users\joanmoturi\pennywise\android-companion'
+gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+& "$env:ANDROID_HOME\cmdline-tools\latest\bin\apkanalyzer.bat" manifest permissions '.\app\build\outputs\apk\debug\app-debug.apk'
+```
 
-The companion package is `ke.pennywise.companion` (Android 9/API 28 minimum, compile/target 35). Its build specifies AGP 8.7.3, Kotlin 2.1.20 and JDK 17; use Gradle 8.9 as documented in its README. There is no bundled Gradle wrapper and no prebuilt APK.
+Expected requested permissions: `android.permission.RECEIVE_SMS` and `android.permission.ACCESS_NETWORK_STATE` only. `BROADCAST_SMS` restricts the receiver's sender; the app does not request it. There must be no `READ_SMS`, Internet, contacts, call logs, accessibility or notification-listener declaration.
 
-Use **Save selected JSON / recovery file** for a bounded 1–100 candidate export (500,000 UTF-8 bytes maximum). **Restore pending JSON file** restores stable identities into the companion queue; it does not restore source consent, Keystore keys, PWA records or configuration. Source capture is paused/disabled after recovery. Keep private exports before uninstalling.
+Use an isolated API-28+ emulator or test phone with a secure PIN/password and first unlock completed:
 
-Raw retention is off by default; **Privacy / raw retention** configures 1–90 days (default 7). Raw cleanup is opportunistic; structured pending items are not silently expired. Queue capacity is 2,000, with no eviction. Temporary share files expire after ten minutes and are cleaned/revoked on subsequent actions or resume.
+```powershell
+gradle --no-daemon :app:connectedDebugAndroidTest
+& "$env:ANDROID_HOME\platform-tools\adb.exe" devices
+& "$env:ANDROID_HOME\platform-tools\adb.exe" install -r '.\app\build\outputs\apk\debug\app-debug.apk'
+```
 
-Source consent is deliberately conservative: process restart/listener reconnection or permission loss pauses capture and disables sources. Re-enable the intended sources and resume future capture; notifications missed during downtime are not backfilled.
+For private manual installation, transfer only your locally built debug APK to a trusted device, temporarily permit installation by that file manager if needed, then revoke that installation permission. This guide does not publish an APK.
+
+## First use and your own financial senders
+
+1. Make and verify a full encrypted backup of existing Pennywise data. Do not uninstall the companion if it has unsent records; save private recovery batches first.
+2. Open **Pennywise Companion**, read the explanation and choose **Allow receiving new SMS**. Grant the Android prompt deliberately. This does not read old messages or resume capture.
+3. If grant is denied/unavailable, reception stays paused. `RECEIVE_SMS` is **hard-restricted**: installer allowlisting and device policy matter. The app cannot fix this with repeated prompts, shell grants, hidden APIs or another permission. Use a permitted test installation or leave SMS reception disabled.
+4. Choose **Add SMS sender ID / phone number**. Inspect the actual sender yourself in your SMS app; add each intended financial sender separately. No inbox scan, contact lookup or sender discovery occurs.
+5. Choose the parser profile and synthetic labelled settings. Existing M-Pesa/Equity/KCB adapters are not verified real-bank formats. Test only synthetic samples locally. Unknown real prose will not reliably create a candidate; do not make real transfers just to prove an unsupported parser.
+6. Explicitly enable intended senders, then **Resume future capture**. Use **Pause now** to stop immediately, or disable/remove one sender. Ordinary process restarts preserve consent; observed permission loss pauses it. Screen relock is supported by design after first unlock, not verified here.
+7. On an isolated emulator, send synthetic SMS using its Extended Controls > Phone interface (including multipart text), not forged app broadcasts or permission bypass commands. Verify allowed/unapproved/disabled senders, timestamps, duplicate retries and counters.
+8. For your own M-Pesa/bank applications, first establish whether the institution actually sends an **SMS** and which sender ID it uses. App-only alerts, RCS and MMS are not captured. Do not save or share personal message samples with developers; real-format support still needs privacy-safe synthetic equivalents and independent tests.
+9. Inspect structured candidates and the detected sender in the queue. Follow `SMS_INTEGRATION_GUIDE.md` for private file/offline sharing and receipt confirmation, then configure narrow account/rule mappings in Pennywise.
+10. Test denial/revocation, pause, restart, screen relock, offline import/retry and encrypted PWA restore into a separate test workspace before financial reliance.
+
+## Recovery and troubleshooting
+
+Old notification-source parser configurations are retained disabled, without assuming any SMS sender. Assign a sender explicitly. New SMS sources use new stable identifiers and need their own PWA account mappings; old queued candidates and financial records are not rewritten.
+
+No background/inbox catch-up is attempted after force-stop, permission denial, pre-unlock downtime or OEM suppression. A delayed carrier SMS newly delivered after consent is eligible; its SMS timestamp is not treated as a financial timestamp. Review dashboard failure counters without exposing message bodies.
+
+Queue capacity is 2,000 with no eviction. Export at most 100 candidates / 500,000 UTF-8 bytes per batch. **Restore pending JSON file** preserves IDs but pauses capture/disables senders and does not restore config, keys, PWA records or receipts. Raw retention is off by default, optionally 1-90 days with opportunistic cleanup; pending structured data does not silently expire.
+
+The phone does not need development tools. See `SMS_INTEGRATION_TEST_REPORT.md` for what actually ran, and `SMS_PRIVACY_AND_SECURITY.md` before exporting.

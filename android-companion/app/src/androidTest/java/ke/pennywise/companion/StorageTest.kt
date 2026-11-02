@@ -144,4 +144,79 @@ class StorageTest : AndroidTestCase() {
         try { context.contentResolver.openInputStream(uri); fail("Deleted handoff readable") }
         catch (_: Exception) { }
     }
+
+    fun testSmsConsentAndPendingSurviveOrdinaryProcessReopen() {
+        val sender = "testbank"
+        val source = Source(SmsSenders.sourceId(sender), "TEST", enabled = true, activatedAt = 1, senderId = sender)
+        store.saveConfig(Config(paused = false, sources = listOf(source)))
+        store.record(candidate())
+        store.processed(1000, true)
+        store.close()
+        store = QueueStore(context, name, crypto)
+        val saved = store.readConfig()
+        assertFalse(saved.paused)
+        assertNotNull(CaptureGate.source(saved, "TESTBANK", 2000, true))
+        assertNull(CaptureGate.source(saved, "TESTBANK", 2000, false))
+        assertEquals(1, store.pending().size)
+        assertEquals(1L, store.stats()["processed"])
+        assertEquals(1000L, store.stats()["lastProcessed"])
+    }
+
+    fun testLegacySourceMigrationPreservesParserButNeverInfersSenderConsent() {
+        val legacy = JSONObject().apply {
+            put("paused", false); put("retainRaw", false); put("retentionDays", 7); put("revision", 2)
+            put("sources", org.json.JSONArray().put(JSONObject().apply {
+                put("packageName", "synthetic.example"); put("displayName", "TEST legacy")
+                put("profile", "mpesa"); put("enabled", true); put("activatedAt", 1)
+                put("previewAvailable", true); put("prefix", "SYNTHETIC"); put("delimiter", "|")
+                put("labels", JSONObject(Source.DEFAULT_LABELS - "accountHint"))
+            }))
+        }
+        val migrated = JsonCodec.readConfig(legacy.toString())
+        assertTrue(migrated.paused)
+        val source = migrated.sources.single()
+        assertFalse(source.enabled)
+        assertNull(source.senderId)
+        assertEquals("synthetic.example", source.sourceId)
+        assertEquals("mpesa", source.profile)
+        assertEquals("Account", source.labels["accountHint"])
+        assertEquals(migrated, JsonCodec.readConfig(JsonCodec.config(migrated)))
+        legacy.getJSONArray("sources").getJSONObject(0).getJSONObject("labels").put("amount", "Account")
+        val customized = JsonCodec.readConfig(legacy.toString()).sources.single()
+        assertEquals("Account", customized.labels["amount"])
+        assertFalse(customized.labels["amount"] == customized.labels["accountHint"])
+        assertTrue(LabelledParser.validProfile(customized))
+    }
+
+    fun testReceiptAcknowledgesOnlyExactPersistedCandidatesAndRetryIsSafe() {
+        val original = candidate()
+        val other = candidate("13")
+        store.record(original); store.record(other)
+        fun receipt(fingerprint: String) = JSONObject().apply {
+            put("format", "pennywise-notification-receipt"); put("version", 1)
+            put("createdAt", "2026-11-02T18:00:00Z")
+            put("candidates", org.json.JSONArray().put(JSONObject().apply {
+                put("id", original.id); put("fingerprint", fingerprint); put("status", "pending")
+            }))
+        }.toString()
+        assertTrue(JsonCodec.readReceipt(receipt("0".repeat(64)), store.pending()).isEmpty())
+        assertEquals(2, store.pending().size)
+        val matched = JsonCodec.readReceipt(receipt(original.fingerprint), store.pending())
+        store.acknowledge(matched, confirmedByReceipt = true)
+        assertEquals(other.id, store.pending().single().id)
+        assertEquals(1L, store.stats()["confirmedImports"])
+        store.acknowledge(matched, confirmedByReceipt = true)
+        assertEquals(1L, store.stats()["confirmedImports"])
+        assertEquals(DedupAction.DUPLICATE, store.record(original))
+    }
+
+    fun testSmsSenderAndAccountMetadataSurvivePrivateRecovery() {
+        val original = candidate().copy(senderId = "TESTBANK", accountHint = "TEST wallet")
+        val saved = JsonCodec.readBatch(JsonCodec.batch(listOf(original)), false).single()
+        assertEquals("TESTBANK", saved.senderId)
+        assertEquals("TEST wallet", saved.accountHint)
+        assertEquals(original.fingerprint, saved.fingerprint)
+        store.record(saved)
+        assertEquals(saved, store.pending().single())
+    }
 }

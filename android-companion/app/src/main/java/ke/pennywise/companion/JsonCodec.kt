@@ -12,7 +12,24 @@ object JsonCodec {
 
     fun validPackage(value: String): Boolean = value.length <= 200 && packagePattern.matches(value)
 
+    private fun sourceLabels(json: JSONObject): Map<String, String> {
+        val saved = json.getJSONObject("labels")
+        val labels = Source.DEFAULT_LABELS.mapValues { (key, default) -> saved.optString(key, default) }.toMutableMap()
+        if (!saved.has("accountHint")) {
+            val used = labels.filterKeys { it != "accountHint" }.values.map { it.lowercase() }.toSet()
+            var label = "Account"
+            var suffix = 0
+            while (label.lowercase() in used) {
+                suffix++
+                label = "AccountHint$suffix"
+            }
+            labels["accountHint"] = label
+        }
+        return labels
+    }
+
     fun config(config: Config): String = JSONObject().apply {
+        put("acquisitionVersion", 2)
         put("paused", config.paused)
         put("retainRaw", config.retainRaw)
         put("retentionDays", config.retentionDays)
@@ -20,9 +37,10 @@ object JsonCodec {
         put("sources", JSONArray().apply {
             config.sources.forEach { source ->
                 put(JSONObject().apply {
-                    put("packageName", source.packageName); put("displayName", source.displayName)
+                    put("sourceId", source.sourceId); put("displayName", source.displayName)
+                    put("senderId", source.senderId); put("detectedSender", source.detectedSender)
                     put("profile", source.profile); put("enabled", source.enabled)
-                    put("activatedAt", source.activatedAt); put("previewAvailable", source.previewAvailable)
+                    put("activatedAt", source.activatedAt)
                     put("prefix", source.prefix); put("delimiter", source.delimiter)
                     put("labels", JSONObject(source.labels))
                 })
@@ -34,14 +52,24 @@ object JsonCodec {
         val json = JSONObject(value)
         val sources = json.getJSONArray("sources")
         require(sources.length() <= 200)
-        return Config(json.getBoolean("paused"), json.getBoolean("retainRaw"),
+        val legacy = json.optInt("acquisitionVersion", 1) == 1
+        require(json.optInt("acquisitionVersion", 1) in 1..2)
+        return Config(legacy || json.getBoolean("paused"), json.getBoolean("retainRaw"),
             json.getInt("retentionDays").coerceIn(1, 90), (0 until sources.length()).map {
                 val s = sources.getJSONObject(it)
-                Source(s.getString("packageName"), s.getString("displayName"),
-                    s.getString("profile"), s.getBoolean("enabled"), s.getLong("activatedAt"),
-                    s.getBoolean("previewAvailable"), s.getString("prefix"), s.getString("delimiter"),
-                    Source.DEFAULT_LABELS.keys.associateWith { key -> s.getJSONObject("labels").getString(key) })
-                    .also { item -> require(validPackage(item.packageName) && LabelledParser.validProfile(item)) }
+                Source(if (legacy) s.getString("packageName") else s.getString("sourceId"), s.getString("displayName"),
+                    s.getString("profile"), !legacy && s.getBoolean("enabled"), s.getLong("activatedAt"),
+                    s.getString("prefix"), s.getString("delimiter"),
+                    sourceLabels(s),
+                    if (s.has("senderId")) s.getString("senderId") else null,
+                    if (s.has("detectedSender")) s.getString("detectedSender") else null)
+                    .also { item ->
+                        require(validPackage(item.sourceId) && LabelledParser.validProfile(item))
+                        require(item.senderId == null || (SmsSenders.normalize(item.senderId) == item.senderId &&
+                            SmsSenders.sourceId(item.senderId) == item.sourceId))
+                        require(item.detectedSender == null || SmsSenders.normalize(item.detectedSender) == item.senderId)
+                        require(!item.enabled || item.senderId != null)
+                    }
             }, json.getLong("revision"))
     }
 
@@ -56,6 +84,7 @@ object JsonCodec {
         put("confidence", candidate.confidence); put("missing", JSONArray(candidate.missing))
         put("validation", candidate.validation); put("fingerprint", candidate.fingerprint)
         put("originalReference", candidate.originalReference); put("raw", candidate.raw)
+        put("senderId", candidate.senderId); put("accountHint", candidate.accountHint)
     }
 
     private fun text(json: JSONObject, key: String, max: Int, required: Boolean = false): String? {
@@ -115,7 +144,9 @@ object JsonCodec {
         return Candidate(id, source, parser, text(json, "parserVersion", 20, true)!!,
             captured, occurred, reference, amount, currency, direction, kind, party,
             minor(json, "fee"), minor(json, "balance"), confidence, missingValues, validation,
-            fingerprint, originalReference, if (allowRaw) text(json, "raw", 8192) else null)
+            fingerprint, originalReference, if (allowRaw) text(json, "raw", 8192) else null,
+            text(json, "senderId", 80)?.also { require(SmsSenders.normalize(it) != null) },
+            text(json, "accountHint", 160))
     }
 
     fun batch(candidates: List<Candidate>): String {
@@ -125,7 +156,9 @@ object JsonCodec {
             put("format", "pennywise-notification-batch"); put("version", 1)
             put("batchId", UUID.nameUUIDFromBytes(identity.toByteArray()).toString())
             put("createdAt", Instant.now().toString())
-            put("candidates", JSONArray().apply { candidates.forEach { put(candidate(it)) } })
+            put("candidates", JSONArray().apply {
+                candidates.forEach { put(candidate(it.copy(raw = it.raw?.take(4000)))) }
+            })
         }.toString(2).also { require(it.toByteArray().size <= MAX_FILE_BYTES) }
     }
 
@@ -140,5 +173,25 @@ object JsonCodec {
         return (0 until array.length()).map { readCandidate(array.getJSONObject(it), allowRaw) }.also {
             require(it.map { item -> item.id }.distinct().size == it.size)
         }
+    }
+
+    fun readReceipt(value: String, pending: List<Candidate>): List<Candidate> {
+        require(value.toByteArray(Charsets.UTF_8).size <= 2_500_000)
+        BoundedIo.requireShallowJson(value)
+        val json = JSONObject(value)
+        require(json.get("format") == "pennywise-notification-receipt" && json.get("version") == 1)
+        Instant.parse(json.getString("createdAt"))
+        val entries = json.getJSONArray("candidates")
+        require(entries.length() <= 10000)
+        val identities = mutableMapOf<String, String>()
+        repeat(entries.length()) {
+            val item = entries.getJSONObject(it)
+            val id = text(item, "id", 100, true)!!
+            val fingerprint = text(item, "fingerprint", 64, true)!!
+            require(fingerprint.matches(Regex("[a-f0-9]{64}")))
+            require(item.getString("status") in setOf("pending", "approved", "rejected", "duplicate", "error", "conflict"))
+            require(identities.put(id, fingerprint) == null)
+        }
+        return pending.filter { identities[it.id] == it.fingerprint }
     }
 }

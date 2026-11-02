@@ -6,11 +6,11 @@ Production: `https://pennywise-7lz.pages.dev/`. Financial records remain local t
 
 New workspaces use a midnight-navy and warm-gold theme. Existing saved preferences are preserved; select **Settings > Theme > Dark** for the premium dark palette, or Light for its warm ivory counterpart.
 
-## Optional Android notification integration
+## Optional Android SMS integration
 
-Transaction Inbox imports local companion JSON files, stages offline shares, reviews unknown captures and evaluates explicitly configured deterministic rules. The separate Kotlin application is under `android-companion`; the PWA does not itself read Android notifications. Notification access is optional and no historical SMS or cloud synchronization is introduced.
+Transaction Inbox imports local companion JSON files, stages offline shares, reviews ambiguous candidates and evaluates explicitly configured deterministic rules. The separate Kotlin application under `android-companion` receives only new SMS broadcasts from explicitly enabled senders, using `RECEIVE_SMS`; it does not request `READ_SMS` or notification access. The PWA does not read SMS. No historical inbox scan or cloud synchronization is introduced.
 
-Start with `ANDROID_COMPANION_GUIDE.md`, `NOTIFICATION_INTEGRATION_GUIDE.md` and `APPROVAL_RULES_GUIDE.md`. Parser fixtures are synthetic, not certified real-bank formats. See `NOTIFICATION_PRIVACY_AND_SECURITY.md` for offline-only Sharesheet precautions and `NOTIFICATION_INTEGRATION_TEST_REPORT.md` for actual build/test limitations. An Android APK still requires an Android build environment.
+Start with `ANDROID_COMPANION_GUIDE.md`, `SMS_INTEGRATION_GUIDE.md` and `APPROVAL_RULES_GUIDE.md`. Parser fixtures are synthetic, not certified real-bank formats. See `SMS_PRIVACY_AND_SECURITY.md` for permission restrictions and offline-only Sharesheet precautions, and `SMS_INTEGRATION_TEST_REPORT.md` for actual build/test limitations. An Android APK still requires an Android build environment.
 
 ## Run locally
 
@@ -225,7 +225,7 @@ See `IMPLEMENTATION_REPORT.md` for executed results and limitations.
 
 The production dependency audit reports zero vulnerabilities. The full development-tool audit still reports 19 advisory entries (2 low, 17 moderate), documented in `IMPLEMENTATION_REPORT.md`; a compatible fix was attempted without unsafe or incompatible forced downgrades.
 
-- No direct bank API integration, server, multi-device synchronization, PWA notification-reading permission, analytics or external AI. The optional native companion captures explicitly selected future notifications; real-provider parsing remains unverified.
+- No direct bank API integration, server, multi-device synchronization, notification listener, analytics or external AI. The optional native companion receives new SMS from enabled senders; real-provider parsing remains unverified. Android installer/device policy can prevent the restricted SMS permission from being granted.
 - IndexedDB is **not app-encrypted at rest**. Device encryption, browser profile protection and private backups remain necessary. Financial records/receipts are not written to application logs.
 - Local revision history is not tamper-proof, signed or an automatic undo database.
 - No multi-currency accounts, FX conversion, tax advice, security valuation, bond trading or automated interest accrual. Loan-interest rates and income tax fields are references; record actual net receipts/interest explicitly.

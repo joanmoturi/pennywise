@@ -1,6 +1,6 @@
-# Notification approval rules
+# Transaction Inbox approval rules
 
-Open **Transaction Inbox**. Create the receiving accounts in Settings first, then choose **Map source**. Enter the exact Android package name and select an existing account. An optional exact account hint distinguishes multiple accounts at the same institution; ambiguous mappings never auto-post.
+Open **Transaction Inbox**. Create the receiving accounts in Settings first, then choose **Map source**. Copy the exact `source` from the imported candidate (for SMS, `sms.s` plus the canonical sender's SHA-256), then select an existing account. Do not enter a phone number or old Android package name as a new SMS source. An optional exact account hint distinguishes multiple accounts at the same institution; ambiguous mappings never auto-post.
 
 New source mappings are review-only until you explicitly trust them for automation. New rules are disabled by default and have no broad all-incoming-income rule.
 
@@ -25,7 +25,9 @@ No automatic approval is possible without valid amount, matching currency, actua
 
 Multiple identical matching actions use explicit priority and ID order. Any contradictory matching action/target, even at a lower priority, holds for review. No silent “first match wins” financial conflict.
 
-Incoming transfers are held for source/destination review. Reversals, failed messages, balance-only updates, unknown types and potentially existing same-day/same-amount ledger items do not auto-post.
+Incoming transfers are held for source/destination review. Reversals, failed messages, balance-only updates, unknown types and potentially existing same-day/same-amount ledger items do not auto-post. Unknown accounts, missing references, unclear direction, sender ambiguity and amounts outside a narrow rule range remain manual. SMS sender IDs and JSON are spoofable, not authenticated bank evidence.
+
+The companion's fully explicit synthetic labelled format scores 95; incomplete, contradictory, failed and reversal captures score 35. These scores are not measured bank accuracy. Native receipt confirmation only proves inbox import, not approval. No rule is enabled by adding an SMS sender or granting permission. Old app-source rules are not silently rebound to new SMS senders.
 
 Borrowed funds require an explicitly created liability whose principal already includes this borrowing. A draw increases cash, not income; do not increase that principal twice. Loan recoveries reduce an existing receivable and cannot exceed its remaining principal. Bond coupon rules link the bond and classify income; principal recovery is not coupon income.
 
