@@ -14,7 +14,7 @@ export function migrate(input: unknown): State {
     const defaults = initialState();
     return validateState({
       ...old,
-      version: 3,
+      version: 4,
       audit: old.audit ?? [],
       settings: {
         ...defaults.settings,
@@ -35,13 +35,26 @@ export function migrate(input: unknown): State {
       prepaids: [],
       captures: [],
       reviews: [],
+      notifications: { inbox: [], rules: [], sources: [] },
+    });
+  }
+  if (
+    typeof input === "object" &&
+    input !== null &&
+    "version" in input &&
+    input.version === 3
+  ) {
+    return validateState({
+      ...input,
+      version: 4,
+      notifications: { inbox: [], rules: [], sources: [] },
     });
   }
   if (
     typeof input !== "object" ||
     input === null ||
     !("version" in input) ||
-    input.version !== 3
+    input.version !== 4
   )
     throw new Error("Unsupported financial data schema version");
   return validateState(input);
@@ -83,6 +96,27 @@ function changes(
     (key) => key !== "audit" && key !== "revision",
   ) as (keyof State)[]) {
     if (JSON.stringify(before[key]) === JSON.stringify(after[key])) continue;
+    if (key === "notifications") {
+      for (const collection of ["inbox", "rules", "sources"] as const) {
+        const previous = new Map(
+          before.notifications[collection].map((r) => [
+            r.id,
+            JSON.stringify(r),
+          ]),
+        );
+        const next = new Map(
+          after.notifications[collection].map((r) => [r.id, JSON.stringify(r)]),
+        );
+        for (const id of new Set([...previous.keys(), ...next.keys()])) {
+          if (previous.get(id) !== next.get(id))
+            result.push({
+              before: `notifications.${collection}: ${previous.get(id) ?? "absent"}`,
+              after: `notifications.${collection}: ${next.get(id) ?? "deleted"}`,
+            });
+        }
+      }
+      continue;
+    }
     const prior = before[key],
       next = after[key];
     if (Array.isArray(prior) && Array.isArray(next)) {

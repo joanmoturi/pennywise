@@ -195,7 +195,10 @@ export function BackupCentre() {
           all budgets and review snapshots, savings decisions, recurring
           definitions and occurrences, occasional plans, prepaids, bonds and
           coupons, liabilities, receivables, reserves, windfalls, scenarios,
-          settings, IDs and relationships.
+          settings, IDs and relationships. Transaction Inbox records, approval
+          rules, source mappings and import identities are included. The Android
+          companion's separate queue and unimported local shares are not
+          included.
         </p>
         <p>
           Reminders run when the app is opened or data changes. There are no
@@ -285,6 +288,18 @@ export function BackupCentre() {
                     preview.state.transactions.length,
                   ],
                   ["Budget profiles and periods", preview.state.budgets.length],
+                  [
+                    "Notification inbox",
+                    preview.state.notifications.inbox.length,
+                  ],
+                  [
+                    "Notification approval rules",
+                    preview.state.notifications.rules.length,
+                  ],
+                  [
+                    "Notification source mappings",
+                    preview.state.notifications.sources.length,
+                  ],
                   ["Income sources", preview.state.incomes.length],
                   ["Recurring definitions", preview.state.recurring.length],
                   ["Generated occurrences", preview.state.occurrences.length],

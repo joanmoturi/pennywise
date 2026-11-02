@@ -784,6 +784,51 @@ export function validateState(input: unknown): State {
   if (new Set(allIds).size !== allIds.length)
     throw new Error("Duplicate record IDs");
   const accountIds = new Set(s.accounts.map((a) => a.id));
+  const inboxIds = new Set(s.notifications.inbox.map((r) => r.id));
+  if (
+    inboxIds.size !== s.notifications.inbox.length ||
+    new Set(s.notifications.inbox.map((r) => r.candidate.id)).size !==
+      s.notifications.inbox.length ||
+    new Set(s.notifications.inbox.map((r) => r.identity)).size !==
+      s.notifications.inbox.length
+  )
+    throw new Error("Duplicate notification capture identity");
+  for (const list of [s.notifications.rules, s.notifications.sources])
+    if (new Set(list.map((r) => r.id)).size !== list.length)
+      throw new Error("Duplicate notification configuration IDs");
+  for (const m of s.notifications.sources)
+    if (!accountIds.has(m.accountId))
+      throw new Error("Notification source account is missing");
+  for (const r of s.notifications.rules) {
+    if (r.minimum > r.maximum || !accountIds.has(r.posting.accountId))
+      throw new Error("Notification rule account or amount range is invalid");
+    if (r.posting.destinationId && !accountIds.has(r.posting.destinationId))
+      throw new Error("Notification transfer destination is missing");
+    if (
+      r.posting.relatedId &&
+      ![...s.liabilities, ...s.receivables, ...s.bonds].some(
+        (v) => v.id === r.posting.relatedId,
+      )
+    )
+      throw new Error("Notification rule related record is missing");
+  }
+  const inboxTransactions = new Set<string>();
+  for (const r of s.notifications.inbox) {
+    if (r.status === "approved" && !r.transactionIds.length)
+      throw new Error("Approved notification has no ledger entry");
+    for (const id of r.transactionIds) {
+      if (
+        inboxTransactions.has(id) ||
+        !s.transactions.some(
+          (t) => t.id === id && t.notification?.inboxId === r.id,
+        )
+      )
+        throw new Error(
+          "Inbox ledger relationship is missing or duplicated; reverse rather than deleting an imported transaction",
+        );
+      inboxTransactions.add(id);
+    }
+  }
   for (const r of [
     ...s.incomes,
     ...s.liabilities,
@@ -848,9 +893,39 @@ export function validateState(input: unknown): State {
     if (
       t.type !== "adjustment" &&
       t.type !== "reserve_transfer" &&
-      t.amount <= 0
+      t.amount <= 0 &&
+      !t.reversalOf
     )
       throw new Error("Transaction amount must be positive");
+    if (
+      t.notification &&
+      !s.notifications.inbox.some(
+        (r) =>
+          r.id === t.notification!.inboxId && r.transactionIds.includes(t.id),
+      )
+    )
+      throw new Error("Imported transaction is missing its inbox provenance");
+    if (t.reversalOf) {
+      const original = s.transactions.find((r) => r.id === t.reversalOf);
+      if (
+        !original ||
+        original.reversalOf ||
+        t.amount !== -original.amount ||
+        t.type !== original.type ||
+        t.accountId !== original.accountId ||
+        t.destinationId !== original.destinationId ||
+        t.relatedId !== original.relatedId ||
+        t.date < original.date ||
+        t.prepaidId ||
+        t.captureId ||
+        t.windfallId ||
+        original.type === "reserve_transfer" ||
+        original.type === "liability_draw" ||
+        original.type === "bond_maturity" ||
+        s.transactions.filter((r) => r.reversalOf === original.id).length !== 1
+      )
+        throw new Error("Invalid or duplicate reversal relationship");
+    }
     if (
       t.type === "transfer" &&
       (!t.destinationId ||

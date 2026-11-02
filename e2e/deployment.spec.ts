@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { createHash } from "node:crypto";
 import type { State } from "../src/domain";
+import { notificationPayload } from "./notification-fixture";
 
 interface StaticHost {
   url: string;
@@ -125,6 +126,183 @@ async function nav(page: Page, name: string) {
     .getByRole("button", { name, exact: true })
     .click();
 }
+test("offline POST share is intercepted locally, reviewed once and never uploaded", async ({
+  page,
+  staticHost,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-11-01T09:00:00Z"));
+  await page.goto(staticHost.url);
+  await firstAccount(page, "TEST share wallet");
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  await page.reload();
+  await expect
+    .poll(() =>
+      page.evaluate(() => Boolean(navigator.serviceWorker.controller)),
+    )
+    .toBe(true);
+  const manifest = await page.evaluate(async () =>
+    (await fetch("/manifest.webmanifest")).json(),
+  );
+  expect(manifest.share_target.method).toBe("POST");
+  expect(manifest.share_target.action).toBe("/notification-handoff");
+  await page.context().setOffline(true);
+  await page.evaluate(() => {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.enctype = "multipart/form-data";
+    form.action = "/notification-handoff";
+    const input = document.createElement("input");
+    input.type = "file";
+    input.name = "transactions";
+    input.id = "TEST-share-file";
+    const button = document.createElement("button");
+    button.textContent = "TEST send offline share";
+    button.type = "submit";
+    form.append(input, button);
+    document.body.append(form);
+  });
+  await page.locator("#TEST-share-file").setInputFiles({
+    name: "TEST-companion.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(notificationPayload())),
+  });
+  await page.evaluate(() => {
+    (
+      document.querySelector("#TEST-share-file")!
+        .parentElement as HTMLFormElement
+    ).requestSubmit();
+  });
+  await expect(
+    page.getByRole("heading", { name: "Transaction Inbox", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Review shared batch", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Import reviewed batch", exact: true })
+    .click();
+  await expect(page.getByText("1 items.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Review item", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Approve manually", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("combobox", { name: "Financial classification", exact: true })
+    .selectOption("other_receipt");
+  await save(page);
+  expect((await snapshot(page)).transactions).toHaveLength(1);
+  await page.getByLabel("Companion transaction file").setInputFiles({
+    name: "TEST-retry.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(notificationPayload())),
+  });
+  await page
+    .getByRole("button", { name: "Import reviewed batch", exact: true })
+    .click();
+  const state = await snapshot(page);
+  expect(state.transactions).toHaveLength(1);
+  expect(state.notifications.inbox[0].deliveries).toBe(2);
+  expect(state.notifications.inbox[0].candidate.reference).toBe(
+    "TEST-HANDOFF-001",
+  );
+  expect(staticHost.requests.filter((r) => r.method === "POST")).toEqual([]);
+  await page.reload();
+  expect((await snapshot(page)).transactions).toHaveLength(1);
+});
+test("source mapping, explicit approval rules and schema-3 recovery preserve the existing ledger", async ({
+  page,
+  staticHost,
+}) => {
+  await page.clock.setFixedTime(new Date("2026-11-01T09:00:00Z"));
+  await page.goto(staticHost.url);
+  await firstAccount(page, "TEST mapped wallet");
+  const old = await snapshot(page);
+  await page.evaluate(async (state) => {
+    const legacy = { ...state } as Record<string, unknown>;
+    legacy.version = 3;
+    delete legacy.notifications;
+    const request = indexedDB.open("pennywise-private");
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      request.onsuccess = () => resolve(request.result);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("state", "readwrite");
+      tx.objectStore("state").put(legacy, "current");
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(new Error("Legacy fixture write failed"));
+    });
+    db.close();
+  }, old);
+  await page.reload();
+  await nav(page, "Transaction Inbox");
+  await page.getByRole("button", { name: "Map source", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("Display name", { exact: true })
+    .fill("TEST selected app");
+  await dialog
+    .getByLabel("Android package name", { exact: true })
+    .fill("synthetic.mpesa");
+  await dialog
+    .getByLabel("Trust this selected source for rule automation", {
+      exact: true,
+    })
+    .check();
+  await save(page);
+  await page.getByRole("button", { name: "Create rule", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("Rule name", { exact: true })
+    .fill("TEST exact known sender");
+  await dialog
+    .getByLabel("Exact Android package name", { exact: true })
+    .fill("synthetic.mpesa");
+  await dialog
+    .getByRole("combobox", { name: "Notification type", exact: true })
+    .selectOption("received");
+  await dialog
+    .getByRole("combobox", { name: "Direction", exact: true })
+    .selectOption("credit");
+  await dialog.getByLabel("Maximum amount", { exact: true }).fill("10000");
+  await dialog
+    .getByLabel("Exact known counterparty (optional)", { exact: true })
+    .fill("TEST portable sender");
+  await dialog
+    .getByRole("combobox", { name: "Rule action", exact: true })
+    .selectOption("approve");
+  await dialog
+    .getByRole("combobox", { name: "Financial classification", exact: true })
+    .selectOption("earned_income");
+  await dialog.getByLabel("Enable this rule", { exact: true }).check();
+  await save(page);
+  await page.getByLabel("Companion transaction file").setInputFiles({
+    name: "TEST-rule-import.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(notificationPayload())),
+  });
+  await page
+    .getByLabel(
+      "This is my trusted companion file; evaluate my enabled approval rules",
+      { exact: true },
+    )
+    .check();
+  await page
+    .getByRole("button", { name: "Import reviewed batch", exact: true })
+    .click();
+  await expect(
+    page.locator(".badge").filter({ hasText: /^approved$/ }),
+  ).toBeVisible();
+  const result = await snapshot(page);
+  expect(result.version).toBe(4);
+  expect(result.accounts).toEqual(old.accounts);
+  expect(result.transactions).toHaveLength(1);
+  expect(result.transactions[0].type).toBe("income");
+  expect(result.transactions[0].notification?.ruleVersion).toBe(1);
+  expect(result.notifications.rules[0].matchCount).toBe(1);
+});
 async function save(page: Page, name = "Save") {
   await page
     .getByRole("dialog")

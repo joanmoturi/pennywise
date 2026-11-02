@@ -25,6 +25,9 @@ export default defineConfig(({ command }) => {
         },
       },
       VitePWA({
+        strategies: "injectManifest",
+        srcDir: "src",
+        filename: "sw.ts",
         registerType: "prompt",
         includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
         manifest: {
@@ -38,6 +41,16 @@ export default defineConfig(({ command }) => {
           background_color: "#0b1220",
           theme_color: "#0b1220",
           lang: "en-KE",
+          share_target: {
+            action: "/notification-handoff",
+            method: "POST",
+            enctype: "multipart/form-data",
+            params: {
+              files: [
+                { name: "transactions", accept: ["application/json", ".json"] },
+              ],
+            },
+          },
           icons: [
             {
               src: "/icon-192.png",
@@ -53,10 +66,8 @@ export default defineConfig(({ command }) => {
             },
           ],
         },
-        workbox: {
+        injectManifest: {
           globPatterns: ["**/*.{js,css,html,png,svg,webmanifest}"],
-          navigateFallback: "index.html",
-          cleanupOutdatedCaches: true,
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         },
       }),

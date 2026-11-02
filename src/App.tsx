@@ -43,6 +43,8 @@ import {
   MonthlyReviewPage,
 } from "./pages-expenses";
 import { BackupCentre } from "./pages-backup";
+import { NotificationInbox } from "./pages-notifications";
+import { APP_VERSION } from "./backup";
 import { backupReminder } from "./expense-engine";
 import { Button, Card, FormDialog, errorMessage } from "./ui";
 
@@ -50,6 +52,7 @@ const navigation = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "budgets", label: "Budgets", icon: Wallet },
   { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
+  { id: "inbox", label: "Transaction Inbox", icon: Download },
   { id: "income", label: "Income", icon: TrendingUp },
   { id: "bonds", label: "Bonds", icon: Landmark },
   { id: "obligations", label: "Obligations", icon: ClipboardList },
@@ -96,7 +99,9 @@ export default function App() {
   const [repo, setRepo] = useState<Repository>();
   const [state, setState] = useState<State>();
   const [error, setError] = useState("");
-  const [section, setSection] = useState("overview");
+  const [section, setSection] = useState(
+    location.pathname === "/transaction-inbox/" ? "inbox" : "overview",
+  );
   const [dialog, setDialog] = useState<DialogSpec>();
   const [toast, setToast] = useState("");
   const [preparedDownload, setPreparedDownload] = useState<{
@@ -290,6 +295,7 @@ export default function App() {
     accounts: <AccountsPage />,
     budgets: <BudgetsPage />,
     transactions: <TransactionsPage />,
+    inbox: <NotificationInbox />,
     income: <IncomePage />,
     bonds: <BondsPage />,
     obligations: <ObligationsPage />,
@@ -504,8 +510,9 @@ export default function App() {
             )}
             <div key={section}>{content}</div>
             <footer className="page-footer">
-              Pennywise 1.1.0 / Figures are based on your records and explicitly
-              labeled assumptions. Not personalized investment advice.
+              Pennywise {APP_VERSION} / Figures are based on your records and
+              explicitly labeled assumptions. Not personalized investment
+              advice.
             </footer>
           </main>
         </div>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { notificationStateSchema } from "./notification-schema";
 
 export const moneySchema = z.number().int().safe();
 const nonnegative = moneySchema.nonnegative();
@@ -85,6 +86,21 @@ export const transactionSchema = z
     prepaidId: id.optional(),
     captureId: id.optional(),
     additionalPayment: z.boolean().optional(),
+    reversalOf: id.optional(),
+    notification: z
+      .object({
+        inboxId: id,
+        fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+        source: z.string().max(200),
+        reference: text.optional(),
+        approvedAt: z.string().datetime(),
+        explanation: text,
+        confidence: z.number().int().min(0).max(100),
+        ruleId: id.optional(),
+        ruleVersion: z.number().int().positive().optional(),
+      })
+      .strict()
+      .optional(),
     recurringReference: text,
     receipt: z
       .object({
@@ -375,7 +391,7 @@ export const reviewSchema = z
   .strict();
 export const stateSchema = z
   .object({
-    version: z.literal(3),
+    version: z.literal(4),
     revision: z.number().int().nonnegative(),
     settings: z
       .object({
@@ -411,6 +427,7 @@ export const stateSchema = z
     captures: z.array(captureSchema).max(10000),
     reviews: z.array(reviewSchema).max(1000),
     audit: z.array(auditSchema).max(100000),
+    notifications: notificationStateSchema,
   })
   .strict();
 export type Account = z.infer<typeof accountSchema>;
@@ -478,7 +495,7 @@ export function initialState(): State {
     };
   });
   return {
-    version: 3,
+    version: 4,
     revision: 0,
     settings: {
       currency: "KES",
@@ -511,5 +528,6 @@ export function initialState(): State {
     captures: [],
     reviews: [],
     audit: [],
+    notifications: { inbox: [], rules: [], sources: [] },
   };
 }

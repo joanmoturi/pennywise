@@ -3,7 +3,7 @@ import { migrate } from "./storage";
 import type { State } from "./domain";
 import { validateState } from "./engine";
 
-export const APP_VERSION = "1.1.0";
+export const APP_VERSION = "1.2.0";
 const fullBackupSchema = z
   .object({
     format: z.literal("pennywise-full-backup"),
@@ -190,7 +190,7 @@ export async function inspectBackup(
     typeof input === "object" &&
     input !== null &&
     "version" in input &&
-    input.version === 3
+    (input.version === 3 || input.version === 4)
   )
     throw new Error("Current-schema backup is missing its integrity envelope");
   return {

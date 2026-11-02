@@ -6,6 +6,12 @@ Production: `https://pennywise-7lz.pages.dev/`. Financial records remain local t
 
 New workspaces use a midnight-navy and warm-gold theme. Existing saved preferences are preserved; select **Settings > Theme > Dark** for the premium dark palette, or Light for its warm ivory counterpart.
 
+## Optional Android notification integration
+
+Transaction Inbox imports local companion JSON files, stages offline shares, reviews unknown captures and evaluates explicitly configured deterministic rules. The separate Kotlin application is under `android-companion`; the PWA does not itself read Android notifications. Notification access is optional and no historical SMS or cloud synchronization is introduced.
+
+Start with `ANDROID_COMPANION_GUIDE.md`, `NOTIFICATION_INTEGRATION_GUIDE.md` and `APPROVAL_RULES_GUIDE.md`. Parser fixtures are synthetic, not certified real-bank formats. See `NOTIFICATION_PRIVACY_AND_SECURITY.md` for offline-only Sharesheet precautions and `NOTIFICATION_INTEGRATION_TEST_REPORT.md` for actual build/test limitations. An Android APK still requires an Android build environment.
+
 ## Run locally
 
 Requires Node.js 22.12+ (Node 26 was used during implementation) and npm.
@@ -130,7 +136,7 @@ There are no automatic investments, real bank transfers, real bond dates/rates, 
 - `money.ts`: exact monetary parsing, formatting, bounded aggregation and ratios.
 - `engine.ts`: ledger balances, validation, coupons, budgets, necessities, decision support, windfalls and projections.
 - `expense-engine.ts`: recurring generation, prepaid recognition, savings decisions, rollover and review snapshots.
-- `storage.ts`: IndexedDB version 3, v1/v2 migration, serialized read/write transactions, revisioning and safety snapshots.
+- `storage.ts`: IndexedDB object-store version 3, financial schema 4 with v1/v2/v3 migrations, serialized read/write transactions, revisioning and safety snapshots.
 - `backup.ts`: versioned full envelopes, canonical SHA-256 integrity, PBKDF2/AES-GCM encryption and validated inspection.
 - `import.ts` / `reports.ts`: reviewed CSV import, exact duplicate fingerprints, safe CSV output and actual reporting.
 - `context.tsx`, `ui.tsx`, `pages-*.tsx`, `App.tsx`: presentation and form workflows.
@@ -195,7 +201,7 @@ On Android Chrome:
 4. Launch the installed app, then test reopening in airplane mode.
 5. Back up frequently. Uninstalling or clearing site storage can remove the database.
 
-Manifest includes 192/512 PNG icons, maskable-safe artwork, standalone display and scoped relative start URL. Workbox precaches the built shell and hashed assets. New builds present an update prompt rather than silently reloading a form. Back up before an upgrade. Browser-specific install UX still needs testing on the user's actual Android device.
+Manifest includes 192/512 PNG icons, maskable-safe artwork, standalone display, root start URL and optional file share target. The custom Workbox injectManifest worker precaches the built shell/hashed assets and intercepts handoff POSTs locally. Use offline-only Sharesheet delivery or the local Inbox file picker; a missing worker cannot intercept a network POST. New builds present an update prompt rather than silently reloading a form. Back up before an upgrade. Browser-specific install/share UX still needs testing on the user's actual Android device.
 
 ## Validation commands
 
@@ -219,7 +225,7 @@ See `IMPLEMENTATION_REPORT.md` for executed results and limitations.
 
 The production dependency audit reports zero vulnerabilities. The full development-tool audit still reports 19 advisory entries (2 low, 17 moderate), documented in `IMPLEMENTATION_REPORT.md`; a compatible fix was attempted without unsafe or incompatible forced downgrades.
 
-- No bank integration, server, multi-device synchronization, notifications, analytics or external AI.
+- No direct bank API integration, server, multi-device synchronization, PWA notification-reading permission, analytics or external AI. The optional native companion captures explicitly selected future notifications; real-provider parsing remains unverified.
 - IndexedDB is **not app-encrypted at rest**. Device encryption, browser profile protection and private backups remain necessary. Financial records/receipts are not written to application logs.
 - Local revision history is not tamper-proof, signed or an automatic undo database.
 - No multi-currency accounts, FX conversion, tax advice, security valuation, bond trading or automated interest accrual. Loan-interest rates and income tax fields are references; record actual net receipts/interest explicitly.
