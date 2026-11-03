@@ -244,7 +244,7 @@ test("source mapping, explicit approval rules and schema-3 recovery preserve the
     .getByLabel("Display name", { exact: true })
     .fill("TEST selected app");
   await dialog
-    .getByLabel("Android package name", { exact: true })
+    .getByLabel("Companion source ID", { exact: true })
     .fill("synthetic.mpesa");
   await dialog
     .getByLabel("Trust this selected source for rule automation", {
@@ -258,10 +258,10 @@ test("source mapping, explicit approval rules and schema-3 recovery preserve the
     .getByLabel("Rule name", { exact: true })
     .fill("TEST exact known sender");
   await dialog
-    .getByLabel("Exact Android package name", { exact: true })
+    .getByLabel("Exact companion source ID", { exact: true })
     .fill("synthetic.mpesa");
   await dialog
-    .getByRole("combobox", { name: "Notification type", exact: true })
+    .getByRole("combobox", { name: "Transaction candidate type", exact: true })
     .selectOption("received");
   await dialog
     .getByRole("combobox", { name: "Direction", exact: true })

@@ -2,7 +2,7 @@
 
 Native Kotlin companion, migrated from local commit `4735052`. The notification listener has been removed. The existing parser modules, private queue, deduplication, file handoff and recovery remain; no financial ledger is implemented here.
 
-**Source implemented, Android build/device acceptance unverified. No APK is provided.** See `..\SMS_INTEGRATION_TEST_REPORT.md` for exact executed checks and blockers.
+**Debug APK built; 27 JVM and 13 API-35 emulator instrumentation tests passed.** Emulator SMS reception and the explicit native-file/local-desktop-PWA/receipt loop were verified. Physical phones and Android browser Sharesheet routing remain unverified. See `..\ANDROID_BUILD_AND_DEVICE_REPORT.md` for the APK location, checksum, evidence and limits. The APK is not published.
 
 ## Platform and permissions
 
@@ -17,17 +17,19 @@ Native Kotlin companion, migrated from local commit `4735052`. The notification 
 
 ## Setup/build
 
-Exact Windows installation, SDK/license and checksum-verified Gradle setup commands are in `..\ANDROID_COMPANION_GUIDE.md`. There is no Gradle wrapper, and this migration did not install global tooling or accept licenses.
+Exact Windows setup and private installation steps are in `..\ANDROID_COMPANION_GUIDE.md`. Official user-local tools were installed after explicit SDK-license consent. The included Gradle 8.9 wrapper pins its distribution checksum; the wrapper JAR was checked against Gradle's official checksum. No global PATH or SDK settings were changed.
 
 With prerequisites installed:
 
 ```powershell
 Set-Location 'C:\Users\joanmoturi\pennywise\android-companion'
-gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+. .\tools\Use-AndroidToolchain.ps1
+.\gradlew.bat --no-daemon --console=plain clean :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 # Only on an isolated, unlocked test emulator/device:
-gradle --no-daemon :app:connectedDebugAndroidTest
-& "$env:ANDROID_HOME\platform-tools\adb.exe" install -r '.\app\build\outputs\apk\debug\app-debug.apk'
-& "$env:ANDROID_HOME\cmdline-tools\latest\bin\apkanalyzer.bat" manifest permissions '.\app\build\outputs\apk\debug\app-debug.apk'
+$env:ANDROID_SERIAL = 'emulator-5560' # List devices and replace deliberately.
+.\gradlew.bat --no-daemon --console=plain :app:connectedDebugAndroidTest
+& "$env:ANDROID_HOME\platform-tools\adb.exe" -s $env:ANDROID_SERIAL install -r '.\app\build\outputs\apk\debug\app-debug.apk'
+& "$env:ANDROID_HOME\cmdline-tools\19.0\bin\apkanalyzer.bat" manifest permissions '.\app\build\outputs\apk\debug\app-debug.apk'
 ```
 
 Grant SMS permission through the app's Android permission prompt, not shell grants. Configure a secure device PIN/password and unlock once after boot. Explicitly add and enable intended SMS sender IDs, then **Resume future capture**. No historical catch-up occurs. Ordinary process restarts preserve SMS consent; observed permission loss pauses capture. Force-stop/OEM restrictions can prevent delivery.
@@ -46,8 +48,8 @@ The initial parsers are **synthetic labelled formats**, not production M-Pesa/Eq
 SYNTHETIC|Amount=123.45|Currency=KES|Ref=TEST001|Date=2026-11-02T18:00:00Z|Direction=credit|Kind=received|Party=TEST sender|Fee=0|Balance=900.10|Account=TEST wallet
 ```
 
-No sample is saved by **Test sample locally (no queue write)**. See `..\TRANSACTION_PARSING_REFERENCE.md` for categories, exact minor-unit arithmetic and limitations.
+The local harness requires explicit manual-redaction confirmation, disables sample saved state/autofill, requests no personalized keyboard learning, clears input after testing/dismissal and never writes to the queue. No sample is saved by **Test sample locally (no queue write)**. Keyboard/clipboard privacy remains the user's responsibility. See `..\TRANSACTION_PARSING_REFERENCE.md` for categories, exact minor-unit arithmetic and limitations.
 
 Save private JSON and choose it in the PWA Transaction Inbox, or use Sharesheet **completely offline** after priming the installed PWA. No automatic synchronization is claimed. Shared/saved candidates remain pending. Download the PWA's local receipt, import it through **Import Pennywise confirmation receipt**, and confirm exact ID/fingerprint matches. This confirms inbox import, not ledger approval; receipts are not cryptographically signed.
 
-The existing Keystore/AES-GCM protection code is retained, with fresh IVs and record-specific authenticated context, no plaintext fallback and Android backup disabled. **Its Android encryption tests have not run here.** Device/storage compromise, spoofable SMS senders and plaintext export providers remain risks. Read `..\SMS_PRIVACY_AND_SECURITY.md`.
+The existing Keystore/AES-GCM protection code is retained, with fresh IVs and record-specific authenticated context, no plaintext fallback and Android backup disabled. **Crypto round-trip/tamper/storage tests passed on the API-35 emulator**, not physical hardware or every Android version. Device/storage compromise, spoofable SMS senders and plaintext export providers remain risks. Read `..\SMS_PRIVACY_AND_SECURITY.md`.

@@ -14,26 +14,28 @@ SYNTHETIC|Amount=123.45|Currency=KES|Ref=TEST001|Date=2026-11-02T18:00:00Z|Direc
 
 Each sender can choose profile `mpesa`, `equity`, `kcb` or `generic`, a literal safe prefix, delimiter (`|`, `;` or `~`) and unique field labels. Use **Test sample locally (no queue write)** with synthetic text before enabling that parser. This intentionally supports known labelled structures, not arbitrary bank prose or invented provider-specific templates. Real SMS formats require new tested adapters, not merely enabling a bank-name profile.
 
+For private representative examples, manually replace every identifying name, phone/account number and reference before pasting. Explicitly confirm redaction in the harness; sample input is memory-only, is cleared after preview/dismissal and never enters the queue. Preview does not train a parser or affect a ledger. Unsupported prose reports fields that cannot reliably be extracted; do not treat a named bank profile as real-format support. The harness and all four labelled profiles were exercised as detailed in `ANDROID_BUILD_AND_DEVICE_REPORT.md`.
+
 The original detected sender is optional `senderId` metadata; the stable source is `sms.s` plus SHA-256 of its canonical allowlist identifier. New native candidates carry parser version 2; stored version-1 candidates retain their evidence. SMS service-centre timestamps are validated but never substituted for an absent transaction `Date`. Native initial currency support remains KES. Absent fees/balances/accounts remain absent, not zero. Complete explicit labelled fields score 95; missing/ambiguous fields or failed/reversal types score 35 and require review. These are deterministic parser scores, not measured provider accuracy. Conflicting kind/direction and oversized ambiguous fields cannot be high-confidence.
 
 Amounts, fees and balances are safe integer minor units. KES 5,000 is `500000`. Amount excludes a separately stated additional fee; where a source format does not establish that distinction, hold for review. A balance must never substitute for the transaction amount. No amount/reference/currency is inferred merely because the source is a known bank.
 
 ## Candidate types and financial treatment
 
-| Candidate | Safe ledger treatment |
-| --- | --- |
-| Received/deposit | Review receipt classification; never default earned income |
-| Sent/withdrawal/merchant/PayBill/Buy Goods | Confirm debit, account and expense versus owned transfer |
-| Charge | Expense only if it represents an independently stated transaction; avoid importing a fee twice |
-| Transfer | Two distinct owned accounts; no income or expense |
-| Loan repayment received | Existing receivable principal recovery; interest separate |
-| Loan/debt payment sent | Existing liability repayment |
-| Coupon/interest | Explicit investment classification; coupon links the bond |
-| Principal | Bond principal recovery, not income |
-| Refund/other receipt | Reviewed cash adjustment, not automatically earned income |
-| Reversal | Manual exact original-transaction link; original retained |
-| Failed/balance-only | Cannot post |
-| Unknown/incomplete | Review and correct extracted fields first |
+| Candidate                                  | Safe ledger treatment                                                                          |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Received/deposit                           | Review receipt classification; never default earned income                                     |
+| Sent/withdrawal/merchant/PayBill/Buy Goods | Confirm debit, account and expense versus owned transfer                                       |
+| Charge                                     | Expense only if it represents an independently stated transaction; avoid importing a fee twice |
+| Transfer                                   | Two distinct owned accounts; no income or expense                                              |
+| Loan repayment received                    | Existing receivable principal recovery; interest separate                                      |
+| Loan/debt payment sent                     | Existing liability repayment                                                                   |
+| Coupon/interest                            | Explicit investment classification; coupon links the bond                                      |
+| Principal                                  | Bond principal recovery, not income                                                            |
+| Refund/other receipt                       | Reviewed cash adjustment, not automatically earned income                                      |
+| Reversal                                   | Manual exact original-transaction link; original retained                                      |
+| Failed/balance-only                        | Cannot post                                                                                    |
+| Unknown/incomplete                         | Review and correct extracted fields first                                                      |
 
 Sensitive OTP/PIN/password/login content is excluded rather than retained as a parsing error. Disabled/unapproved senders' decoded message bodies are not accessed by acquisition code. Android must decode PDUs to expose addresses; no unrelated decoded body is persisted. Malformed multipart data, unsupported format/encoding and invalid SMS timestamps fail closed. RCS, MMS, app messages and historical inboxes are not read.
 

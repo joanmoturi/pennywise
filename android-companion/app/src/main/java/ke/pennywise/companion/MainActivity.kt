@@ -300,8 +300,15 @@ class MainActivity : Activity() {
         val labels = Source.DEFAULT_LABELS.keys.associateWith {
             input(form, "$it label", source.labels.getValue(it))
         }
-        val sample = input(form, "Optional local sample (not saved)", "")
+        label(form, "Local parser harness: use synthetic or manually redacted examples only. Replace real names, " +
+            "phone/account numbers and references before pasting. This does not train a parser or save a sample.")
+        val redacted = check(form, "I manually redacted all identifying details", false)
+        redacted.isSaveEnabled = false
+        val sample = input(form, "Optional redacted sample (memory only)", "")
         sample.filters = arrayOf(android.text.InputFilter.LengthFilter(8192))
+        sample.isSaveEnabled = false
+        sample.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
+        sample.imeOptions = sample.imeOptions or android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
         fun edited(): Source {
             val normalized = requireNotNull(SmsSenders.normalize(sender.text.toString()))
             return source.copy(sourceId = SmsSenders.sourceId(normalized), senderId = normalized,
@@ -312,11 +319,19 @@ class MainActivity : Activity() {
                 delimiter = delimiter.text.toString(), labels = labels.mapValues { it.value.text.toString() })
         }
         button(form, "Test sample locally (no queue write)") {
+            if (!redacted.isChecked) {
+                notifyUser("Confirm manual redaction first. Never paste personal financial SMS into a test.")
+                return@button
+            }
             val edit = edited(); require(LabelledParser.validProfile(edit))
-            val result = Parsers.forSource(edit).parse(edit, sample.text.toString(), System.currentTimeMillis(), false)
+            val result = try {
+                Parsers.forSource(edit).parse(edit, sample.text.toString(), System.currentTimeMillis(), false)
+            } finally { sample.text.clear() }
             AlertDialog.Builder(this).setTitle("Local parser test · not accuracy certification")
                 .setMessage(result?.let { JsonCodec.candidate(it).toString(2) }
-                    ?: "Excluded: no safe labelled financial candidate. Sensitive/unrelated/balance-only text is not retained.")
+                    ?: "No supported financial candidate. Amount, reference, transaction time, direction, account and " +
+                        "charges cannot be reliably extracted from this input. Sensitive/unrelated/balance-only text is not retained; " +
+                        "a generic bank profile is not a verified provider-format parser.")
                 .setPositiveButton("Close", null).show()
         }
         val dialog = AlertDialog.Builder(this).setTitle("Configure source").setView(scroll(form))
@@ -342,12 +357,13 @@ class MainActivity : Activity() {
                 dialog.dismiss(); render()
             } }
         }
+        dialog.setOnDismissListener { sample.text.clear() }
         dialog.show()
     }
 
     private fun retentionSettings() {
         val form = column()
-        label(form, "Raw text is OFF by default. Optional raw uses the local Keystore protection code, whose Android tests remain unverified, and becomes plaintext in exports. " +
+        label(form, "Raw text is OFF by default. Optional raw uses local Android Keystore AES-GCM protection and becomes plaintext in exports. " +
             "OTP/PIN/password/login content is excluded even when raw is on. Only matched financial candidates can retain raw.")
         val raw = check(form, "Retain matched raw SMS text (up to 4,000 characters)", app.config.retainRaw)
         val days = input(form, "Raw retention / pending-age warning days (1–90)", app.config.retentionDays.toString())

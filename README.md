@@ -1,6 +1,6 @@
 # Pennywise
 
-Private, offline-first personal financial command centre. Standalone React/TypeScript PWA in its own private `joanmoturi/pennywise` repository; Engineering Academy remains unchanged in its original repository.
+Local-first personal financial command centre. Standalone React/TypeScript PWA in its own public `joanmoturi/pennywise` source repository; financial records remain private to each device/browser. Engineering Academy remains unchanged in its original repository.
 
 Production: `https://pennywise-7lz.pages.dev/`. Financial records remain local to each device/browser; hosting is not a backup service. Download portable full backups and keep encrypted copies outside the device.
 
@@ -10,7 +10,7 @@ New workspaces use a midnight-navy and warm-gold theme. Existing saved preferenc
 
 Transaction Inbox imports local companion JSON files, stages offline shares, reviews ambiguous candidates and evaluates explicitly configured deterministic rules. The separate Kotlin application under `android-companion` receives only new SMS broadcasts from explicitly enabled senders, using `RECEIVE_SMS`; it does not request `READ_SMS` or notification access. The PWA does not read SMS. No historical inbox scan or cloud synchronization is introduced.
 
-Start with `ANDROID_COMPANION_GUIDE.md`, `SMS_INTEGRATION_GUIDE.md` and `APPROVAL_RULES_GUIDE.md`. Parser fixtures are synthetic, not certified real-bank formats. See `SMS_PRIVACY_AND_SECURITY.md` for permission restrictions and offline-only Sharesheet precautions, and `SMS_INTEGRATION_TEST_REPORT.md` for actual build/test limitations. An Android APK still requires an Android build environment.
+Start with `ANDROID_COMPANION_GUIDE.md`, `SMS_INTEGRATION_GUIDE.md` and `APPROVAL_RULES_GUIDE.md`. Parser fixtures are synthetic, not certified real-bank formats. A local debug APK has been built: 27 JVM tests, 13 API-35 emulator instrumentation tests and the explicit native-file/local-PWA/receipt workflow passed. See `ANDROID_BUILD_AND_DEVICE_REPORT.md` for its path, checksum, installation steps and remaining physical-phone/Android Sharesheet limitations, and `SMS_PRIVACY_AND_SECURITY.md` before exporting. Production is updated through the existing Cloudflare Pages Git integration; `DEPLOYMENT_REPORT.md` records the verified web revision. The Android APK is not published.
 
 ## Run locally
 

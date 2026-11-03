@@ -1,5 +1,7 @@
 # SMS migration implementation and acceptance report
 
+**Historical snapshot:** this report records the November 2 source-migration state. Its missing-toolchain/build/device statements below describe that earlier checkpoint, not the current environment. See `ANDROID_BUILD_AND_DEVICE_REPORT.md` for the subsequent successful APK build, 27 JVM/13 emulator instrumentation results, actual emulator SMS/file/receipt acceptance and remaining physical-device limitations.
+
 **Date:** November 2, 2026. **Baseline:** local commit `4735052`.
 
 **Implemented locally; PWA checks passed. Android build, native tests, installation and actual SMS reception are BLOCKED/UNVERIFIED.** This is not a claim that the complete Android acceptance standard has been met. No GitHub push, Cloudflare deployment, release or APK publication was performed.
@@ -31,18 +33,18 @@ Rules still require explicit trusted-file evaluation, a unique trusted source/ac
 
 ## Executed automated results
 
-| Check | Actual result |
-| --- | --- |
-| `npm run format:check` | PASSED |
-| `npm run lint` | PASSED |
-| `npm test` | **148 passed**, 6 files, 0 failures |
-| Notification/SMS contract scenarios within that suite | **47 passed**: original 44 plus 3 SMS metadata/mapping/backup compatibility cases |
-| `npm run build` | PASSED: TypeScript, Vite and custom Workbox worker |
-| `npm run test:e2e` | **20 passed**, 10 desktop + 10 Pixel 7 Chromium-emulated cases, 0 failures |
-| Native manifest/XML assertions | PASSED: exact two requested permissions, protected SMS receiver, no listener, backups/direct boot disabled, unchanged SDK settings; **4 XML files parsed** |
-| Native source boundary assertions | PASSED: sender gate precedes message-body access; revision checks/finalization present; no old listener/history API/logging calls |
-| Kotlin syntax-only parse | **11 Kotlin source files parsed, 0 syntax diagnostics**; receipt API confirmed as an object member |
-| Git whitespace check | PASSED |
+| Check                                                 | Actual result                                                                                                                                              |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run format:check`                                | PASSED                                                                                                                                                     |
+| `npm run lint`                                        | PASSED                                                                                                                                                     |
+| `npm test`                                            | **148 passed**, 6 files, 0 failures                                                                                                                        |
+| Notification/SMS contract scenarios within that suite | **47 passed**: original 44 plus 3 SMS metadata/mapping/backup compatibility cases                                                                          |
+| `npm run build`                                       | PASSED: TypeScript, Vite and custom Workbox worker                                                                                                         |
+| `npm run test:e2e`                                    | **20 passed**, 10 desktop + 10 Pixel 7 Chromium-emulated cases, 0 failures                                                                                 |
+| Native manifest/XML assertions                        | PASSED: exact two requested permissions, protected SMS receiver, no listener, backups/direct boot disabled, unchanged SDK settings; **4 XML files parsed** |
+| Native source boundary assertions                     | PASSED: sender gate precedes message-body access; revision checks/finalization present; no old listener/history API/logging calls                          |
+| Kotlin syntax-only parse                              | **11 Kotlin source files parsed, 0 syntax diagnostics**; receipt API confirmed as an object member                                                         |
+| Git whitespace check                                  | PASSED                                                                                                                                                     |
 
 One initial targeted run had **1 failed / 46 passed** because a newly added test treated the serialized backup string as a state object. The test was corrected to use the existing `decodeBackup`; the final full run passed all 148. No financial safeguard or test was disabled.
 
@@ -54,10 +56,10 @@ Kotlin syntax checks used an isolated temporary tree-sitter parser, not a Kotlin
 
 ## Native test inventory: authored, NOT executed
 
-| Suite | Count | Coverage authored |
-| --- | --- | --- |
-| JVM `CoreTest.kt` | **27** | Existing arithmetic/security/parsers plus allowed/unapproved/disabled sender gates, normalization/ambiguity, multipart GSM/CDMA text assembly, malformed/invalid time/unsupported encoding, permission denial/revocation gate, repeated-broadcast fingerprints and explicit SMS categories |
-| Android `StorageTest.kt` | **13** | Existing crypto/tamper/private-provider/queue tests plus persisted SMS consent, legacy parser migration, exact receipt acknowledgement/retry and sender/account recovery metadata |
+| Suite                    | Count  | Coverage authored                                                                                                                                                                                                                                                                          |
+| ------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| JVM `CoreTest.kt`        | **27** | Existing arithmetic/security/parsers plus allowed/unapproved/disabled sender gates, normalization/ambiguity, multipart GSM/CDMA text assembly, malformed/invalid time/unsupported encoding, permission denial/revocation gate, repeated-broadcast fingerprints and explicit SMS categories |
+| Android `StorageTest.kt` | **13** | Existing crypto/tamper/private-provider/queue tests plus persisted SMS consent, legacy parser migration, exact receipt acknowledgement/retry and sender/account recovery metadata                                                                                                          |
 
 **0 native tests executed; neither suite is reported passed.** Reopening a store in an authored test is not a verified Android process restart; pure multipart tests do not verify actual telephony PDU ordering or physical carrier delivery.
 
@@ -93,13 +95,13 @@ RECEIVE_SMS is **hard-restricted**, requiring installer allowlisting as well as 
 
 ## Changed files
 
-| Area | Files |
-| --- | --- |
-| Acquisition | Added `android-companion\app\src\main\java\ke\pennywise\companion\SmsReceiver.kt`; removed `CaptureService.kt`; updated `CompanionApp.kt`, `Core.kt`, `MainActivity.kt`, `JsonCodec.kt`, `QueueStore.kt` in that directory |
+| Area                        | Files                                                                                                                                                                                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Acquisition                 | Added `android-companion\app\src\main\java\ke\pennywise\companion\SmsReceiver.kt`; removed `CaptureService.kt`; updated `CompanionApp.kt`, `Core.kt`, `MainActivity.kt`, `JsonCodec.kt`, `QueueStore.kt` in that directory                                   |
 | Android configuration/tests | `android-companion\app\src\main\AndroidManifest.xml`; `android-companion\app\build.gradle.kts`; `android-companion\app\src\test\java\ke\pennywise\companion\CoreTest.kt`; `android-companion\app\src\androidTest\java\ke\pennywise\companion\StorageTest.kt` |
-| PWA compatibility/tests | `src\notification-schema.ts`; `tests\notifications.test.ts` |
-| Current guides | `ANDROID_COMPANION_GUIDE.md`; new `SMS_INTEGRATION_GUIDE.md`, `SMS_PRIVACY_AND_SECURITY.md`, this report; updated `TRANSACTION_PARSING_REFERENCE.md`, `APPROVAL_RULES_GUIDE.md` |
-| Entry/legacy documentation | `README.md`; `android-companion\README.md`; `NOTIFICATION_INTEGRATION_GUIDE.md`, `NOTIFICATION_PRIVACY_AND_SECURITY.md` compatibility pointers; `NOTIFICATION_INTEGRATION_TEST_REPORT.md` explicitly historical |
+| PWA compatibility/tests     | `src\notification-schema.ts`; `tests\notifications.test.ts`                                                                                                                                                                                                  |
+| Current guides              | `ANDROID_COMPANION_GUIDE.md`; new `SMS_INTEGRATION_GUIDE.md`, `SMS_PRIVACY_AND_SECURITY.md`, this report; updated `TRANSACTION_PARSING_REFERENCE.md`, `APPROVAL_RULES_GUIDE.md`                                                                              |
+| Entry/legacy documentation  | `README.md`; `android-companion\README.md`; `NOTIFICATION_INTEGRATION_GUIDE.md`, `NOTIFICATION_PRIVACY_AND_SECURITY.md` compatibility pointers; `NOTIFICATION_INTEGRATION_TEST_REPORT.md` explicitly historical                                              |
 
 All work stays in the standalone Pennywise repository. The local migration commit contains this report; use `git log -1 --oneline` for its exact hash. Nothing is pushed or deployed.
 

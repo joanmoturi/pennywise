@@ -1,6 +1,18 @@
 # Pennywise deployment execution report
 
-**Updated:** November 2, 2026 (local execution clock). Initial publication: November 1, 2026.
+**Updated:** November 3, 2026. Initial publication: November 1, 2026.
+
+## November 3 SMS / Transaction Inbox publication
+
+The user explicitly authorized publishing the current Pennywise changes and confirmed retaining the repository's existing **PUBLIC** visibility. Earlier private-repository statements in the historical report below describe the initial November 1-2 publication, not the current visibility.
+
+This update publishes the existing Transaction Inbox, approval rules, duplicate safeguards, schema-4 backup compatibility and SMS companion source. The toolchain wrapper, local APK build evidence and redacted in-memory parser harness are included in source; the APK, signing keys, local databases, financial files and test artifacts are excluded. Remaining obsolete notification-reader setup labels in the PWA were corrected without changing financial logic or layout.
+
+Production deployment verification for this update is pending completion of the Git push and existing Cloudflare Pages build. The target remains project `pennywise`, branch `main`, at `https://pennywise-7lz.pages.dev/`; no new origin, backend or financial-data service is introduced. Current Android build/device evidence is in `ANDROID_BUILD_AND_DEVICE_REPORT.md`. Publishing the PWA does not certify real-bank formats, physical-phone behavior or Android Sharesheet routing, and the APK is not published.
+
+Pre-push validation for this update passed: formatting, ESLint, **148 unit/integration tests**, TypeScript/production build and **20 desktop/mobile browser tests**, with no failed or skipped cases. Existing Zod annotation and approximately 523 KB bundle warnings remain visible. The produced main bundle is `/assets/index-DPAK0JzT.js`.
+
+## Historical November 1-2 publication
 
 **Status: LIVE AND VERIFIED in isolated desktop and mobile-emulated Chromium. Physical Android installation remains UNVERIFIED.**
 

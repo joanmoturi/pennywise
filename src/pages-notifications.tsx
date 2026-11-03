@@ -128,12 +128,12 @@ export function NotificationInbox() {
   function editMapping(id?: string) {
     const previous = s.notifications.sources.find((v) => v.id === id);
     app.dialog({
-      title: previous ? "Edit source mapping" : "Map notification source",
+      title: previous ? "Edit source mapping" : "Map companion source",
       description:
-        "Use the exact Android package name. Multiple mappings require an exact account hint in the capture; ambiguous mappings never auto-post.",
+        "Copy the exact source ID from the imported candidate. SMS sources start with sms.s; legacy source IDs remain valid. Multiple mappings require an exact account hint; ambiguous mappings never auto-post.",
       fields: [
         { key: "name", label: "Display name" },
-        { key: "source", label: "Android package name" },
+        { key: "source", label: "Companion source ID" },
         {
           key: "accountId",
           label: "Pennywise account",
@@ -181,10 +181,10 @@ export function NotificationInbox() {
         "New rules are disabled by default. Simulate before enabling. Incoming automation requires an exact known counterparty. Conflicting rules always hold for review.",
       fields: [
         { key: "name", label: "Rule name" },
-        { key: "source", label: "Exact Android package name" },
+        { key: "source", label: "Exact companion source ID" },
         {
           key: "kind",
-          label: "Notification type",
+          label: "Transaction candidate type",
           type: "select",
           options: candidateKinds.map((v) => ({ value: v, label: v })),
         },
@@ -308,7 +308,7 @@ export function NotificationInbox() {
         },
         {
           key: "kind",
-          label: "Notification type",
+          label: "Transaction candidate type",
           type: "select",
           options: candidateKinds.map((v) => ({ value: v, label: v })),
         },
@@ -409,7 +409,7 @@ export function NotificationInbox() {
     <>
       <PageHead
         title="Transaction Inbox"
-        subtitle="Local companion captures, explicit financial classification and auditable rules. Notification access is optional."
+        subtitle="Local SMS companion imports, explicit financial classification and auditable rules. The PWA does not read SMS or notifications."
       />
       <Card>
         <h2>Receive from your companion</h2>

@@ -6,7 +6,7 @@ The existing Git-connected Pages project is `pennywise`; its actual production U
 
 ## 1. Publish the application from your laptop
 
-Pennywise uses its own **PRIVATE** repository `joanmoturi/pennywise`, production branch `main`. Engineering Academy remains in its original repository. Current publishing status, verified commit and hosting blockers are recorded in `DEPLOYMENT_REPORT.md`.
+Pennywise uses its own **PUBLIC** source repository `joanmoturi/pennywise`, production branch `main`; the user explicitly confirmed retaining that visibility on November 3, 2026. Public source does not publish the browser's financial database. Engineering Academy remains in its original repository. Current publishing status and verified commit are recorded in `DEPLOYMENT_REPORT.md`.
 
 ```powershell
 Set-Location C:\Users\joanmoturi\pennywise
@@ -24,13 +24,13 @@ The lockfile now uses public npm tarball URLs instead of the development environ
 
 ## 2. Enter these exact Cloudflare settings
 
-In the Cloudflare dashboard, choose **Workers & Pages > Create application > Pages > Connect to Git**. Connect GitHub and authorize access to the selected repository. Choose **Pages**, not a Workers project requiring a deploy command.
+For updates, use the existing Git-connected Pages project `pennywise`; pushing tested changes to `main` triggers its build. Do not create a replacement project or hostname. Only if configuring a new installation, choose **Workers & Pages > Create application > Pages > Connect to Git**, authorize the selected repository, and choose **Pages**, not a Workers project requiring a deploy command.
 
 | Setting                                   | Value to enter                                    |
 | ----------------------------------------- | ------------------------------------------------- |
 | Git provider                              | GitHub                                            |
 | Repository                                | `joanmoturi/pennywise`                            |
-| Project name                              | `pennywise-joanmoturi`, or another available name |
+| Project name                              | `pennywise` (existing project)                     |
 | Production branch                         | `main`                                            |
 | Framework preset                          | `None`                                            |
 | Root directory / advanced path            | Leave blank (repository root)                     |
@@ -47,10 +47,10 @@ Apply the two build variables to both Production and Preview environments. `SKIP
 
 Use the free `pages.dev` hostname; a purchased domain is unnecessary. Do not enable Web Analytics, add analytics snippets, or configure cloud financial storage. The build uses development dependencies as well as runtime dependencies: do not set npm to omit dev dependencies.
 
-Select **Save and Deploy**. A successful deployment supplies the actual production HTTPS URL. If you chose the suggested available name, its form is:
+The existing production address is:
 
 ```text
-https://pennywise-joanmoturi.pages.dev
+https://pennywise-7lz.pages.dev/
 ```
 
 Use the actual URL shown by Cloudflare, not an assumed hostname. Do not install a commit-specific or preview URL for your real financial records.

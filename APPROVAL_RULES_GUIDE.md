@@ -6,7 +6,7 @@ New source mappings are review-only until you explicitly trust them for automati
 
 ## Configure and simulate
 
-Choose **Create rule**, then specify source, notification type, direction, inclusive amount range, optional exact known counterparty, priority (1 is highest), reference matching, confidence threshold (90–100), action, financial classification and target account/category. Link existing receivables, liabilities, bonds or transfer destination accounts where required.
+Choose **Create rule**, then specify the exact companion source ID, transaction candidate type, direction, inclusive amount range, optional exact known counterparty, priority (1 is highest), reference matching, confidence threshold (90–100), action, financial classification and target account/category. Link existing receivables, liabilities, bonds or transfer destination accounts where required.
 
 Actions:
 

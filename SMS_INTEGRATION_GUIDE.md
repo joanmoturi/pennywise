@@ -48,7 +48,7 @@ The companion and PWA have separate stores. No automatic background synchronizat
 
 The historical version-1 batch/receipt format names and worker path are intentionally unchanged. Optional `senderId` metadata is accepted without replacing financial schema 4 or altering existing ledger postings. Old payloads/backups still work.
 
-Use the matching PWA source revision for SMS files. This work is local only: the existing Cloudflare deployment has not gained the new Inbox/metadata support. Desktop localhost checks exercise the local production build; a phone-to-PWA acceptance test must wait for an explicitly authorized matching deployment or another trusted secure test installation. Do not expect an older deployed PWA to accept new fields.
+Use the matching PWA source revision for SMS files. `DEPLOYMENT_REPORT.md` records the verified production revision. An older installation must save open forms, back up records and accept **Reload update** before using the new Inbox/metadata support. Desktop browser checks do not establish physical-phone or installed Android PWA Sharesheet acceptance. Do not expect an older cached PWA to accept new fields.
 
 PWA receipt export currently lists original inbox candidate identities. A conflicting updated candidate not listed by that receipt remains pending in the companion; resolve/review explicitly rather than deleting it based on a chooser success. Receipt import is bounded to 10,000 entries / 2.5 MB.
 
