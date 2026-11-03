@@ -8,9 +8,20 @@ The user explicitly authorized publishing the current Pennywise changes and conf
 
 This update publishes the existing Transaction Inbox, approval rules, duplicate safeguards, schema-4 backup compatibility and SMS companion source. The toolchain wrapper, local APK build evidence and redacted in-memory parser harness are included in source; the APK, signing keys, local databases, financial files and test artifacts are excluded. Remaining obsolete notification-reader setup labels in the PWA were corrected without changing financial logic or layout.
 
-Production deployment verification for this update is pending completion of the Git push and existing Cloudflare Pages build. The target remains project `pennywise`, branch `main`, at `https://pennywise-7lz.pages.dev/`; no new origin, backend or financial-data service is introduced. Current Android build/device evidence is in `ANDROID_BUILD_AND_DEVICE_REPORT.md`. Publishing the PWA does not certify real-bank formats, physical-phone behavior or Android Sharesheet routing, and the APK is not published.
+**PUBLISHED AND VERIFIED.** Application commit `263cded89aa7cf5d3ba726982f3fbfa9e9a76568` was pushed to `joanmoturi/pennywise` main, including the previously local Inbox/SMS commits. GitHub's exact-SHA **Cloudflare Pages** check succeeded for deployment `1b61fd4e-ef1a-4031-8c01-c9b7346c057c`. The stable production URL `https://pennywise-7lz.pages.dev/` serves `/assets/index-DPAK0JzT.js`, whose complete contents matched the validated local production bundle. The unrelated Workers build check was not used as Pages deployment evidence.
+
+The target remains existing project `pennywise`, branch `main`; no new origin, backend or financial-data service was introduced. Current Android build/device evidence is in `ANDROID_BUILD_AND_DEVICE_REPORT.md`. Publishing the PWA does not certify real-bank formats, physical-phone behavior or Android Sharesheet routing, and the APK is not published.
 
 Pre-push validation for this update passed: formatting, ESLint, **148 unit/integration tests**, TypeScript/production build and **20 desktop/mobile browser tests**, with no failed or skipped cases. Existing Zod annotation and approximately 523 KB bundle warnings remain visible. The produced main bundle is `/assets/index-DPAK0JzT.js`.
+
+Live verification used fresh isolated Chromium contexts, never an existing personal browser profile:
+
+- Desktop and Pixel 7 mobile-emulated smoke checks passed: root/nested refresh, active controlling worker, offline nested reload, preserved navy/gold presentation, no horizontal overflow and no captured JavaScript/console errors.
+- Actual HTTPS manifest/worker/icon responses, MIME/cache/security headers, PNG dimensions, standalone manifest and immutable hashed JavaScript were checked successfully.
+- **Seven live SMS-file acceptance assertion groups passed:** actual synthetic native export validation (including `senderId`), offline Inbox import without ledger posting, duplicate import preservation, exact receipt identities, constrained trusted source/account/rule posting, repeated-import ledger idempotency, and no observed external requests or network writes.
+- Those SMS checks used two independent desktop browser contexts at the real production origin, switched offline after priming the worker. They do not claim installed Android PWA Sharesheet acceptance or a new native-device test.
+
+All exercised production requests were same-origin asset GETs; no real financial records or SMS were used. Native file/receipt test fixtures remain private session artifacts and were not committed. Subsequent documentation-only commits retain the same application asset fingerprints. Existing installations should back up records, save open forms and choose **Reload update** when offered; no storage clearing or forced reload is required.
 
 ## Historical November 1-2 publication
 
