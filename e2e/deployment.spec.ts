@@ -18,8 +18,8 @@ const test = base.extend<{ staticHost: StaticHost }>({
     const dist = join(process.cwd(), "dist");
     const originalHtml = await readFile(join(dist, "index.html"), "utf8");
     const updatedHtml = originalHtml.replace(
-      "<title>Kichella | Financial command centre</title>",
-      "<title>Kichella deployment update</title>",
+      "<title>Pennywise | Financial command centre</title>",
+      "<title>Pennywise deployment update</title>",
     );
     const digest = (text: string) =>
       createHash("md5").update(text).digest("hex");
@@ -390,6 +390,11 @@ test("root assets and install manifest work on nested URLs and offline navigatio
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${staticHost.url}/monthly/review/`);
   await expect(page.locator(".app-shell")).toBeVisible();
+  await expect(page).toHaveTitle("Pennywise | Financial command centre");
+  await expect(page.locator(".brand")).toContainText("Pennywise");
+  await expect(page.locator(".brand .logo-mark")).toHaveText("P");
+  await expect(page.locator(".page-footer")).toContainText("Pennywise");
+  await expect(page.locator(".page-footer")).not.toContainText("Kichella");
   const manifestResponse = await page.request.get(
     `${staticHost.url}/manifest.webmanifest`,
   );
@@ -399,8 +404,8 @@ test("root assets and install manifest work on nested URLs and offline navigatio
   expect(manifestResponse.headers()["cache-control"]).toBe("no-cache");
   const manifest = await manifestResponse.json();
   expect(manifest).toMatchObject({
-    name: "Kichella Financial Command Centre",
-    short_name: "Kichella",
+    name: "Pennywise Financial Command Centre",
+    short_name: "Pennywise",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -594,12 +599,12 @@ test("a new service-worker deployment prompts before activation and preserves In
     .toBe(true);
   await page.clock.fastForward("01:00:00");
   await expect(page.locator(".update-banner")).toBeVisible();
-  expect(await page.title()).toBe("Kichella | Financial command centre");
+  expect(await page.title()).toBe("Pennywise | Financial command centre");
   expect(await snapshot(page)).toEqual(original);
   await page
     .getByRole("button", { name: "Reload update", exact: true })
     .click();
-  await expect(page).toHaveTitle("Kichella deployment update");
+  await expect(page).toHaveTitle("Pennywise deployment update");
   await expect(page.locator(".app-shell")).toBeVisible();
   expect(await snapshot(page)).toEqual(original);
   await nav(page, "Transactions");

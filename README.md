@@ -1,4 +1,4 @@
-# Kichella (Pennywise)
+# Pennywise
 
 Local-first personal financial command centre. Standalone React/TypeScript PWA in its own public `joanmoturi/pennywise` source repository; financial records remain private to each device/browser. Engineering Academy remains unchanged in its original repository.
 
@@ -8,11 +8,16 @@ New workspaces use a midnight-navy and warm-gold theme. Existing saved preferenc
 
 ## Save reliability and usability update
 
-Kichella retains Pennywise's financial modules, ledger rules, Transaction Inbox,
+Pennywise retains its financial modules, ledger rules, Transaction Inbox,
 full-backup format and existing production address. Changes include targeted
 local record writes, guarded saves with retained inputs on failure, grouped
 navigation, direct account access, simpler forms and paginated transactions.
 See `docs\KICHELLA_RELEASE_READINESS_REPORT.md` for checks and limitations.
+
+The Kichella-branded version is preserved on the GitHub branch
+`kichella/stabilisation`. `main` and the existing deployment use the Pennywise
+name with all stabilization improvements retained. This name-only change leaves
+database identifiers, financial records and backup formats unchanged.
 
 The original deployed source is preserved on GitHub in
 `backup/pennywise-deployed-2026-11-05` at `95e6d83`.

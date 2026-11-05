@@ -402,8 +402,8 @@ export default function App() {
   if (!repo || !state || !app)
     return (
       <main className="startup">
-        <div className="logo-mark">K</div>
-        <h1>Kichella</h1>
+        <div className="logo-mark">P</div>
+        <h1>Pennywise</h1>
         <p role="status">Opening your private financial workspace...</p>
       </main>
     );
@@ -429,9 +429,9 @@ export default function App() {
               app.navigate("overview");
             }}
           >
-            <span className="logo-mark">K</span>
+            <span className="logo-mark">P</span>
             <span>
-              Kichella<small>A little wiser. Every day.</small>
+              Pennywise<small>A little wiser. Every day.</small>
             </span>
           </a>
           <span className="nav-label">YOUR WORKSPACE</span>
@@ -481,7 +481,7 @@ export default function App() {
               {installEvent && (
                 <button
                   className="icon-button"
-                  aria-label="Install Kichella"
+                  aria-label="Install Pennywise"
                   onClick={() => {
                     void installEvent.prompt();
                     setInstallEvent(undefined);
@@ -627,9 +627,9 @@ export default function App() {
             )}
             <ActivePage key={section} section={section} />
             <footer className="page-footer">
-              Kichella preview / based on Pennywise {APP_VERSION}. Figures are
-              based on your records and explicitly labeled assumptions. Not
-              personalized investment advice.
+              Pennywise {APP_VERSION}. Figures are based on your records and
+              explicitly labeled assumptions. Not personalized investment
+              advice.
             </footer>
           </main>
         </div>

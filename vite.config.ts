@@ -32,8 +32,8 @@ export default defineConfig(({ command }) => {
         includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
         manifest: {
           id: "/",
-          name: "Kichella Financial Command Centre",
-          short_name: "Kichella",
+          name: "Pennywise Financial Command Centre",
+          short_name: "Pennywise",
           description: "Private, offline-first personal finance",
           start_url: "/",
           scope: "/",
