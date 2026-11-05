@@ -159,3 +159,59 @@ it("invalid financial input does not close the form or commit any data", async (
   expect(submit).not.toHaveBeenCalled();
   expect(screen.getByRole("dialog")).toBeInTheDocument();
 });
+it("rapid repeated submissions run once, show saving and retain input after a failed write", async () => {
+  let rejectWrite: (reason: Error) => void = () => {};
+  const submit = vi.fn(
+    () =>
+      new Promise<void>((_resolve, reject) => {
+        rejectWrite = reject;
+      }),
+  );
+  const close = vi.fn();
+  render(
+    <FormDialog
+      spec={{
+        title: "TEST save guard",
+        fields: [{ key: "name", label: "Name" }],
+        values: { name: "TEST retained entry" },
+        submit,
+      }}
+      close={close}
+    />,
+  );
+  const form = screen.getByRole("dialog").querySelector("form")!;
+  fireEvent.submit(form);
+  fireEvent.submit(form);
+  expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
+  expect(screen.getByLabelText("Name")).toBeDisabled();
+  await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
+  rejectWrite(new Error("TEST disk full"));
+  await screen.findByRole("alert");
+  expect(screen.getByLabelText("Name")).toHaveValue("TEST retained entry");
+  expect(screen.getByLabelText("Name")).not.toBeDisabled();
+  expect(screen.getByRole("alert")).toHaveFocus();
+  expect(close).not.toHaveBeenCalled();
+});
+it("successful saves wait for persistence before closing and closing is disabled while saving", async () => {
+  let finish: () => void = () => {};
+  const submit = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const close = vi.fn();
+  render(
+    <FormDialog
+      spec={{ title: "TEST commit", fields: [], values: {}, submit }}
+      close={close}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(submit).toHaveBeenCalledOnce());
+  expect(close).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Close dialog" })).toBeDisabled();
+  finish();
+  await waitFor(() => expect(close).toHaveBeenCalledOnce());
+});

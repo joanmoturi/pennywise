@@ -1,10 +1,26 @@
-# Pennywise
+# Kichella (Pennywise)
 
 Local-first personal financial command centre. Standalone React/TypeScript PWA in its own public `joanmoturi/pennywise` source repository; financial records remain private to each device/browser. Engineering Academy remains unchanged in its original repository.
 
 Production: `https://pennywise-7lz.pages.dev/`. Financial records remain local to each device/browser; hosting is not a backup service. Download portable full backups and keep encrypted copies outside the device.
 
 New workspaces use a midnight-navy and warm-gold theme. Existing saved preferences are preserved; select **Settings > Theme > Dark** for the premium dark palette, or Light for its warm ivory counterpart.
+
+## Save reliability and usability update
+
+Kichella retains Pennywise's financial modules, ledger rules, Transaction Inbox,
+full-backup format and existing production address. Changes include targeted
+local record writes, guarded saves with retained inputs on failure, grouped
+navigation, direct account access, simpler forms and paginated transactions.
+See `docs\KICHELLA_RELEASE_READINESS_REPORT.md` for checks and limitations.
+
+The original deployed source is preserved on GitHub in
+`backup/pennywise-deployed-2026-11-05` at `95e6d83`.
+**Download a full backup before updating an existing installation.** Physical
+IndexedDB storage upgrades from version 3 to 4; financial schema 4 is unchanged.
+Do not roll an upgraded browser back to the old application code, clear site
+data, or uninstall to troubleshoot a save. Export from the current application
+and test recovery in an independent browser profile first.
 
 ## Optional Android SMS integration
 
@@ -136,17 +152,29 @@ There are no automatic investments, real bank transfers, real bond dates/rates, 
 - `money.ts`: exact monetary parsing, formatting, bounded aggregation and ratios.
 - `engine.ts`: ledger balances, validation, coupons, budgets, necessities, decision support, windfalls and projections.
 - `expense-engine.ts`: recurring generation, prepaid recognition, savings decisions, rollover and review snapshots.
-- `storage.ts`: IndexedDB object-store version 3, financial schema 4 with v1/v2/v3 migrations, serialized read/write transactions, revisioning and safety snapshots.
+- `storage.ts`: IndexedDB physical version 4, financial schema 4 with v1/v2/v3 migrations, targeted record writes, serialized transactions, revisioning and safety snapshots.
 - `backup.ts`: versioned full envelopes, canonical SHA-256 integrity, PBKDF2/AES-GCM encryption and validated inspection.
 - `import.ts` / `reports.ts`: reviewed CSV import, exact duplicate fingerprints, safe CSV output and actual reporting.
 - `context.tsx`, `ui.tsx`, `pages-*.tsx`, `App.tsx`: presentation and form workflows.
 - `vite.config.ts`: manifest, precache generation and prompted updates.
 
-Database: `pennywise-private`, object store `state`, key `current`. Complete snapshots are validated and saved in one read/write transaction. The transaction reads the latest revision before applying the synchronous mutation, avoiding lost updates across tabs. Audit entries record before/after changes (receipt binaries omitted from audit, but included in full backups). BroadcastChannel refreshes other tabs after commit. The app does not use localStorage as its financial database.
+Database: `pennywise-private`, object stores `state` and `records`. `state/current`
+holds revision, settings and collection order; `records` holds individual
+financial records. A complete financial state is validated before changed
+records, audit entries and header are committed atomically. The transaction
+reads the latest revision before applying its synchronous mutation, avoiding
+lost updates across tabs. Audit entries record before/after changes (receipt
+binaries omitted from audit, but included in full backups). Optional
+BroadcastChannel refreshes other tabs after commit; its failure cannot hide a
+successful save. The app does not use localStorage as its financial database.
 
 Before restore/reset, the current state is saved under `safety-before-destructive` in the same transaction. Validation, exceptions and aborts roll back the entire operation. The safety snapshot is available in Backup Centre, but it cannot survive clearing browser storage; use the downloadable safety file too.
 
-The snapshot approach is simple and transaction-safe for personal datasets; it is not an indexed high-volume multi-user ledger. Limits include 50,000 transactions, 20,000 occurrences, 100,000 audit entries, 2 MB per local receipt, 20,000 CSV rows and a 35 MB plaintext full-backup export limit. Imported encrypted files are limited to 50 MB.
+Reads, financial validation and diffing still reconstruct or visit full state;
+this is not an indexed high-volume multi-user ledger. Limits include 50,000
+transactions, 20,000 occurrences, 100,000 audit entries, 2 MB per local receipt,
+20,000 CSV rows and a 35 MB plaintext full-backup export limit. Imported
+encrypted files are limited to 50 MB.
 
 ## Complete backup and restore guide
 

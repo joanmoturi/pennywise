@@ -19,6 +19,7 @@ import {
   deleteRecord,
   baseScenario,
   confirmWindfall,
+  editTransaction,
 } from "./forms";
 import {
   PageHead,
@@ -43,8 +44,10 @@ import {
   prepaidSavings,
   recurringReminders,
 } from "./expense-engine";
+import { timing } from "./performance";
 
 export function OverviewPage() {
+  const endCalculation = timing("overview-calculation");
   const app = useApp();
   const s = app.state;
   const fmt = (n: number) => formatMoney(n, s.settings.currency);
@@ -65,6 +68,7 @@ export function OverviewPage() {
       .filter((e) => e.due >= today() && e.status !== "cancelled")
       .map((e) => eventRemaining(s, e)),
   );
+  endCalculation();
   return (
     <>
       <PageHead
@@ -77,13 +81,40 @@ export function OverviewPage() {
           </Button>
         }
       />
+      <div className="actions quick-actions">
+        <Button
+          onClick={() =>
+            s.accounts.length
+              ? editTransaction(app)
+              : editRecord(app, "accounts")
+          }
+        >
+          Record expense
+        </Button>
+        <Button
+          secondary
+          onClick={() =>
+            s.accounts.length
+              ? editTransaction(app, undefined, {
+                  type: "income",
+                  category: "Income",
+                })
+              : editRecord(app, "accounts")
+          }
+        >
+          Record income
+        </Button>
+        <Button secondary onClick={() => app.navigate("budgets")}>
+          Plan a budget
+        </Button>
+      </div>
       <div className="hero">
         <div>
           <span className="eyebrow">AVAILABLE AFTER COMMITMENTS</span>
           <div className="hero-amount">{fmt(totals.available)}</div>
           <p>
-            Liquid cash minus restrictions, reserves and all outstanding
-            liabilities.
+            Cash in your accounts, minus protected money and everything you owe.
+            Expected payments are not included.
           </p>
           <Badge>{b.name}</Badge>
         </div>

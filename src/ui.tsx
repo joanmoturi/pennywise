@@ -13,6 +13,7 @@ import { X, Plus, Pencil, Trash2 } from "lucide-react";
 import type { DialogSpec } from "./context";
 import { parseMoney, decimal } from "./money";
 import { ZodError } from "zod";
+import { timing } from "./performance";
 
 export function errorMessage(error: unknown): string {
   if (error instanceof ZodError)
@@ -151,6 +152,7 @@ export function Progress({ value, total }: { value: number; total: number }) {
     <div
       className="progress"
       role="progressbar"
+      aria-label="Budget used"
       aria-valuenow={percentage}
       aria-valuemin={0}
       aria-valuemax={100}
@@ -354,21 +356,63 @@ export function FormDialog({
   close: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const submitting = useRef(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [slow, setSlow] = useState(false);
+  const [advanced, setAdvanced] = useState(
+    spec.fields.some(
+      (f) =>
+        f.advanced &&
+        [
+          "restricted",
+          "notes",
+          "destinationId",
+          "relatedId",
+          "subcategory",
+          "minimum",
+          "maximum",
+          "end",
+        ].includes(f.key) &&
+        Boolean(spec.values[f.key]),
+    ) || ["custom", "irregular"].includes(String(spec.values.frequency)),
+  );
   useEffect(() => {
     const el = ref.current!;
     el.showModal();
     return () => el.close();
   }, []);
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
+  useEffect(() => {
+    if (!busy) return;
+    const timer = setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(timer);
+  }, [busy]);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
+    const data = new FormData(e.currentTarget);
     setError("");
+    setFieldErrors({});
     setBusy(true);
+    setSlow(false);
+    const endFeedback = timing("save-feedback");
+    let activeField = "";
     try {
-      const data = new FormData(e.currentTarget);
+      await new Promise<void>((resolve) => {
+        if (typeof requestAnimationFrame === "function")
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        else setTimeout(resolve, 0);
+      });
+      const endValidation = timing("form-validation");
       const values = { ...spec.values };
       for (const f of spec.fields) {
+        activeField = f.key;
         const raw = String(data.get(f.key) ?? "");
         values[f.key] =
           f.type === "checkbox"
@@ -379,12 +423,27 @@ export function FormDialog({
                 ? Number(raw)
                 : raw;
       }
+      activeField = "";
+      endValidation();
       await spec.submit(values);
+      endFeedback();
       close();
     } catch (error) {
+      const errors: Record<string, string> = {};
+      if (activeField) errors[activeField] = errorMessage(error);
+      if (error instanceof ZodError)
+        for (const issue of error.issues) {
+          const key = String(issue.path.at(-1));
+          if (spec.fields.some((f) => f.key === key))
+            errors[key] = issue.message;
+        }
+      setFieldErrors(errors);
+      if (Object.keys(errors).length) setAdvanced(true);
       setError(errorMessage(error));
     } finally {
+      submitting.current = false;
       setBusy(false);
+      setSlow(false);
     }
   }
   return (
@@ -395,8 +454,30 @@ export function FormDialog({
         else close();
       }}
       aria-labelledby="dialog-title"
+      aria-describedby={spec.description ? "dialog-description" : undefined}
+      aria-busy={busy}
     >
-      <form onSubmit={submit}>
+      <form
+        onSubmit={submit}
+        onChange={(event) => {
+          const target = event.target;
+          if (!(
+            target instanceof HTMLInputElement ||
+            target instanceof HTMLSelectElement
+          ))
+            return;
+          if (
+            target.name === "type" &&
+            !["income", "expense"].includes(target.value)
+          )
+            setAdvanced(true);
+          if (
+            target.name === "frequency" &&
+            ["custom", "irregular"].includes(target.value)
+          )
+            setAdvanced(true);
+        }}
+      >
         <div className="dialog-head">
           <h2 id="dialog-title">{spec.title}</h2>
           <button
@@ -410,77 +491,156 @@ export function FormDialog({
           </button>
         </div>
         {spec.description && (
-          <p className="dialog-description">{spec.description}</p>
+          <p className="dialog-description" id="dialog-description">
+            {spec.description}
+          </p>
         )}
-        <div className="form-grid">
-          {spec.fields.map((f) => {
-            const value = spec.values[f.key];
-            const display =
-              (f.type === "money" || f.type === "rate") &&
-              typeof value === "number"
-                ? decimal(value)
-                : String(value ?? "");
-            return (
-              <label
-                key={f.key}
-                className={f.type === "textarea" ? "full" : ""}
-              >
-                <span>{f.label}</span>
-                {f.type === "select" ? (
-                  <select
-                    name={f.key}
-                    defaultValue={display}
-                    required={f.required !== false}
-                  >
-                    {f.required === false && <option value="">None</option>}
-                    {f.options?.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : f.type === "textarea" ? (
-                  <textarea
-                    name={f.key}
-                    defaultValue={display}
-                    rows={3}
-                    maxLength={2000}
-                  />
-                ) : f.type === "checkbox" ? (
-                  <input
-                    type="checkbox"
-                    name={f.key}
-                    defaultChecked={Boolean(value)}
-                  />
-                ) : (
-                  <input
-                    name={f.key}
-                    type={
-                      f.type === "date"
-                        ? "date"
-                        : f.type === "number"
-                          ? "number"
-                          : "text"
-                    }
-                    inputMode={
-                      f.type === "money" || f.type === "rate"
-                        ? "decimal"
-                        : undefined
-                    }
-                    defaultValue={display}
-                    required={f.required !== false}
-                    maxLength={f.type === "text" || !f.type ? 160 : undefined}
-                  />
-                )}
-                {f.help && <small>{f.help}</small>}
-              </label>
-            );
-          })}
-        </div>
         {error && (
-          <div className="error" role="alert">
-            {error}
+          <div className="error" role="alert" tabIndex={-1} ref={errorRef}>
+            <strong>Could not save. Your entries are still here.</strong>
+            <p>{error}</p>
+            {Object.entries(fieldErrors).map(([key, message]) => (
+              <a
+                key={key}
+                href={`#field-${key}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  document.getElementById(`field-${key}`)?.focus();
+                }}
+              >
+                {spec.fields.find((f) => f.key === key)?.label}: {message}
+              </a>
+            ))}
           </div>
+        )}
+        {spec.fields.some((f) => f.advanced) && (
+          <button
+            type="button"
+            className="text-button"
+            aria-expanded={advanced}
+            aria-controls="dialog-fields"
+            disabled={busy}
+            onClick={() => setAdvanced(!advanced)}
+          >
+            {advanced
+              ? "Hide optional details"
+              : "Optional details and linked records"}
+          </button>
+        )}
+        <fieldset disabled={busy} id="dialog-fields">
+          <legend className="visually-hidden">Record details</legend>
+          <div className="form-grid">
+            {spec.fields.map((f) => {
+              const value = spec.values[f.key];
+              const display =
+                (f.type === "money" || f.type === "rate") &&
+                typeof value === "number"
+                  ? decimal(value)
+                  : String(value ?? "");
+              return (
+                <label
+                  key={f.key}
+                  className={f.type === "textarea" ? "full" : ""}
+                  hidden={f.advanced && !advanced}
+                >
+                  <span id={`label-${f.key}`}>{f.label}</span>
+                  {f.type === "select" ? (
+                    <select
+                      id={`field-${f.key}`}
+                      aria-labelledby={`label-${f.key}`}
+                      name={f.key}
+                      aria-invalid={Boolean(fieldErrors[f.key])}
+                      aria-describedby={
+                        [
+                          f.help && `help-${f.key}`,
+                          fieldErrors[f.key] && `error-${f.key}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || undefined
+                      }
+                      defaultValue={display}
+                      required={f.required !== false}
+                    >
+                      {f.required === false && <option value="">None</option>}
+                      {f.options?.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : f.type === "textarea" ? (
+                    <textarea
+                      id={`field-${f.key}`}
+                      aria-labelledby={`label-${f.key}`}
+                      name={f.key}
+                      aria-invalid={Boolean(fieldErrors[f.key])}
+                      aria-describedby={
+                        fieldErrors[f.key]
+                          ? `error-${f.key}`
+                          : f.help
+                            ? `help-${f.key}`
+                            : undefined
+                      }
+                      defaultValue={display}
+                      rows={3}
+                      maxLength={2000}
+                    />
+                  ) : f.type === "checkbox" ? (
+                    <input
+                      id={`field-${f.key}`}
+                      aria-labelledby={`label-${f.key}`}
+                      type="checkbox"
+                      name={f.key}
+                      defaultChecked={Boolean(value)}
+                    />
+                  ) : (
+                    <input
+                      id={`field-${f.key}`}
+                      aria-labelledby={`label-${f.key}`}
+                      name={f.key}
+                      aria-invalid={Boolean(fieldErrors[f.key])}
+                      aria-describedby={
+                        [
+                          f.help && `help-${f.key}`,
+                          fieldErrors[f.key] && `error-${f.key}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || undefined
+                      }
+                      type={
+                        f.type === "date"
+                          ? "date"
+                          : f.type === "number"
+                            ? "number"
+                            : "text"
+                      }
+                      inputMode={
+                        f.type === "money" || f.type === "rate"
+                          ? "decimal"
+                          : undefined
+                      }
+                      defaultValue={display}
+                      required={f.required !== false}
+                      maxLength={f.type === "text" || !f.type ? 160 : undefined}
+                    />
+                  )}
+                  {f.help && <small id={`help-${f.key}`}>{f.help}</small>}
+                  {fieldErrors[f.key] && (
+                    <small className="field-error" id={`error-${f.key}`}>
+                      {fieldErrors[f.key]}
+                    </small>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+        {busy && (
+          <p role="status">
+            {slow
+              ? "Still waiting for local storage. Keep this form open; it will confirm the save or let you retry safely."
+              : "Saving on this device..."}
+          </p>
         )}
         <div className="dialog-footer">
           <button

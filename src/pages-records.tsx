@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CalendarDays, Copy, Check, Archive, Paperclip } from "lucide-react";
 import { useApp } from "./context";
 import {
@@ -11,7 +11,7 @@ import {
 } from "./domain";
 import { sum, formatMoney } from "./money";
 import {
-  accountBalance,
+  accountBalances,
   outstanding,
   reserveBalance,
   necessitiesFunding,
@@ -52,6 +52,7 @@ export function AccountsPage() {
   const app = useApp();
   const { state: s } = app;
   const fmt = (n: number) => formatMoney(n, s.settings.currency);
+  const balances = useMemo(() => accountBalances(s), [s]);
   return (
     <>
       <PageHead
@@ -81,7 +82,7 @@ export function AccountsPage() {
                 />
               </div>
               <h3>{a.name}</h3>
-              <div className="big-number">{fmt(accountBalance(s, a.id))}</div>
+              <div className="big-number">{fmt(balances.get(a.id)!)}</div>
               <p>Restricted: {fmt(a.restricted)}</p>
               <small>{a.notes}</small>
             </Card>
@@ -105,19 +106,30 @@ export function TransactionsPage() {
   const [end, setEnd] = useState("");
   const [ascending, setAscending] = useState(false);
   const [account, setAccount] = useState("");
+  const [offset, setOffset] = useState(0);
+  const pageSize = 50;
   const fmt = (n: number) => formatMoney(n, s.settings.currency);
-  const txs = s.transactions
-    .filter(
-      (t) =>
-        (!type || t.type === type) &&
-        (!account || t.accountId === account) &&
-        (!start || t.date >= start) &&
-        (!end || t.date <= end) &&
-        `${t.description} ${t.category} ${t.subcategory} ${t.notes}`
-          .toLowerCase()
-          .includes(search.toLowerCase()),
-    )
-    .sort((a, b) => (ascending ? 1 : -1) * a.date.localeCompare(b.date));
+  const txs = useMemo(
+    () =>
+      (ascending ? s.transactions : [...s.transactions].reverse())
+        .filter(
+          (t) =>
+            (!type || t.type === type) &&
+            (!account || t.accountId === account) &&
+            (!start || t.date >= start) &&
+            (!end || t.date <= end) &&
+            `${t.description} ${t.category} ${t.subcategory} ${t.notes}`
+              .toLowerCase()
+              .includes(search.toLowerCase()),
+        )
+        .sort((a, b) => (ascending ? 1 : -1) * a.date.localeCompare(b.date)),
+    [s.transactions, type, account, start, end, search, ascending],
+  );
+  const pageOffset = Math.min(
+    offset,
+    Math.max(0, Math.ceil(txs.length / pageSize) - 1) * pageSize,
+  );
+  const visible = txs.slice(pageOffset, pageOffset + pageSize);
   async function attach(t: Transaction, file: File) {
     try {
       if (
@@ -153,7 +165,7 @@ export function TransactionsPage() {
           </AddButton>
         }
       />
-      <div className="toolbar">
+      <div className="toolbar" onChange={() => setOffset(0)}>
         <input
           aria-label="Search transactions"
           placeholder="Search description, category or notes"
@@ -200,7 +212,13 @@ export function TransactionsPage() {
             onChange={(e) => setEnd(e.target.value)}
           />
         </label>
-        <Button secondary onClick={() => setAscending(!ascending)}>
+        <Button
+          secondary
+          onClick={() => {
+            setAscending(!ascending);
+            setOffset(0);
+          }}
+        >
           {ascending ? "Oldest first" : "Newest first"}
         </Button>
       </div>
@@ -224,7 +242,7 @@ export function TransactionsPage() {
               "Actions",
             ]}
           >
-            {txs.map((t) => (
+            {visible.map((t) => (
               <tr key={t.id}>
                 <td>{t.date}</td>
                 <td>
@@ -283,6 +301,28 @@ export function TransactionsPage() {
               </tr>
             ))}
           </Table>
+        )}
+        {txs.length > pageSize && (
+          <nav className="pagination" aria-label="Transaction pages">
+            <Button
+              secondary
+              disabled={pageOffset === 0}
+              onClick={() => setOffset(Math.max(0, pageOffset - pageSize))}
+            >
+              Previous
+            </Button>
+            <span role="status">
+              {pageOffset + 1}-{Math.min(pageOffset + pageSize, txs.length)} of{" "}
+              {txs.length} entries
+            </span>
+            <Button
+              secondary
+              disabled={pageOffset + pageSize >= txs.length}
+              onClick={() => setOffset(pageOffset + pageSize)}
+            >
+              Next
+            </Button>
+          </nav>
         )}
       </Card>
     </>

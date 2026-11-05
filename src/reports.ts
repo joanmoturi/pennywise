@@ -1,6 +1,6 @@
 import type { State } from "./domain";
 import { sum } from "./money";
-import { accountBalance, outstanding, reserveBalance } from "./engine";
+import { accountBalances, outstanding, reserveBalance } from "./engine";
 
 export function reports(s: State, start: string, end: string) {
   const txs = s.transactions.filter((t) => t.date >= start && t.date <= end);
@@ -22,24 +22,27 @@ export function reports(s: State, start: string, end: string) {
   };
   const monthly = [...new Set(txs.map((t) => t.date.slice(0, 7)))]
     .sort()
-    .map((month) => ({
-      month,
-      income: sum(
-        txs
-          .filter((t) => t.date.startsWith(month) && t.type === "income")
-          .map((t) => t.amount),
-      ),
-      expense: sum(
-        txs
-          .filter((t) => t.date.startsWith(month) && t.type === "expense")
-          .map((t) => t.amount),
-      ),
-      cash: sum(
-        s.accounts
-          .filter((a) => a.kind !== "investment")
-          .map((a) => accountBalance(s, a.id, `${month}-31`)),
-      ),
-    }));
+    .map((month) => {
+      const balances = accountBalances(s, `${month}-31`);
+      return {
+        month,
+        income: sum(
+          txs
+            .filter((t) => t.date.startsWith(month) && t.type === "income")
+            .map((t) => t.amount),
+        ),
+        expense: sum(
+          txs
+            .filter((t) => t.date.startsWith(month) && t.type === "expense")
+            .map((t) => t.amount),
+        ),
+        cash: sum(
+          s.accounts
+            .filter((a) => a.kind !== "investment")
+            .map((a) => balances.get(a.id)!),
+        ),
+      };
+    });
   return {
     transactions: txs,
     spending: groups("expense", "category"),

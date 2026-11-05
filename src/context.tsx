@@ -17,6 +17,7 @@ export interface Field {
   options?: { value: string; label: string }[];
   required?: boolean;
   help?: string;
+  advanced?: boolean;
 }
 export interface DialogSpec {
   title: string;

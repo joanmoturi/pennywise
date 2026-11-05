@@ -1,4 +1,13 @@
-import { Component, useEffect, useState, type ReactNode } from "react";
+import {
+  Component,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   LayoutDashboard,
   Wallet,
@@ -47,11 +56,13 @@ import { NotificationInbox } from "./pages-notifications";
 import { APP_VERSION } from "./backup";
 import { backupReminder } from "./expense-engine";
 import { Button, Card, FormDialog, errorMessage } from "./ui";
+import { timing } from "./performance";
 
 const navigation = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "budgets", label: "Budgets", icon: Wallet },
   { id: "transactions", label: "Transactions", icon: ArrowLeftRight },
+  { id: "accounts", label: "Accounts", icon: Wallet },
   { id: "inbox", label: "Transaction Inbox", icon: Download },
   { id: "income", label: "Income", icon: TrendingUp },
   { id: "bonds", label: "Bonds", icon: Landmark },
@@ -69,6 +80,62 @@ const navigation = [
   { id: "backup", label: "Backup Centre", icon: Download },
   { id: "settings", label: "Settings", icon: Settings },
 ];
+const navigationGroups = [
+  {
+    label: "Everyday money",
+    ids: ["overview", "transactions", "accounts", "budgets"],
+  },
+  {
+    label: "Income & commitments",
+    ids: [
+      "income",
+      "recurring",
+      "occasional",
+      "prepaid",
+      "obligations",
+      "receivables",
+    ],
+  },
+  {
+    label: "Planning & financial safety",
+    ids: [
+      "reserves",
+      "bonds",
+      "forecast",
+      "windfalls",
+      "capture",
+      "review",
+      "reports",
+    ],
+  },
+  { label: "Tools & settings", ids: ["backup", "settings", "inbox"] },
+];
+const ActivePage = memo(function ActivePage({ section }: { section: string }) {
+  return (
+    {
+      overview: <OverviewPage />,
+      accounts: <AccountsPage />,
+      budgets: <BudgetsPage />,
+      transactions: <TransactionsPage />,
+      inbox: <NotificationInbox />,
+      income: <IncomePage />,
+      bonds: <BondsPage />,
+      obligations: <ObligationsPage />,
+      receivables: <ObligationsPage receivables />,
+      reserves: <ReservesPage />,
+      forecast: <ForecastPage />,
+      windfalls: <WindfallsPage />,
+      reports: <ReportsPage />,
+      settings: <SettingsPage />,
+      recurring: <RecurringPage />,
+      occasional: <OccasionalPage />,
+      prepaid: <PrepaidPage />,
+      capture: <MonthlyReviewPage captureOnly />,
+      review: <MonthlyReviewPage />,
+      backup: <BackupCentre />,
+    }[section] ?? <OverviewPage />
+  );
+});
 let updateWorker: ((reloadPage?: boolean) => Promise<void>) | undefined;
 export class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -104,6 +171,8 @@ export default function App() {
   );
   const [dialog, setDialog] = useState<DialogSpec>();
   const [toast, setToast] = useState("");
+  const [saving, setSaving] = useState(0);
+  const pendingWrites = useRef(0);
   const [preparedDownload, setPreparedDownload] = useState<{
     name: string;
     url: string;
@@ -121,6 +190,10 @@ export default function App() {
     void (async () => {
       try {
         database = await openDatabase();
+        if (!active) {
+          database.close();
+          return;
+        }
         const repository = new Repository(database);
         const s = await repository.read();
         if (active) {
@@ -218,11 +291,21 @@ export default function App() {
   }, []);
   useEffect(() => {
     if (!repo) return;
-    const channel = new BroadcastChannel("pennywise-revisions");
+    if (typeof BroadcastChannel === "undefined") return;
+    let channel: BroadcastChannel;
+    try {
+      channel = new BroadcastChannel("pennywise-revisions");
+    } catch {
+      return;
+    }
     channel.onmessage = () => {
       void repo
         .read()
-        .then(setState)
+        .then((s) =>
+          setState((current) =>
+            !current || s.revision >= current.revision ? s : current,
+          ),
+        )
         .catch((e) => setToast(errorMessage(e)));
     };
     return () => channel.close();
@@ -235,6 +318,73 @@ export default function App() {
     const id = setTimeout(() => setToast(""), 6500);
     return () => clearTimeout(id);
   }, [toast]);
+  useEffect(() => {
+    const leave = (event: BeforeUnloadEvent) => {
+      if (pendingWrites.current || dialog) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", leave);
+    return () => window.removeEventListener("beforeunload", leave);
+  }, [dialog]);
+  const navigate = useCallback((id: string) => {
+    setSection(id);
+    setDrawer(false);
+    requestAnimationFrame(() =>
+      document.getElementById("main-content")?.focus(),
+    );
+  }, []);
+  const mutate = useCallback(
+    async (action: string, change: (s: State) => void) => {
+      if (!repo) throw new Error("Local storage is not ready");
+      pendingWrites.current++;
+      setSaving((n) => n + 1);
+      try {
+        const updated = await repo.update(action, change);
+        const endState = timing("state-update");
+        setState((current) =>
+          !current || updated.revision >= current.revision ? updated : current,
+        );
+        endState();
+        setToast("Saved on this device");
+      } catch (e) {
+        setToast(errorMessage(e));
+        throw e;
+      } finally {
+        pendingWrites.current--;
+        setSaving((n) => n - 1);
+      }
+    },
+    [repo],
+  );
+  const app = useMemo(
+    () =>
+      repo && state
+        ? {
+            state,
+            repo,
+            mutate,
+            dialog: setDialog,
+            confirm: (
+              title: string,
+              description: string,
+              action: () => Promise<void>,
+            ) =>
+              setDialog({
+                title,
+                description,
+                fields: [],
+                values: {},
+                submit: action,
+                submitLabel: "Confirm",
+              }),
+            notify: setToast,
+            navigate,
+          }
+        : undefined,
+    [repo, state, mutate, navigate],
+  );
   if (error)
     return (
       <main className="startup">
@@ -249,72 +399,20 @@ export default function App() {
         </Card>
       </main>
     );
-  if (!repo || !state)
+  if (!repo || !state || !app)
     return (
       <main className="startup">
-        <div className="logo-mark">P</div>
-        <h1>Pennywise</h1>
+        <div className="logo-mark">K</div>
+        <h1>Kichella</h1>
         <p role="status">Opening your private financial workspace...</p>
       </main>
     );
-  const app = {
-    state,
-    repo,
-    mutate: async (action: string, change: (s: State) => void) => {
-      try {
-        const updated = await repo.update(action, change);
-        setState(updated);
-        setToast("Saved on this device");
-      } catch (e) {
-        setToast(errorMessage(e));
-        throw e;
-      }
-    },
-    dialog: setDialog,
-    confirm: (
-      title: string,
-      description: string,
-      action: () => Promise<void>,
-    ) =>
-      setDialog({
-        title,
-        description,
-        fields: [],
-        values: {},
-        submit: action,
-        submitLabel: "Confirm",
-      }),
-    notify: setToast,
-    navigate: (id: string) => {
-      setSection(id);
-      setDrawer(false);
-    },
-  };
-  const content = {
-    overview: <OverviewPage />,
-    accounts: <AccountsPage />,
-    budgets: <BudgetsPage />,
-    transactions: <TransactionsPage />,
-    inbox: <NotificationInbox />,
-    income: <IncomePage />,
-    bonds: <BondsPage />,
-    obligations: <ObligationsPage />,
-    receivables: <ObligationsPage receivables />,
-    reserves: <ReservesPage />,
-    forecast: <ForecastPage />,
-    windfalls: <WindfallsPage />,
-    reports: <ReportsPage />,
-    settings: <SettingsPage />,
-    recurring: <RecurringPage />,
-    occasional: <OccasionalPage />,
-    prepaid: <PrepaidPage />,
-    capture: <MonthlyReviewPage captureOnly />,
-    review: <MonthlyReviewPage />,
-    backup: <BackupCentre />,
-  }[section];
   return (
     <Context.Provider value={app}>
       <div className="app-shell">
+        <a className="skip-link" href="#main-content">
+          Skip to main content
+        </a>
         {drawer && (
           <button
             className="drawer-backdrop"
@@ -331,23 +429,30 @@ export default function App() {
               app.navigate("overview");
             }}
           >
-            <span className="logo-mark">P</span>
+            <span className="logo-mark">K</span>
             <span>
-              Pennywise<small>A little wiser. Every day.</small>
+              Kichella<small>A little wiser. Every day.</small>
             </span>
           </a>
           <span className="nav-label">YOUR WORKSPACE</span>
           <nav aria-label="Main navigation">
-            {navigation.map((n) => (
-              <button
-                key={n.id}
-                className={section === n.id ? "active" : ""}
-                aria-current={section === n.id ? "page" : undefined}
-                onClick={() => app.navigate(n.id)}
-              >
-                <n.icon size={19} />
-                {n.label}
-              </button>
+            {navigationGroups.map((group) => (
+              <div className="nav-group" key={group.label}>
+                <span className="nav-label">{group.label}</span>
+                {navigation
+                  .filter((n) => group.ids.includes(n.id))
+                  .map((n) => (
+                    <button
+                      key={n.id}
+                      className={section === n.id ? "active" : ""}
+                      aria-current={section === n.id ? "page" : undefined}
+                      onClick={() => app.navigate(n.id)}
+                    >
+                      <n.icon size={19} />
+                      {n.label}
+                    </button>
+                  ))}
+              </div>
             ))}
           </nav>
           <div className="sidebar-footer">
@@ -376,7 +481,7 @@ export default function App() {
               {installEvent && (
                 <button
                   className="icon-button"
-                  aria-label="Install Pennywise"
+                  aria-label="Install Kichella"
                   onClick={() => {
                     void installEvent.prompt();
                     setInstallEvent(undefined);
@@ -396,6 +501,7 @@ export default function App() {
                 <Plus size={17} />
                 <span className="quick-add-label">Quick add</span>
               </Button>
+              {saving > 0 && <span role="status">Saving locally...</span>}
             </div>
           </header>
           {state.settings.demo && (
@@ -415,6 +521,7 @@ export default function App() {
               </Button>
               <Button
                 secondary
+                disabled={Boolean(dialog) || saving > 0}
                 onClick={() => {
                   void updateWorker?.(true);
                 }}
@@ -435,7 +542,7 @@ export default function App() {
               </button>
             </div>
           )}
-          <main id="main-content">
+          <main id="main-content" tabIndex={-1}>
             {preparedDownload && (
               <Card className="prepared-download no-print">
                 <div>
@@ -482,7 +589,7 @@ export default function App() {
             {!state.settings.setup && (
               <Card className="setup">
                 <div>
-                  <span className="eyebrow">WELCOME TO PENNYWISE</span>
+                  <span className="eyebrow">WELCOME TO KICHELLA</span>
                   <h2>Start with what you know.</h2>
                   <p>
                     Add an account and its opening balance. Then build your
@@ -496,23 +603,33 @@ export default function App() {
                   </Button>
                   <Button
                     secondary
-                    onClick={() => {
-                      void app.mutate("Complete progressive welcome", (s) => {
-                        s.settings.setup = true;
-                      });
-                      app.navigate("settings");
-                    }}
+                    disabled={saving > 0}
+                    onClick={() =>
+                      void (async () => {
+                        try {
+                          await app.mutate(
+                            "Complete progressive welcome",
+                            (s) => {
+                              s.settings.setup = true;
+                            },
+                          );
+                          app.navigate("settings");
+                        } catch {
+                          /* The mutation already displays the error. */
+                        }
+                      })()
+                    }
                   >
                     Continue progressively
                   </Button>
                 </div>
               </Card>
             )}
-            <div key={section}>{content}</div>
+            <ActivePage key={section} section={section} />
             <footer className="page-footer">
-              Pennywise {APP_VERSION} / Figures are based on your records and
-              explicitly labeled assumptions. Not personalized investment
-              advice.
+              Kichella preview / based on Pennywise {APP_VERSION}. Figures are
+              based on your records and explicitly labeled assumptions. Not
+              personalized investment advice.
             </footer>
           </main>
         </div>

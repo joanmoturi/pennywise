@@ -47,16 +47,14 @@ function recurrenceDate(
 }
 export function generateOccurrences(s: State, until: string): number {
   let generated = 0;
+  const identities = new Set(
+    s.occurrences.map((o) => `${o.recurringId}:${o.scheduledDate}`),
+  );
   for (const r of s.recurring.filter((r) => r.status === "active")) {
     for (let i = 0; i < 20000; i++) {
       const date = recurrenceDate(r.firstDue, r.frequency, r.customDays, i);
       if (date > until || (r.end && date > r.end)) break;
-      if (
-        date >= r.start &&
-        !s.occurrences.some(
-          (o) => o.recurringId === r.id && o.scheduledDate === date,
-        )
-      ) {
+      if (date >= r.start && !identities.has(`${r.id}:${date}`)) {
         s.occurrences.push({
           id: uid(),
           recurringId: r.id,
@@ -66,6 +64,7 @@ export function generateOccurrences(s: State, until: string): number {
           status: "scheduled",
           notes: "",
         });
+        identities.add(`${r.id}:${date}`);
         generated++;
       }
       if (r.frequency === "one-off") break;

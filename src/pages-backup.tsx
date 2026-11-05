@@ -84,12 +84,11 @@ export function BackupCentre() {
           "Restore full validated backup with safety snapshot",
           (s) => {
             const audit = s.audit;
+            const ids = new Set(audit.map((a) => a.id));
             Object.assign(s, structuredClone(preview.state));
             s.audit = [
               ...audit,
-              ...preview.state.audit.filter(
-                (r) => !audit.some((a) => a.id === r.id),
-              ),
+              ...preview.state.audit.filter((r) => !ids.has(r.id)),
             ];
           },
         );

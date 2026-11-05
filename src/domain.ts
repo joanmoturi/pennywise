@@ -450,13 +450,14 @@ export type SavingsCapture = z.infer<typeof captureSchema>;
 export type MonthlyReview = z.infer<typeof reviewSchema>;
 export type State = z.infer<typeof stateSchema>;
 export const uid = () => crypto.randomUUID();
+const nairobiDate = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Africa/Nairobi",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 export function today(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Africa/Nairobi",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  return nairobiDate.format(new Date());
 }
 export function addDays(date: string, days: number): string {
   return new Date(Date.parse(date) + days * 86400000)

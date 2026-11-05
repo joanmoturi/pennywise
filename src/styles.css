@@ -41,6 +41,59 @@
 * {
   box-sizing: border-box;
 }
+[hidden] {
+  display: none !important;
+}
+html {
+  scroll-padding-block: 24px 100px;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 100;
+  padding: 12px;
+  background: var(--surface);
+}
+.skip-link:focus {
+  top: 12px;
+}
+.nav-group {
+  display: grid;
+  gap: 4px;
+}
+.nav-group .nav-label {
+  padding-top: 18px;
+  padding-bottom: 6px;
+  letter-spacing: 0.06rem;
+}
+.quick-actions {
+  margin-bottom: 24px;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+.field-error {
+  color: var(--danger);
+}
+[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.error a {
+  display: block;
+  margin-top: 6px;
+}
 body {
   margin: 0;
 }
@@ -797,6 +850,11 @@ dialog::backdrop {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 24px;
+  position: sticky;
+  bottom: -25px;
+  background: var(--surface);
+  padding: 16px 0;
+  z-index: 1;
 }
 .error {
   background: #b53a4310;
@@ -951,6 +1009,17 @@ pre {
   }
 }
 @media (max-width: 800px) {
+  .icon-button,
+  .text-button,
+  .toast button,
+  summary,
+  .button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .form-grid label:has(input[type="checkbox"]) {
+    min-height: 44px;
+  }
   .sidebar {
     transform: translateX(-100%);
     width: 265px;

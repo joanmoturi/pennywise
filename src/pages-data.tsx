@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, Upload, ShieldCheck, Database } from "lucide-react";
 import { useApp } from "./context";
 import {
@@ -559,6 +559,36 @@ export function SettingsPage() {
   const [restore, setRestore] = useState<State>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [storageStatus, setStorageStatus] = useState(
+    "Checking browser storage...",
+  );
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const [estimate, persistent] = await Promise.all([
+          navigator.storage?.estimate?.(),
+          navigator.storage?.persisted?.(),
+        ]);
+        if (!active) return;
+        const usage = estimate?.usage;
+        const quota = estimate?.quota;
+        setStorageStatus(
+          usage !== undefined && quota
+            ? `This origin uses about ${(usage / 1048576).toFixed(1)} MB of ${(quota / 1048576).toFixed(0)} MB available. ${usage / quota >= 0.8 ? "Storage is running low. Export a full backup." : ""} ${persistent ? "Persistent storage is granted." : "Storage may be evicted; keep independent backups."}`
+            : "Storage estimates are unavailable. Keep independent full backups.",
+        );
+      } catch {
+        if (active)
+          setStorageStatus(
+            "Storage status is unavailable. Keep independent full backups.",
+          );
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
   async function backup(encrypted: boolean) {
     setBusy(true);
     setError("");
@@ -622,6 +652,10 @@ export function SettingsPage() {
             void (async () => {
               try {
                 const granted = await navigator.storage?.persist?.();
+                if (granted)
+                  setStorageStatus(
+                    "Persistent storage is granted. Keep independent full backups; clearing site data still removes records.",
+                  );
                 app.notify(
                   granted
                     ? "Persistent storage granted by your browser"
@@ -638,6 +672,7 @@ export function SettingsPage() {
           <Database size={16} />
           Request persistent storage
         </Button>
+        <p role="status">{storageStatus}</p>
       </Card>
       <div className="grid two">
         <Card>
@@ -647,7 +682,9 @@ export function SettingsPage() {
             <select
               aria-label="Currency"
               value={s.settings.currency}
-              onChange={(e) =>
+              onChange={(e) => {
+                const currency = e.target
+                  .value as State["settings"]["currency"];
                 void app.mutate("Set currency", (s) => {
                   if (
                     s.accounts.length ||
@@ -657,10 +694,9 @@ export function SettingsPage() {
                     throw new Error(
                       "Currency cannot change after financial records exist; no exchange conversion is implemented",
                     );
-                  s.settings.currency = e.target
-                    .value as State["settings"]["currency"];
-                })
-              }
+                  s.settings.currency = currency;
+                });
+              }}
             >
               {["KES", "USD", "EUR", "GBP"].map((c) => (
                 <option key={c}>{c}</option>
@@ -776,12 +812,11 @@ export function SettingsPage() {
                       );
                       await app.mutate("Restore validated backup", (s) => {
                         const audit = s.audit;
+                        const ids = new Set(audit.map((a) => a.id));
                         Object.assign(s, structuredClone(data));
                         s.audit = [
                           ...audit,
-                          ...data.audit.filter(
-                            (r) => !audit.some((a) => a.id === r.id),
-                          ),
+                          ...data.audit.filter((r) => !ids.has(r.id)),
                         ];
                       });
                       setRestore(undefined);

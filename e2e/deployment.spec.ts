@@ -18,8 +18,8 @@ const test = base.extend<{ staticHost: StaticHost }>({
     const dist = join(process.cwd(), "dist");
     const originalHtml = await readFile(join(dist, "index.html"), "utf8");
     const updatedHtml = originalHtml.replace(
-      "<title>Pennywise | Financial command centre</title>",
-      "<title>Pennywise deployment update</title>",
+      "<title>Kichella | Financial command centre</title>",
+      "<title>Kichella deployment update</title>",
     );
     const digest = (text: string) =>
       createHash("md5").update(text).digest("hex");
@@ -224,7 +224,13 @@ test("source mapping, explicit approval rules and schema-3 recovery preserve the
     const legacy = { ...state } as Record<string, unknown>;
     legacy.version = 3;
     delete legacy.notifications;
-    const request = indexedDB.open("pennywise-private");
+    const deleted = indexedDB.deleteDatabase("pennywise-private");
+    await new Promise<void>((resolve, reject) => {
+      deleted.onsuccess = () => resolve();
+      deleted.onerror = () => reject(deleted.error);
+    });
+    const request = indexedDB.open("pennywise-private", 3);
+    request.onupgradeneeded = () => request.result.createObjectStore("state");
     const db = await new Promise<IDBDatabase>((resolve) => {
       request.onsuccess = () => resolve(request.result);
     });
@@ -333,11 +339,40 @@ async function snapshot(page: Page): Promise<State> {
     });
     try {
       return await new Promise((resolve, reject) => {
-        const request = db
-          .transaction("state")
-          .objectStore("state")
-          .get("current");
-        request.onsuccess = () => resolve(request.result);
+        const tx = db.transaction(["state", "records"]);
+        const request = tx.objectStore("state").get("current");
+        request.onsuccess = () => {
+          const meta = request.result;
+          const all = tx.objectStore("records").getAll();
+          all.onsuccess = () => {
+            const byId = new Map(
+              all.result.map((r) => [
+                JSON.stringify([r.collection, r.id]),
+                r.value,
+              ]),
+            );
+            const state: Record<string, unknown> = {
+              version: meta.version,
+              revision: meta.revision,
+              settings: meta.settings,
+            };
+            const notifications: Record<string, unknown> = {};
+            for (const [collection, ids] of Object.entries(meta.order) as [
+              string,
+              string[],
+            ][]) {
+              const values = ids.map((id) =>
+                byId.get(JSON.stringify([collection, id])),
+              );
+              if (collection.startsWith("notifications."))
+                notifications[collection.split(".")[1]] = values;
+              else state[collection] = values;
+            }
+            state.notifications = notifications;
+            resolve(state as State);
+          };
+          all.onerror = () => reject(all.error);
+        };
         request.onerror = () => reject(request.error);
       });
     } finally {
@@ -364,8 +399,8 @@ test("root assets and install manifest work on nested URLs and offline navigatio
   expect(manifestResponse.headers()["cache-control"]).toBe("no-cache");
   const manifest = await manifestResponse.json();
   expect(manifest).toMatchObject({
-    name: "Pennywise Financial Command Centre",
-    short_name: "Pennywise",
+    name: "Kichella Financial Command Centre",
+    short_name: "Kichella",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -559,12 +594,12 @@ test("a new service-worker deployment prompts before activation and preserves In
     .toBe(true);
   await page.clock.fastForward("01:00:00");
   await expect(page.locator(".update-banner")).toBeVisible();
-  expect(await page.title()).toBe("Pennywise | Financial command centre");
+  expect(await page.title()).toBe("Kichella | Financial command centre");
   expect(await snapshot(page)).toEqual(original);
   await page
     .getByRole("button", { name: "Reload update", exact: true })
     .click();
-  await expect(page).toHaveTitle("Pennywise deployment update");
+  await expect(page).toHaveTitle("Kichella deployment update");
   await expect(page.locator(".app-shell")).toBeVisible();
   expect(await snapshot(page)).toEqual(original);
   await nav(page, "Transactions");

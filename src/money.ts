@@ -26,12 +26,13 @@ export function decimal(value: number): string {
   const abs = v < 0n ? -v : v;
   return `${v < 0n ? "-" : ""}${abs / 100n}.${String(abs % 100n).padStart(2, "0")}`;
 }
+const groupedInteger = new Intl.NumberFormat("en-KE", {
+  maximumFractionDigits: 0,
+});
 export function formatMoney(value: number, currency = "KES"): string {
   const [whole, fraction] = decimal(value).split(".");
   const sign = value < 0 ? "-" : "";
-  const grouped = new Intl.NumberFormat("en-KE", {
-    maximumFractionDigits: 0,
-  }).format(BigInt(whole.replace("-", "")));
+  const grouped = groupedInteger.format(BigInt(whole.replace("-", "")));
   return `${sign}${currency} ${grouped}.${fraction}`;
 }
 export function ratio(

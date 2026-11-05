@@ -53,6 +53,36 @@ export function accountBalance(
       }),
   ]);
 }
+export function accountBalances(
+  s: State,
+  until = "9999-12-31",
+): Map<string, number> {
+  const amounts = new Map(s.accounts.map((a) => [a.id, BigInt(a.opening)]));
+  const add = (id: string | undefined, amount: bigint) => {
+    if (id && amounts.has(id)) amounts.set(id, amounts.get(id)! + amount);
+  };
+  for (const t of s.transactions) {
+    if (t.date > until || t.type === "reserve_transfer") continue;
+    const amount = BigInt(t.amount);
+    if (t.type === "transfer") {
+      add(t.accountId, -amount);
+      add(t.destinationId, amount);
+    } else {
+      add(
+        t.accountId,
+        [
+          "expense",
+          "debt_repayment",
+          "loan_disbursement",
+          "liability_repayment",
+        ].includes(t.type)
+          ? -amount
+          : amount,
+      );
+    }
+  }
+  return new Map([...amounts].map(([id, amount]) => [id, safe(amount)]));
+}
 export function outstanding(
   s: State,
   id: string,
@@ -113,10 +143,11 @@ export function necessityRemaining(s: State, id: string): number {
   );
 }
 export function summary(s: State, asOf = today()) {
+  const balances = accountBalances(s, asOf);
   const liquid = sum(
     s.accounts
       .filter((a) => a.kind !== "investment")
-      .map((a) => accountBalance(s, a.id, asOf)),
+      .map((a) => balances.get(a.id)!),
   );
   const restricted = sum(
     s.accounts
@@ -126,7 +157,7 @@ export function summary(s: State, asOf = today()) {
   const savingsAccounts = sum(
     s.accounts
       .filter((a) => a.kind === "savings")
-      .map((a) => Math.max(0, accountBalance(s, a.id, asOf))),
+      .map((a) => Math.max(0, balances.get(a.id)!)),
   );
   const carried = sum(
     s.captures
@@ -175,7 +206,7 @@ export function summary(s: State, asOf = today()) {
     ),
   );
   const assets = sum([
-    sum(s.accounts.map((a) => accountBalance(s, a.id, asOf))),
+    sum([...balances.values()]),
     bondAssets,
     receivables,
     ...s.prepaids.map((p) => prepaidBalance(s, p, asOf)),
@@ -760,6 +791,7 @@ export function commitWindfall(s: State, receiptId: string) {
 }
 export function validateState(input: unknown): State {
   const s = stateSchema.parse(input);
+  const asOf = today();
   const collections = [
     s.accounts,
     s.transactions,
@@ -886,7 +918,7 @@ export function validateState(input: unknown): State {
   for (const t of s.transactions) {
     if (!accountIds.has(t.accountId))
       throw new Error("Transaction account is missing");
-    if (t.date > today())
+    if (t.date > asOf)
       throw new Error(
         "Future transactions belong in expected payments, not actual cash",
       );
@@ -1099,6 +1131,7 @@ export function validateState(input: unknown): State {
       throw new Error(
         "Savings accounts are already protected; use a normal liquid account for reserve earmarks",
       );
+  const balances = accountBalances(s);
   for (const a of s.accounts) {
     const reserved = sum(
       s.reserves
@@ -1107,7 +1140,7 @@ export function validateState(input: unknown): State {
     );
     if (reserved > 0 && a.kind === "investment")
       throw new Error("Reserves need a liquid account");
-    if (sum([reserved, a.restricted]) > Math.max(0, accountBalance(s, a.id)))
+    if (sum([reserved, a.restricted]) > Math.max(0, balances.get(a.id)!))
       throw new Error(
         "Restricted and reserved money exceeds account balance; release reserves before spending",
       );

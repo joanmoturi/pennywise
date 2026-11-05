@@ -372,7 +372,22 @@ export function editRecord(
       kind === "bonds"
         ? "Use your bond documents. No rates or payment schedules are inferred. Add explicit payment dates after saving."
         : undefined,
-    fields: recordFields(app.state, kind),
+    fields: recordFields(app.state, kind).map((field) => ({
+      ...field,
+      advanced:
+        kind === "accounts"
+          ? ["restricted", "notes"].includes(field.key)
+          : kind === "recurring"
+            ? [
+                "minimum",
+                "maximum",
+                "customDays",
+                "end",
+                "reminderDays",
+                "notes",
+              ].includes(field.key)
+            : false,
+    })),
     values: record ? { ...record } : defaultRecord(app.state, kind),
     submit: async (values) =>
       app.mutate(`Save ${kind}`, (s) => {
@@ -384,6 +399,13 @@ export function editRecord(
         }
         const list = s[kind] as { id: string }[];
         const index = list.findIndex((r) => r.id === values.id);
+        if (
+          record &&
+          (index < 0 || JSON.stringify(list[index]) !== JSON.stringify(record))
+        )
+          throw new Error(
+            "This record changed in another tab. Keep your entries, close this form and reopen the latest record before saving.",
+          );
         if (index >= 0) list[index] = values as { id: string };
         else list.push(values as { id: string });
         if (kind === "recurring") {
@@ -414,6 +436,10 @@ export function deleteRecord(
       await app.mutate(`Delete ${kind}`, (s) => {
         const list = s[kind] as { id: string }[];
         const index = list.findIndex((r) => r.id === record.id);
+        if (index < 0)
+          throw new Error(
+            "This record was already removed. No other records were deleted.",
+          );
         list.splice(index, 1);
       });
     },
@@ -432,6 +458,7 @@ export function transactionFields(s: State): Field[] {
       options: options(
         transactionTypes.filter((t) => t !== "reserve_transfer"),
       ),
+      help: "Choose expense for spending or income for earned money. Transfers and loan repayments have their own types so they are not counted twice.",
     }),
     f("amount", "Amount", "money"),
     f("date", "Transaction date", "date"),
@@ -452,13 +479,30 @@ export function transactionFields(s: State): Field[] {
     f("paymentMethod", "Payment method", "text", { required: false }),
     f("recurringReference", "Recurring reference", "text", { required: false }),
     f("notes", "Notes", "textarea"),
-  ];
+  ].map((field) => ({
+    ...field,
+    advanced: [
+      "subcategory",
+      "destinationId",
+      "relatedId",
+      "paymentMethod",
+      "recurringReference",
+      "notes",
+    ].includes(field.key),
+  }));
 }
 export function editTransaction(
   app: AppContext,
   record?: Transaction,
   defaults: Partial<Transaction> = {},
 ) {
+  if (!app.state.accounts.length) {
+    app.notify(
+      "Add an account first so this transaction has somewhere to be saved.",
+    );
+    editRecord(app, "accounts");
+    return;
+  }
   if (record?.prepaidId || record?.captureId || record?.occurrenceId) {
     app.notify(
       "Use the prepaid, savings capture or recurring expense workflow to correct this linked transaction.",
@@ -515,6 +559,14 @@ export function editTransaction(
               "Cannot record payments against a written-off loan",
             );
           const index = s.transactions.findIndex((r) => r.id === t.id);
+          if (
+            record &&
+            (index < 0 ||
+              JSON.stringify(s.transactions[index]) !== JSON.stringify(record))
+          )
+            throw new Error(
+              "This transaction changed in another tab. Keep your entries, close this form and reopen the latest transaction before saving.",
+            );
           if (index >= 0) s.transactions[index] = t;
           else s.transactions.push(t);
         },
