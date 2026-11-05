@@ -92,6 +92,14 @@ Open the printed localhost URL once online and wait for the **Offline ready** no
 | Backup Centre       | Complete portable JSON/encrypted JSON, integrity verification, schema migration, restore preview, transactional safety snapshot, safety file export, reminder preferences and separate reporting CSV exports                                      |
 | Settings            | Currency/theme, allowance horizon, progressive setup, storage persistence request, privacy explanation, local audit history, fictional demo and typed reset                                                                                       |
 
+Bond holdings also appear automatically under **Income > Bond coupon income**,
+using the same bond records and payment calendar. Configure dates or confirm
+partial/full receipts from either Income or Bonds; both views stay linked.
+Coupon cards show the estimated net payout, next unpaid date, total actually
+received and five most recent receipts. Expected coupons are not current cash,
+and returned principal never becomes coupon income. Do not add a duplicate
+ordinary income source for the same bond.
+
 ### Recurring expenses
 
 Creation generates occurrences through a two-year horizon. Extend it in Recurring Expenses. Each occurrence has a permanent original scheduled date plus its editable due date; `(definition ID, original date)` is unique. Changing an occurrence's amount or date does not regenerate it. Monthly schedules retain their original day through short months (January 31 -> February 28 -> March 31).

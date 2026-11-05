@@ -330,10 +330,10 @@ export function TransactionsPage() {
 }
 export function PaymentCalendar({
   sourceId,
-  kind,
+  kinds,
 }: {
   sourceId?: string;
-  kind?: PaymentEvent["kind"];
+  kinds?: readonly PaymentEvent["kind"][];
 }) {
   const app = useApp();
   const s = app.state;
@@ -341,7 +341,8 @@ export function PaymentCalendar({
   const events = s.events
     .filter(
       (e) =>
-        (!sourceId || e.sourceId === sourceId) && (!kind || e.kind === kind),
+        (!sourceId || e.sourceId === sourceId) &&
+        (!kinds || kinds.includes(e.kind)),
     )
     .sort((a, b) => a.due.localeCompare(b.due));
   function edit(e: PaymentEvent) {
@@ -411,7 +412,10 @@ export function PaymentCalendar({
                     (r) => r.id === e.sourceId,
                   )?.name
                 }
-                <small>{e.reliability}</small>
+                <small>
+                  {e.kind === "bond" && "Bond coupon / "}
+                  {e.reliability}
+                </small>
               </td>
               <td>
                 {fmt(e.amount)}
@@ -456,12 +460,14 @@ export function IncomePage() {
           </AddButton>
         }
       />
-      {!s.incomes.length ? (
+      {!s.incomes.length && !s.bonds.length && (
         <Empty title="Build your income picture">
-          Add work, consulting, rent, distributions or other receipts. Loan
-          repayment schedules belong in Receivables.
+          Add work, consulting, rent, distributions or other receipts. Bonds
+          added in Bonds appear here automatically. Loan repayment schedules
+          belong in Receivables.
         </Empty>
-      ) : (
+      )}
+      {s.incomes.length > 0 && (
         <div className="grid cards">
           {s.incomes.map((i) => (
             <Card key={i.id}>
@@ -502,7 +508,108 @@ export function IncomePage() {
           ))}
         </div>
       )}
-      <PaymentCalendar kind="income" />
+      {s.bonds.length > 0 && (
+        <section aria-labelledby="bond-income-heading">
+          <h2 id="bond-income-heading">Bond coupon income</h2>
+          <p>
+            Linked to your existing bonds, not separate income records. Only
+            confirmed coupon receipts count as income; principal repayments do
+            not.
+          </p>
+          <div className="grid cards">
+            {s.bonds.map((b) => {
+              const receipts = s.transactions
+                .filter((t) => t.relatedId === b.id && t.type === "income")
+                .sort((a, b) => b.date.localeCompare(a.date));
+              const next = s.events
+                .filter(
+                  (e) =>
+                    e.kind === "bond" &&
+                    e.sourceId === b.id &&
+                    e.status !== "cancelled",
+                )
+                .sort((a, b) => a.due.localeCompare(b.due))
+                .find((e) => eventRemaining(s, e) > 0);
+              return (
+                <Card key={b.id}>
+                  <div className="card-head">
+                    <Badge>Linked bond</Badge>
+                    <button
+                      className="text-button"
+                      onClick={() => app.navigate("bonds")}
+                    >
+                      Manage bond
+                    </button>
+                  </div>
+                  <h3>{b.name}</h3>
+                  <p>
+                    {b.identifier} / {b.issuer}
+                  </p>
+                  <div className="big-number">{fmt(coupon(b).net)}</div>
+                  <small>
+                    Estimated net coupon per payment ({b.paymentsPerYear} per
+                    year). Your configured dates determine expected payouts.
+                  </small>
+                  <dl>
+                    <dt>Actual received</dt>
+                    <dd>{fmt(sum(receipts.map((t) => t.amount)))}</dd>
+                    <dt>Next unpaid coupon</dt>
+                    <dd>{next?.due ?? "No unpaid dates configured"}</dd>
+                    {next && (
+                      <>
+                        <dt>Still expected</dt>
+                        <dd>
+                          {fmt(eventRemaining(s, next))} /{" "}
+                          {eventStatus(s, next)}
+                        </dd>
+                      </>
+                    )}
+                    <dt>Receiving account</dt>
+                    <dd>
+                      {s.accounts.find((a) => a.id === b.accountId)?.name}
+                    </dd>
+                  </dl>
+                  <Button
+                    secondary
+                    onClick={() => addSchedule(app, "bond", b.id)}
+                  >
+                    Add payment dates
+                  </Button>
+                  <details>
+                    <summary>
+                      Recent coupon receipts ({receipts.length})
+                    </summary>
+                    {receipts.length ? (
+                      <>
+                        <p>
+                          Showing the latest {Math.min(5, receipts.length)}.
+                        </p>
+                        <Table headers={["Date received", "Amount", "Account"]}>
+                          {receipts.slice(0, 5).map((t) => (
+                            <tr key={t.id}>
+                              <td>{t.date}</td>
+                              <td>{fmt(t.amount)}</td>
+                              <td>
+                                {
+                                  s.accounts.find((a) => a.id === t.accountId)
+                                    ?.name
+                                }
+                              </td>
+                            </tr>
+                          ))}
+                        </Table>
+                      </>
+                    ) : (
+                      <p>No coupon receipts recorded yet.</p>
+                    )}
+                  </details>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      )}
+      <PaymentCalendar kinds={["income", "bond"]} />
     </>
   );
 }
@@ -575,7 +682,7 @@ export function BondsPage() {
           ))}
         </div>
       )}
-      <PaymentCalendar kind="bond" />
+      <PaymentCalendar kinds={["bond"]} />
     </>
   );
 }
@@ -737,7 +844,11 @@ export function ObligationsPage({
           })}
         </div>
       )}
-      {receivables ? <PaymentCalendar kind="receivable" /> : <Necessities />}
+      {receivables ? (
+        <PaymentCalendar kinds={["receivable"]} />
+      ) : (
+        <Necessities />
+      )}
     </>
   );
 }

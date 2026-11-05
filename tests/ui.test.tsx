@@ -1,14 +1,21 @@
 import { useState, type ReactNode } from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { Context, type DialogSpec } from "../src/context";
 import { FormDialog } from "../src/ui";
 import { RecurringPage, MonthlyReviewPage } from "../src/pages-expenses";
+import { IncomePage } from "../src/pages-records";
 import { Repository, openDatabase } from "../src/storage";
 import type { State } from "../src/domain";
 import { generateOccurrences } from "../src/expense-engine";
-import { summary } from "../src/engine";
-import { fixture, recurring, budget, tx, cash } from "./fixtures";
+import { summary, eventRemaining } from "../src/engine";
+import { fixture, recurring, budget, tx, cash, receivable } from "./fixtures";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -59,6 +66,139 @@ function Harness({
     </Context.Provider>
   );
 }
+function bondIncomeFixture(): State {
+  const s = fixture();
+  s.bonds.push({
+    id: "TEST-bond",
+    name: "TEST coupon bond",
+    identifier: "TEST-COUPON",
+    issuer: "Fictional test issuer",
+    principal: cash("10000"),
+    couponBps: 1000,
+    taxBps: 1000,
+    paymentsPerYear: 2,
+    maturity: "2027-11-01",
+    maturityValue: cash("10000"),
+    accountId: "cash",
+    notes: "",
+  });
+  for (const [id, due, status] of [
+    ["TEST-due", "2026-11-01", "expected"],
+    ["TEST-next", "2027-05-01", "expected"],
+    ["TEST-cancelled", "2026-10-01", "cancelled"],
+  ] as const)
+    s.events.push({
+      id,
+      sourceId: "TEST-bond",
+      kind: "bond",
+      due,
+      amount: cash("450"),
+      status,
+      reliability: "confirmed",
+      notes: "TEST coupon",
+    });
+  receivable(s, "1000", "TEST-loan");
+  s.events.push({
+    id: "TEST-repayment",
+    sourceId: "TEST-loan",
+    kind: "receivable",
+    due: "2026-11-01",
+    amount: cash("1000"),
+    status: "expected",
+    reliability: "confirmed",
+    notes: "",
+  });
+  s.transactions.push(
+    tx("income", "100", {
+      relatedId: "TEST-bond",
+      eventId: "TEST-due",
+      category: "Bond coupon",
+    }),
+    tx("bond_maturity", "1000", { relatedId: "TEST-bond" }),
+  );
+  return s;
+}
+it("shows bond-only income, unpaid coupon dates and actual receipts without principal or new records", async () => {
+  const db = await openDatabase(`TEST-bond-income-${crypto.randomUUID()}`);
+  const repo = new Repository(db);
+  try {
+    const initial = await repo.restore(bondIncomeFixture());
+    render(
+      <Harness initial={initial} repo={repo}>
+        <IncomePage />
+      </Harness>,
+    );
+    const region = screen.getByRole("region", { name: "Bond coupon income" });
+    expect(
+      within(region).getByRole("heading", { name: "TEST coupon bond" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Build your income picture"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(region).getByText("Actual received").nextElementSibling,
+    ).toHaveTextContent("KES 100.00");
+    expect(
+      within(region).getByText("Next unpaid coupon").nextElementSibling,
+    ).toHaveTextContent("2026-11-01");
+    expect(
+      within(region).getByText("Still expected").nextElementSibling,
+    ).toHaveTextContent("KES 350.00 / partially received");
+    expect(
+      screen.queryByRole("cell", { name: /TEST borrower/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(within(region).getByText("Recent coupon receipts (1)"));
+    expect(
+      within(region).getByRole("cell", { name: "KES 100.00" }),
+    ).toBeInTheDocument();
+    expect(
+      within(region).queryByRole("cell", { name: "KES 1,000.00" }),
+    ).not.toBeInTheDocument();
+    expect(await repo.read()).toEqual(initial);
+  } finally {
+    db.close();
+  }
+});
+it("receives an existing bond coupon from Income without creating another income source or schedule", async () => {
+  const db = await openDatabase(`TEST-bond-receipt-${crypto.randomUUID()}`);
+  const repo = new Repository(db);
+  try {
+    const initial = await repo.restore(bondIncomeFixture());
+    render(
+      <Harness initial={initial} repo={repo}>
+        <IncomePage />
+      </Harness>,
+    );
+    const row = screen
+      .getByRole("cell", { name: /Remaining: KES 350\.00/ })
+      .closest("tr")!;
+    fireEvent.click(within(row).getByRole("button", { name: "Receive" }));
+    expect(screen.getByLabelText("Actual amount received")).toHaveValue(
+      "350.00",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    const saved = await repo.read();
+    expect(saved.incomes).toHaveLength(0);
+    expect(saved.events).toEqual(initial.events);
+    expect(saved.transactions.filter((t) => t.type === "income")).toHaveLength(
+      2,
+    );
+    expect(eventRemaining(saved, saved.events[0])).toBe(0);
+    expect(summary(saved).income).toBe(cash("450"));
+    const region = screen.getByRole("region", { name: "Bond coupon income" });
+    expect(
+      within(region).getByText("Actual received").nextElementSibling,
+    ).toHaveTextContent("KES 450.00");
+    expect(
+      within(region).getByText("Next unpaid coupon").nextElementSibling,
+    ).toHaveTextContent("2027-05-01");
+  } finally {
+    db.close();
+  }
+});
 it("variable recurring adjustment and payment persist end to end through the UI", async () => {
   const s = fixture();
   recurring(s, { kind: "variable" });

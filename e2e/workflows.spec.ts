@@ -204,6 +204,167 @@ test("complete accounts, income, liabilities, six bonds, budgets, recovery, wind
   await expect(page.locator(".cards h3")).toHaveCount(6);
   expect(errors).toEqual([]);
 });
+test("bond coupons appear as linked income with shared schedules and receipts, never principal or duplicate sources", async ({
+  page,
+  context,
+}) => {
+  await account(page, "TEST coupon account", "1000");
+  await nav(page, "Bonds");
+  await page.getByRole("button", { name: "Add bond", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name", { exact: true }).fill("TEST linked coupon");
+  await dialog.getByLabel("Bond identifier").fill("TEST-COUPON");
+  await dialog.getByLabel("Issuer").fill("Fictional test issuer");
+  await dialog.getByLabel("Principal held").fill("10000");
+  await dialog.getByLabel("Annual coupon rate (%)").fill("10");
+  await dialog.getByLabel("Applicable tax assumption (%)").fill("10");
+  await dialog.getByLabel("Coupon payments per year").fill("2");
+  await dialog.getByLabel("Maturity date").fill("2027-11-01");
+  await dialog.getByLabel("Expected principal maturity value").fill("10000");
+  await dialogSave(page);
+  await nav(page, "Income");
+  const region = page.getByRole("region", { name: "Bond coupon income" });
+  await expect(
+    region.getByRole("heading", { name: "TEST linked coupon", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Build your income picture" }),
+  ).toHaveCount(0);
+  await expect(region.locator(".big-number")).toHaveText("KES 450.00");
+  await expect(region.locator("dl")).toContainText(
+    "No unpaid dates configured",
+  );
+  await expect(
+    region.locator("dl").getByText("KES 0.00", { exact: true }),
+  ).toBeVisible();
+  await region.getByRole("button", { name: "Add payment dates" }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel("First payment date").fill("2026-11-01");
+  await dialog.getByLabel("Number of dates").fill("2");
+  await dialog
+    .getByLabel("Reliability", { exact: true })
+    .selectOption("confirmed");
+  await dialogSave(page);
+  await page.getByRole("button", { name: "Add income", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name", { exact: true }).fill("TEST ordinary income");
+  await dialog.getByLabel("Income type").selectOption("Consulting");
+  await dialog.getByLabel("Expected net amount").fill("100");
+  await dialogSave(page);
+  const ordinary = page.locator(".card").filter({
+    has: page.getByRole("heading", {
+      name: "TEST ordinary income",
+      exact: true,
+    }),
+  });
+  await ordinary.getByRole("button", { name: "Add payment dates" }).click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("First payment date")
+    .fill("2026-11-01");
+  await dialogSave(page);
+  const couponRow = () =>
+    page
+      .getByRole("row")
+      .filter({ hasText: "TEST linked coupon" })
+      .filter({
+        has: page.getByRole("cell", { name: "2026-11-01", exact: true }),
+      });
+  await couponRow()
+    .getByRole("button", { name: "Receive", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Actual amount received")
+    .fill("100");
+  await dialogSave(page);
+  await expect(couponRow()).toContainText("partially received");
+  await expect(
+    region.locator("dl").getByText("KES 100.00", { exact: true }),
+  ).toBeVisible();
+  await nav(page, "Bonds");
+  await expect(couponRow()).toContainText("Remaining: KES 350.00");
+  await couponRow()
+    .getByRole("button", { name: "Receive", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog").getByLabel("Actual amount received"),
+  ).toHaveValue("350.00");
+  await dialogSave(page);
+  await page.getByRole("button", { name: "Record principal recovery" }).click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Amount", { exact: true })
+    .fill("1000");
+  await dialogSave(page);
+  await nav(page, "Income");
+  await expect(
+    region.locator("dl").getByText("KES 450.00", { exact: true }),
+  ).toBeVisible();
+  await expect(region.locator("dl")).toContainText("2027-05-01");
+  await expect(
+    couponRow().getByRole("button", { name: "Receive" }),
+  ).toHaveCount(0);
+  await region.getByText("Recent coupon receipts (2)").click();
+  await expect(
+    region.getByRole("cell", { name: "KES 1,000.00", exact: true }),
+  ).toHaveCount(0);
+  const stored = await page.evaluate(async () => {
+    const request = indexedDB.open("pennywise-private");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      const rows = await new Promise<
+        { collection: string; value: Record<string, unknown> }[]
+      >((resolve, reject) => {
+        const request = db
+          .transaction("records")
+          .objectStore("records")
+          .getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const receipts = rows.filter(
+        (r) => r.collection === "transactions" && r.value.type === "income",
+      );
+      return {
+        incomeSources: rows.filter((r) => r.collection === "incomes").length,
+        bonds: rows.filter((r) => r.collection === "bonds").length,
+        bondDates: rows.filter(
+          (r) => r.collection === "events" && r.value.kind === "bond",
+        ).length,
+        receipts: receipts.length,
+        actualIncome: receipts.reduce((n, r) => n + Number(r.value.amount), 0),
+      };
+    } finally {
+      db.close();
+    }
+  });
+  expect(stored).toEqual({
+    incomeSources: 1,
+    bonds: 1,
+    bondDates: 2,
+    receipts: 2,
+    actualIncome: 45000,
+  });
+  await nav(page, "Accounts");
+  await expect(page.locator(".big-number")).toHaveText("KES 2,450.00");
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => {}));
+  await page.reload();
+  await expect(page.locator(".app-shell")).toBeVisible();
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await context.setOffline(true);
+  await page.reload();
+  await nav(page, "Income");
+  await expect(
+    region.locator("dl").getByText("KES 450.00", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "TEST ordinary income", exact: true }),
+  ).toBeVisible();
+});
 test("recurring variable expenses, prepayment coverage, savings capture and retained monthly review", async ({
   page,
 }) => {
