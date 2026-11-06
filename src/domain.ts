@@ -61,6 +61,7 @@ export const accountSchema = z
     opening: moneySchema,
     restricted: nonnegative,
     notes: text,
+    businessId: id.optional(),
   })
   .strict();
 export const transactionSchema = z
@@ -87,6 +88,11 @@ export const transactionSchema = z
     captureId: id.optional(),
     additionalPayment: z.boolean().optional(),
     reversalOf: id.optional(),
+    businessMovement: z
+      .enum(["owner_distribution", "partner_distribution", "capital"])
+      .optional(),
+    allowanceId: id.optional(),
+    partnerName: name.optional(),
     notification: z
       .object({
         inboxId: id,
@@ -125,6 +131,8 @@ export const incomeSchema = z
     accountId: id,
     active: z.boolean(),
     notes: text,
+    businessId: id.optional(),
+    sourceAccountId: id.optional(),
   })
   .strict();
 export const liabilitySchema = z
@@ -367,6 +375,8 @@ export const captureSchema = z
     accountId: id,
     actions: z.array(captureActionSchema).min(1).max(20),
     notes: text,
+    allowanceId: id.optional(),
+    reduceAllocation: z.boolean().optional(),
   })
   .strict();
 export const reviewSnapshotSchema = z
@@ -389,9 +399,57 @@ export const reviewSchema = z
     snapshot: reviewSnapshotSchema,
   })
   .strict();
+export const businessSchema = z
+  .object({
+    id,
+    name,
+    ownershipBps: z.number().int().min(0).max(10000),
+    partners: z
+      .array(
+        z
+          .object({ name, ownershipBps: z.number().int().min(0).max(10000) })
+          .strict(),
+      )
+      .max(50),
+    openingRetainedProfit: nonnegative,
+    notes: text,
+  })
+  .strict();
+export const budgetChangeSchema = z
+  .object({
+    id,
+    budgetId: id,
+    date: dateSchema,
+    reason: name,
+    moves: z
+      .array(
+        z
+          .object({
+            from: name,
+            to: name,
+            amount: nonnegative.refine((n) => n > 0),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(20),
+    reversalOf: id.optional(),
+  })
+  .strict();
+export const allowanceSchema = z
+  .object({
+    id,
+    name,
+    budgetId: id,
+    accountId: id,
+    amount: nonnegative,
+    fundingEventId: id.optional(),
+    notes: text,
+  })
+  .strict();
 export const stateSchema = z
   .object({
-    version: z.literal(4),
+    version: z.literal(5),
     revision: z.number().int().nonnegative(),
     settings: z
       .object({
@@ -428,6 +486,9 @@ export const stateSchema = z
     reviews: z.array(reviewSchema).max(1000),
     audit: z.array(auditSchema).max(100000),
     notifications: notificationStateSchema,
+    businesses: z.array(businessSchema).max(100),
+    budgetChanges: z.array(budgetChangeSchema).max(10000),
+    allowances: z.array(allowanceSchema).max(500),
   })
   .strict();
 export type Account = z.infer<typeof accountSchema>;
@@ -449,6 +510,9 @@ export type Prepaid = z.infer<typeof prepaidSchema>;
 export type SavingsCapture = z.infer<typeof captureSchema>;
 export type MonthlyReview = z.infer<typeof reviewSchema>;
 export type State = z.infer<typeof stateSchema>;
+export type Business = z.infer<typeof businessSchema>;
+export type BudgetChange = z.infer<typeof budgetChangeSchema>;
+export type Allowance = z.infer<typeof allowanceSchema>;
 export const uid = () => crypto.randomUUID();
 const nairobiDate = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Africa/Nairobi",
@@ -496,8 +560,11 @@ export function initialState(): State {
     };
   });
   return {
-    version: 4,
+    version: 5,
     revision: 0,
+    businesses: [],
+    budgetChanges: [],
+    allowances: [],
     settings: {
       currency: "KES",
       theme: "dark",

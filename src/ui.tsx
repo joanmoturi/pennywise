@@ -362,6 +362,7 @@ export function FormDialog({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [slow, setSlow] = useState(false);
+  const [inputs, setInputs] = useState(spec.values);
   const [advanced, setAdvanced] = useState(
     spec.fields.some(
       (f) =>
@@ -460,6 +461,10 @@ export function FormDialog({
       <form
         onSubmit={submit}
         onChange={(event) => {
+          if (spec.context)
+            setInputs(
+              Object.fromEntries(new FormData(event.currentTarget).entries()),
+            );
           const target = event.target;
           if (!(
             target instanceof HTMLInputElement ||
@@ -493,6 +498,11 @@ export function FormDialog({
         {spec.description && (
           <p className="dialog-description" id="dialog-description">
             {spec.description}
+          </p>
+        )}
+        {spec.context && (
+          <p className="notice" aria-live="polite" aria-atomic="true">
+            {spec.context(inputs)}
           </p>
         )}
         {error && (

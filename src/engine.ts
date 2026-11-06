@@ -13,6 +13,13 @@ import {
 } from "./domain";
 import { sum, ratio, floorDivide, safe } from "./money";
 import {
+  businessForAccount,
+  personalIncome,
+  personalExpense,
+  recordDistribution,
+  validateConnected,
+} from "./connected-finance";
+import {
   effectiveAllocations,
   categoryRollover,
   prepaidRecognition,
@@ -144,24 +151,28 @@ export function necessityRemaining(s: State, id: string): number {
 }
 export function summary(s: State, asOf = today()) {
   const balances = accountBalances(s, asOf);
+  const personal = (accountId: string) => !businessForAccount(s, accountId);
   const liquid = sum(
     s.accounts
-      .filter((a) => a.kind !== "investment")
+      .filter((a) => personal(a.id) && a.kind !== "investment")
       .map((a) => balances.get(a.id)!),
   );
   const restricted = sum(
     s.accounts
-      .filter((a) => a.kind !== "investment" && a.kind !== "savings")
+      .filter(
+        (a) =>
+          personal(a.id) && a.kind !== "investment" && a.kind !== "savings",
+      )
       .map((a) => a.restricted),
   );
   const savingsAccounts = sum(
     s.accounts
-      .filter((a) => a.kind === "savings")
+      .filter((a) => personal(a.id) && a.kind === "savings")
       .map((a) => Math.max(0, balances.get(a.id)!)),
   );
   const carried = sum(
     s.captures
-      .filter((c) => c.date <= asOf)
+      .filter((c) => c.date <= asOf && personal(c.accountId))
       .flatMap((c) =>
         c.actions
           .filter(
@@ -175,41 +186,49 @@ export function summary(s: State, asOf = today()) {
   const reserves = sum([
     savingsAccounts,
     carried,
-    ...s.reserves.map((r) => reserveBalance(s, r.id, asOf)),
+    ...s.reserves
+      .filter((r) => personal(r.accountId))
+      .map((r) => reserveBalance(s, r.id, asOf)),
   ]);
   const liabilities = sum(
     s.liabilities
-      .filter((l) => l.date <= asOf)
+      .filter((l) => l.date <= asOf && personal(l.accountId))
       .map((l) => outstanding(s, l.id, "liability", asOf)),
   );
   const receivables = sum(
     s.receivables
-      .filter((r) => r.date <= asOf)
+      .filter((r) => r.date <= asOf && personal(r.accountId))
       .map((r) => outstanding(s, r.id, "receivable", asOf)),
   );
   const bondAssets = sum(
-    s.bonds.map((b) =>
-      Math.max(
-        0,
-        b.principal -
-          sum(
-            s.transactions
-              .filter(
-                (t) =>
-                  t.type === "bond_maturity" &&
-                  t.relatedId === b.id &&
-                  t.date <= asOf,
-              )
-              .map((t) => t.amount),
-          ),
+    s.bonds
+      .filter((b) => personal(b.accountId))
+      .map((b) =>
+        Math.max(
+          0,
+          b.principal -
+            sum(
+              s.transactions
+                .filter(
+                  (t) =>
+                    t.type === "bond_maturity" &&
+                    t.relatedId === b.id &&
+                    t.date <= asOf,
+                )
+                .map((t) => t.amount),
+            ),
+        ),
       ),
-    ),
   );
   const assets = sum([
-    sum([...balances.values()]),
+    sum(
+      s.accounts.filter((a) => personal(a.id)).map((a) => balances.get(a.id)!),
+    ),
     bondAssets,
     receivables,
-    ...s.prepaids.map((p) => prepaidBalance(s, p, asOf)),
+    ...s.prepaids
+      .filter((p) => personal(p.accountId))
+      .map((p) => prepaidBalance(s, p, asOf)),
   ]);
   const available = sum([liquid, -restricted, -reserves, -liabilities]);
   const month = asOf.slice(0, 7);
@@ -225,13 +244,21 @@ export function summary(s: State, asOf = today()) {
     assets,
     available,
     netWorth: sum([assets, -liabilities]),
-    income: sum(actual.filter((t) => t.type === "income").map((t) => t.amount)),
+    businessCash: sum(
+      s.accounts
+        .filter((a) => a.businessId && a.kind !== "investment")
+        .map((a) => balances.get(a.id)!),
+    ),
+    totalAccounts: sum([...balances.values()]),
+    income: sum(
+      actual.filter((t) => personalIncome(s, t)).map((t) => t.amount),
+    ),
     expenses: sum(
-      actual.filter((t) => t.type === "expense").map((t) => t.amount),
+      actual.filter((t) => personalExpense(s, t)).map((t) => t.amount),
     ),
     emergency: sum(
       s.reserves
-        .filter((r) => r.emergency)
+        .filter((r) => r.emergency && personal(r.accountId))
         .map((r) => reserveBalance(s, r.id, asOf)),
     ),
   };
@@ -287,6 +314,21 @@ export function receiveEvent(
   const income = s.incomes.find((i) => i.id === e.sourceId);
   if (income?.type === "Loan repayment")
     throw new Error("Record loan recovery using the receivables module");
+  if (e.kind === "income" && income?.businessId)
+    return recordDistribution(
+      s,
+      {
+        id: uid(),
+        businessId: income.businessId,
+        accountId: income.sourceAccountId!,
+        destinationId: income.accountId,
+        amount,
+        date,
+        relatedId: income.id,
+        eventId: e.id,
+      },
+      false,
+    );
   return {
     id: uid(),
     type: e.kind === "receivable" ? "loan_recovery" : "income",
@@ -340,11 +382,13 @@ export function budgetActual(
   budget: Budget,
   category?: string,
 ): number {
+  const allowance = s.allowances.find((p) => p.budgetId === budget.id);
   return sum([
     ...s.transactions
       .filter(
         (t) =>
-          t.type === "expense" &&
+          personalExpense(s, t) &&
+          (!allowance || t.accountId === allowance.accountId) &&
           t.date >= budget.start &&
           t.date <= budget.end &&
           !t.prepaidId &&
@@ -352,7 +396,14 @@ export function budgetActual(
       )
       .map((t) => t.amount),
     prepaidRecognition(
-      s,
+      allowance
+        ? {
+            ...s,
+            prepaids: s.prepaids.filter(
+              (p) => p.accountId === allowance.accountId,
+            ),
+          }
+        : s,
       budget.start,
       budget.end < today() ? budget.end : today(),
       category,
@@ -366,6 +417,37 @@ export function rolloverAmount(
 ): number {
   return categoryRollover(s, budget, category);
 }
+export function budgetFunding(s: State, b: Budget, category?: string) {
+  const plan = s.allowances.find((p) => p.budgetId === b.id);
+  const nonSpending = new Set(
+    b.allocations
+      .filter((a) => a.purpose !== "spending")
+      .map((a) => a.category),
+  );
+  return sum(
+    s.transactions
+      .filter(
+        (t) =>
+          !t.captureId &&
+          !businessForAccount(s, t.accountId) &&
+          t.date >= b.start &&
+          t.date <= b.end &&
+          (!category || t.category === category) &&
+          nonSpending.has(t.category) &&
+          (!plan || t.allowanceId === plan.id) &&
+          (t.type === "reserve_transfer" ||
+            ["liability_repayment", "debt_repayment"].includes(t.type) ||
+            (t.type === "transfer" &&
+              s.accounts.some(
+                (a) =>
+                  a.id === t.destinationId &&
+                  !a.businessId &&
+                  a.kind === "savings",
+              ))),
+      )
+      .map((t) => t.amount),
+  );
+}
 export function budgetStats(s: State, b: Budget) {
   const planned = sum(
     effectiveAllocations(s, b).map((a) =>
@@ -373,11 +455,13 @@ export function budgetStats(s: State, b: Budget) {
     ),
   );
   const actual = budgetActual(s, b);
+  const funding = budgetFunding(s, b);
   const available = Math.max(0, summary(s).available);
-  const remaining = sum([planned, -actual, -captured(s, b.id)]);
+  const remaining = sum([planned, -actual, -funding, -captured(s, b.id)]);
   return {
     planned,
     actual,
+    funding,
     remaining,
     unallocated: sum([available, -Math.max(0, remaining)]),
   };
@@ -537,6 +621,14 @@ export function forecast(s: State, scenario: Scenario, asOf = today()) {
   ];
   const billsByCategory = new Map<string, number>();
   const cashPlans = new Map<number, number>();
+  const allowanceCash = new Map<
+    string,
+    { start: string; days: number; amount: number }
+  >();
+  const allowancePeriods = s.allowances.map((p) => ({
+    plan: p,
+    budget: s.budgets.find((b) => b.id === p.budgetId)!,
+  }));
   const seen = new Set<string>();
   let low = opening;
   let insufficient: string | undefined = opening < 0 ? asOf : undefined;
@@ -575,9 +667,51 @@ export function forecast(s: State, scenario: Scenario, asOf = today()) {
         cashPlans.set(bucket, ratio(plan, scenario.spendingBps));
       }
       const cashSpending = cashPlans.get(bucket)!;
-      const expense =
+      let expense =
         safe((BigInt(cashSpending) * BigInt(day % 30 || 30)) / 30n) -
         safe((BigInt(cashSpending) * BigInt((day - 1) % 30)) / 30n);
+      const period = allowancePeriods.find(
+        ({ budget }) => budget.start <= date && date <= budget.end,
+      );
+      if (period) {
+        const plan = period.budget;
+        if (!allowanceCash.has(plan.id)) {
+          const start = plan.start > asOf ? plan.start : addDays(asOf, 1);
+          const allocations = effectiveAllocations(s, plan).filter(
+            (a) => a.purpose !== "debt",
+          );
+          const remaining = sum([
+            sum(
+              allocations.map((a) =>
+                sum([a.amount, rolloverAmount(s, plan, a.category)]),
+              ),
+            ),
+            -budgetActual(s, plan),
+            -sum(allocations.map((a) => budgetFunding(s, plan, a.category))),
+            -captured(s, plan.id),
+            -prepaidRecognition(
+              {
+                ...s,
+                prepaids: s.prepaids.filter(
+                  (p) => p.accountId === period.plan.accountId,
+                ),
+              },
+              start,
+              plan.end,
+            ),
+          ]);
+          allowanceCash.set(plan.id, {
+            start,
+            days: daysBetween(start, plan.end) + 1,
+            amount: ratio(Math.max(0, remaining), scenario.spendingBps),
+          });
+        }
+        const cash = allowanceCash.get(plan.id)!;
+        const elapsed = daysBetween(cash.start, date) + 1;
+        expense =
+          safe((BigInt(cash.amount) * BigInt(elapsed)) / BigInt(cash.days)) -
+          safe((BigInt(cash.amount) * BigInt(elapsed - 1)) / BigInt(cash.days));
+      }
       for (let k = 0; k < 3; k++)
         balances[k] = sum([
           balances[k],
@@ -589,7 +723,7 @@ export function forecast(s: State, scenario: Scenario, asOf = today()) {
       )) {
         const bucket = `${Math.floor((day - 1) / 30)}:${n.category}`;
         const covered = ratio(
-          b?.allocations.find(
+          (period?.budget ?? b)?.allocations.find(
             (a) => a.category === n.category && a.purpose === "spending",
           )?.amount ?? 0,
           scenario.spendingBps,
@@ -606,6 +740,7 @@ export function forecast(s: State, scenario: Scenario, asOf = today()) {
     for (const e of s.events) {
       const due = addDays(e.due, scenario.delayDays);
       if (due !== date || seen.has(e.id) || e.status !== "expected") continue;
+      if (businessForAccount(s, sourceAccount(s, e))) continue;
       if (
         e.kind === "income" &&
         !s.incomes.find((i) => i.id === e.sourceId)?.active
@@ -811,6 +946,9 @@ export function validateState(input: unknown): State {
     s.prepaids,
     s.captures,
     s.reviews,
+    s.businesses,
+    s.budgetChanges,
+    s.allowances,
   ];
   const allIds = collections.flatMap((c) => c.map((r) => r.id));
   if (new Set(allIds).size !== allIds.length)
@@ -947,6 +1085,8 @@ export function validateState(input: unknown): State {
         t.accountId !== original.accountId ||
         t.destinationId !== original.destinationId ||
         t.relatedId !== original.relatedId ||
+        t.businessMovement !== original.businessMovement ||
+        t.partnerName !== original.partnerName ||
         t.date < original.date ||
         t.prepaidId ||
         t.captureId ||
@@ -1044,11 +1184,23 @@ export function validateState(input: unknown): State {
     }
     if (t.eventId) {
       const e = s.events.find((e) => e.id === t.eventId);
+      const distribution =
+        e?.kind === "income" &&
+        s.incomes.find((i) => i.id === e.sourceId)?.businessId;
       if (
         !e ||
         t.relatedId !== e.sourceId ||
-        sourceAccount(s, e) !== t.accountId ||
-        t.type !== (e.kind === "receivable" ? "loan_recovery" : "income")
+        sourceAccount(s, e) !==
+          (distribution ? t.destinationId : t.accountId) ||
+        t.type !==
+          (distribution
+            ? "transfer"
+            : e.kind === "receivable"
+              ? "loan_recovery"
+              : "income") ||
+        (distribution &&
+          (t.businessMovement !== "owner_distribution" ||
+            businessForAccount(s, t.accountId) !== distribution))
       )
         throw new Error("Receipt does not match its payment event");
     }
@@ -1160,6 +1312,7 @@ export function validateState(input: unknown): State {
       throw new Error("Percentage exceeds 100%");
   }
   validateExpenses(s);
+  validateConnected(s);
   summary(s);
   return s;
 }

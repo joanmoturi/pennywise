@@ -3,7 +3,7 @@ import { migrate } from "./storage";
 import type { State } from "./domain";
 import { validateState } from "./engine";
 
-export const APP_VERSION = "1.2.0";
+export const APP_VERSION = "1.3.0";
 const fullBackupSchema = z
   .object({
     format: z.literal("pennywise-full-backup"),

@@ -76,6 +76,18 @@ fieldset {
 .quick-actions {
   margin-bottom: 24px;
 }
+.local-preview-banner {
+  margin: 12px 24px;
+}
+.allowance-plan {
+  margin-block: 24px;
+  padding-block: 16px;
+  border-top: 1px solid var(--line);
+}
+.allowance-plan > summary {
+  font-weight: 600;
+  padding-block: 12px;
+}
 .pagination {
   display: flex;
   align-items: center;

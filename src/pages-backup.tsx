@@ -200,6 +200,13 @@ export function BackupCentre() {
           included.
         </p>
         <p>
+          Business ownership, account classification, distributions, budget
+          funding history and linked allowance plans are included in schema 5.
+          Older backups restore without guessed classifications. A schema-5
+          backup requires this version or newer; do not restore it into the
+          deployed schema-4 app.
+        </p>
+        <p>
           Reminders run when the app is opened or data changes. There are no
           claimed unattended background backups. Move a downloaded backup to a
           separate device or private storage; IndexedDB alone cannot survive
@@ -258,7 +265,7 @@ export function BackupCentre() {
           </label>
           <p>
             For encrypted files, enter the passphrase before choosing the file.
-            Compatible legacy v1/v2 raw backups can be migrated; they lack
+            Compatible schema 1-4 backups can be migrated. Legacy raw files lack
             integrity metadata and are explicitly labeled.
           </p>
           {error && (
@@ -287,6 +294,12 @@ export function BackupCentre() {
                     preview.state.transactions.length,
                   ],
                   ["Budget profiles and periods", preview.state.budgets.length],
+                  ["Businesses", preview.state.businesses.length],
+                  [
+                    "Budget funding changes",
+                    preview.state.budgetChanges.length,
+                  ],
+                  ["Allowance plans", preview.state.allowances.length],
                   [
                     "Notification inbox",
                     preview.state.notifications.inbox.length,

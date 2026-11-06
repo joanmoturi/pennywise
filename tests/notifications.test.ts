@@ -607,7 +607,7 @@ describe("notification atomic persistence and recovery", () => {
     const migrated = migrate({ ...old, version: 3 });
     expect(migrated.accounts).toEqual(original.accounts);
     expect(migrated.settings).toEqual(original.settings);
-    expect(migrated.version).toBe(4);
+    expect(migrated.version).toBe(5);
     expect(migrated.notifications.inbox).toEqual([]);
   });
   it("rejects backups with broken inbox/ledger relationships", async () => {

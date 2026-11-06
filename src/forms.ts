@@ -12,6 +12,9 @@ import {
 import type { AppContext, Field } from "./context";
 import { commitWindfall, coupon, receiveEvent, scheduleDates } from "./engine";
 import { generateOccurrences } from "./expense-engine";
+import { accountBalances } from "./engine";
+import { categoryPosition } from "./connected-finance";
+import { formatMoney } from "./money";
 
 export type Collection =
   | "accounts"
@@ -53,6 +56,16 @@ export function recordFields(s: State, kind: Collection): Field[] {
         help: "Existing balance, not income. Record liabilities separately.",
       }),
       f("restricted", "Restricted portion", "money"),
+      f("businessId", "Business ownership (optional)", "select", {
+        required: false,
+        options: s.businesses.map((b) => ({ value: b.id, label: b.name })),
+        help: "Blank preserves the existing personal/legacy classification. Assigning a business reclassifies this account's entire history, not its cash.",
+      }),
+      f(
+        "reclassificationConfirmed",
+        "I reviewed this account's history and confirm changing its ownership",
+        "checkbox",
+      ),
       common[1],
     ];
   if (kind === "incomes")
@@ -70,6 +83,26 @@ export function recordFields(s: State, kind: Collection): Field[] {
       }),
       account,
       f("active", "Active", "checkbox"),
+      f(
+        "businessId",
+        "Expected distribution from business (optional)",
+        "select",
+        {
+          required: false,
+          options: s.businesses.map((b) => ({ value: b.id, label: b.name })),
+        },
+      ),
+      f(
+        "sourceAccountId",
+        "Business source account (distributions only)",
+        "select",
+        {
+          required: false,
+          options: s.accounts
+            .filter((a) => a.businessId)
+            .map((a) => ({ value: a.id, label: a.name })),
+        },
+      ),
       common[1],
     ];
   if (kind === "liabilities" || kind === "receivables")
@@ -232,7 +265,10 @@ export function defaultRecord(
     id: uid(),
     name: "",
     notes: "",
-    accountId: s.accounts[0]?.id ?? "",
+    accountId:
+      s.accounts.find((a) => !a.businessId && a.kind !== "investment")?.id ??
+      s.accounts[0]?.id ??
+      "",
   };
   if (kind === "accounts")
     return {
@@ -376,7 +412,12 @@ export function editRecord(
       ...field,
       advanced:
         kind === "accounts"
-          ? ["restricted", "notes"].includes(field.key)
+          ? [
+              "restricted",
+              "notes",
+              "businessId",
+              "reclassificationConfirmed",
+            ].includes(field.key)
           : kind === "recurring"
             ? [
                 "minimum",
@@ -391,8 +432,46 @@ export function editRecord(
     values: record ? { ...record } : defaultRecord(app.state, kind),
     submit: async (values) =>
       app.mutate(`Save ${kind}`, (s) => {
-        for (const key of ["end", "due", "reserveId"])
+        for (const key of [
+          "end",
+          "due",
+          "reserveId",
+          "businessId",
+          "sourceAccountId",
+        ])
           if (values[key] === "") delete values[key];
+        if (kind === "accounts") {
+          if (
+            record &&
+            "businessId" in values &&
+            ("businessId" in record ? record.businessId : undefined) !==
+              values.businessId &&
+            (("opening" in record && record.opening !== 0) ||
+              s.transactions.some(
+                (t) =>
+                  t.accountId === record.id || t.destinationId === record.id,
+              )) &&
+            !values.reclassificationConfirmed
+          )
+            throw new Error(
+              "Review and confirm this account's full history before changing its ownership.",
+            );
+          if (
+            record &&
+            !values.businessId &&
+            "businessId" in record &&
+            record.businessId &&
+            (s.transactions.some(
+              (t) => t.accountId === record.id || t.destinationId === record.id,
+            ) ||
+              ("opening" in record && record.opening !== 0)) &&
+            !values.reclassificationConfirmed
+          )
+            throw new Error(
+              "Review and confirm this account's full history before changing its ownership.",
+            );
+          delete values.reclassificationConfirmed;
+        }
         if (kind === "recurring") {
           for (const key of ["minimum", "maximum"])
             if (values[key] === 0) delete values[key];
@@ -476,6 +555,16 @@ export function transactionFields(s: State): Field[] {
       options: related,
       required: false,
     }),
+    f(
+      "businessMovement",
+      "Business movement (cross-ownership transfers only)",
+      "select",
+      {
+        required: false,
+        options: options(["capital", "owner_distribution"]),
+        help: "Capital is not business revenue. An owner distribution uses existing retained profit, not new consolidated income.",
+      },
+    ),
     f("paymentMethod", "Payment method", "text", { required: false }),
     f("recurringReference", "Recurring reference", "text", { required: false }),
     f("notes", "Notes", "textarea"),
@@ -488,6 +577,7 @@ export function transactionFields(s: State): Field[] {
       "paymentMethod",
       "recurringReference",
       "notes",
+      "businessMovement",
     ].includes(field.key),
   }));
 }
@@ -522,11 +612,43 @@ export function editTransaction(
     app.notify("Undo this receipt's windfall allocation before editing it.");
     return;
   }
+  const contextBalances = accountBalances(app.state);
+  const contextBudget = app.state.budgets.find(
+    (b) => b.id === app.state.settings.activeBudgetId,
+  );
+  const knownCategories = new Set([
+    ...app.state.transactions.map((t) => t.category),
+    ...(contextBudget?.allocations.map((a) => a.category) ?? []),
+  ]);
+  const positions = new Map<string, ReturnType<typeof categoryPosition>>();
   app.dialog({
     title: record ? "Edit transaction" : "Add transaction",
     description:
       "Income is earned or distributed money only. Draws, transfers and loan recoveries have distinct ledger types. Expected payments belong in Income or Bonds.",
     fields: transactionFields(app.state),
+    context: (values) => {
+      const accountId = String(values.accountId ?? "");
+      const category = String(values.category ?? "");
+      const balance = contextBalances.get(accountId) ?? 0;
+      if (app.state.accounts.find((a) => a.id === accountId)?.businessId)
+        return `Business account balance: ${formatMoney(balance, app.state.settings.currency)}. Business receipts and expenses stay separate from personal income and budgets.`;
+      if (
+        contextBudget &&
+        knownCategories.has(category) &&
+        !positions.has(category)
+      )
+        positions.set(
+          category,
+          categoryPosition(app.state, contextBudget, category),
+        );
+      const position = positions.get(category) ?? {
+        planned: 0,
+        spent: 0,
+        remaining: 0,
+        status: "Unbudgeted",
+      };
+      return `Account balance: ${formatMoney(balance, app.state.settings.currency)}. ${values.type === "expense" && position ? `${category}: ${position.status}; budget ${formatMoney(position.planned, app.state.settings.currency)}, spent ${formatMoney(position.spent, app.state.settings.currency)}, remaining ${formatMoney(position.remaining, app.state.settings.currency)}. Spending is allowed even above this limit.` : "Transfers and borrowing are not new earned income."}`;
+    },
     values: record
       ? { ...record }
       : {
@@ -537,16 +659,22 @@ export function editTransaction(
           description: "",
           category: "Food",
           subcategory: "",
-          accountId: app.state.accounts[0]?.id ?? "",
+          accountId:
+            app.state.accounts.find(
+              (a) => !a.businessId && a.kind !== "investment",
+            )?.id ??
+            app.state.accounts[0]?.id ??
+            "",
           paymentMethod: "",
           notes: "",
           recurringReference: "",
           ...defaults,
         },
     submit: async (values) => {
-      for (const key of ["destinationId", "relatedId"])
+      for (const key of ["destinationId", "relatedId", "businessMovement"])
         if (!values[key]) delete values[key];
       if (values.type === "debt_repayment") values.type = "liability_repayment";
+      let budgetNotice = "";
       await app.mutate(
         record ? "Edit ledger transaction" : "Add ledger transaction",
         (s) => {
@@ -569,8 +697,25 @@ export function editTransaction(
             );
           if (index >= 0) s.transactions[index] = t;
           else s.transactions.push(t);
+          const b = s.budgets.find((b) => b.id === s.settings.activeBudgetId);
+          const allowance = s.allowances.find((p) => p.budgetId === b?.id);
+          if (
+            t.type === "expense" &&
+            !s.accounts.find((a) => a.id === t.accountId)?.businessId &&
+            b &&
+            t.date >= b.start &&
+            t.date <= b.end &&
+            (!allowance || allowance.accountId === t.accountId)
+          ) {
+            const position = categoryPosition(s, b, t.category);
+            if (position.status === "Unbudgeted")
+              budgetNotice = `Saved on this device. ${t.category} is unexpected / unbudgeted. Fund it from Budgets without changing your actual spending.`;
+            else if (position.remaining < 0)
+              budgetNotice = `Saved on this device. ${t.category} is ${formatMoney(-position.remaining, s.settings.currency)} over budget. Review funding in Budgets.`;
+          }
         },
       );
+      if (budgetNotice) app.notify(budgetNotice);
     },
   });
 }

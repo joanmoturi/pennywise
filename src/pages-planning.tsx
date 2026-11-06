@@ -12,6 +12,7 @@ import {
   eventRemaining,
   budgetStats,
   budgetActual,
+  sourceAccount,
 } from "./engine";
 import { reports } from "./reports";
 import {
@@ -45,6 +46,8 @@ import {
   recurringReminders,
 } from "./expense-engine";
 import { timing } from "./performance";
+import { AllowanceWorkspace } from "./pages-connected";
+import { businessStats, businessForAccount } from "./connected-finance";
 
 export function OverviewPage() {
   const endCalculation = timing("overview-calculation");
@@ -58,14 +61,22 @@ export function OverviewPage() {
   const next = s.events
     .filter(
       (e) =>
-        e.due >= today() && e.status === "expected" && eventRemaining(s, e) > 0,
+        !businessForAccount(s, sourceAccount(s, e)) &&
+        e.due >= today() &&
+        e.status === "expected" &&
+        eventRemaining(s, e) > 0,
     )
     .sort((a, b) => a.due.localeCompare(b.due))[0];
   const b = s.budgets.find((b) => b.id === s.settings.activeBudgetId)!;
   const budget = budgetStats(s, b);
   const expected = sum(
     s.events
-      .filter((e) => e.due >= today() && e.status !== "cancelled")
+      .filter(
+        (e) =>
+          !businessForAccount(s, sourceAccount(s, e)) &&
+          e.due >= today() &&
+          e.status !== "cancelled",
+      )
       .map((e) => eventRemaining(s, e)),
   );
   endCalculation();
@@ -149,6 +160,62 @@ export function OverviewPage() {
           hint="Not personal earned income"
         />
       </div>
+      <div className="metrics">
+        <Metric label="Owed to me (not cash)" value={fmt(totals.receivables)} />
+        <Metric
+          label="Business-owned cash"
+          value={fmt(totals.businessCash)}
+          hint="Excluded from personal available money"
+        />
+        <Metric
+          label="Personal savings / earmarks"
+          value={fmt(totals.reserves)}
+          hint="Already owned, not extra income"
+        />
+        <Metric
+          label="Month-end available (forecast)"
+          value={fmt(
+            projection.lines.find(
+              (l) =>
+                l.date ===
+                new Date(
+                  Date.UTC(
+                    Number(today().slice(0, 4)),
+                    Number(today().slice(5, 7)),
+                    0,
+                  ),
+                )
+                  .toISOString()
+                  .slice(0, 10),
+            )?.expected ?? totals.available,
+          )}
+          hint="After protected money and liabilities; not actual cash"
+        />
+      </div>
+      {s.businesses.length > 0 && (
+        <Card>
+          <div className="card-head">
+            <h3>Business position, separately owned</h3>
+            <Button secondary onClick={() => app.navigate("businesses")}>
+              Businesses & distributions
+            </Button>
+          </div>
+          {s.businesses.map((b) => {
+            const stats = businessStats(s, b.id);
+            return (
+              <p key={b.id}>
+                <strong>{b.name}</strong>: cash {fmt(stats.cash)} / revenue{" "}
+                {fmt(stats.revenue)} / retained profit {fmt(stats.retained)} /
+                actually distributed to me {fmt(stats.ownerDistributions)}.
+              </p>
+            );
+          })}
+          <p>
+            Personal net position excludes full business-owned balances.
+            Indicative ownership shares are not spendable personal cash.
+          </p>
+        </Card>
+      )}
       <div className="metrics">
         <Metric
           label="Recurring expenses due this month"
@@ -442,6 +509,7 @@ export function ForecastPage() {
         subtitle="Live cash, explicit commitments and scenario-only assumptions remain separate."
         action={<Button onClick={configure}>Adjust assumptions</Button>}
       />
+      <AllowanceWorkspace />
       <div className="toolbar">
         <label>
           Forecast horizon

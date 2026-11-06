@@ -1,12 +1,23 @@
 import type { State } from "./domain";
 import { sum } from "./money";
 import { accountBalances, outstanding, reserveBalance } from "./engine";
+import { personalIncome, personalExpense } from "./connected-finance";
 
 export function reports(s: State, start: string, end: string) {
-  const txs = s.transactions.filter((t) => t.date >= start && t.date <= end);
+  const txs = s.transactions.filter(
+    (t) =>
+      t.date >= start &&
+      t.date <= end &&
+      (t.type === "transfer"
+        ? personalIncome(s, t) ||
+          !s.accounts.find((a) => a.id === t.accountId)?.businessId
+        : !s.accounts.find((a) => a.id === t.accountId)?.businessId),
+  );
   const groups = (type: string, field: "category" | "relatedId") => {
     const map = new Map<string, number>();
-    for (const t of txs.filter((t) => t.type === type)) {
+    for (const t of txs.filter((t) =>
+      type === "income" ? personalIncome(s, t) : t.type === type,
+    )) {
       const key = t[field] || "Unlinked";
       map.set(key, sum([map.get(key) ?? 0, t.amount]));
     }
@@ -15,6 +26,7 @@ export function reports(s: State, start: string, end: string) {
         name:
           s.incomes.find((i) => i.id === name)?.name ||
           s.bonds.find((b) => b.id === name)?.name ||
+          s.businesses.find((b) => b.id === name)?.name ||
           name,
         amount,
       }))
@@ -28,7 +40,7 @@ export function reports(s: State, start: string, end: string) {
         month,
         income: sum(
           txs
-            .filter((t) => t.date.startsWith(month) && t.type === "income")
+            .filter((t) => t.date.startsWith(month) && personalIncome(s, t))
             .map((t) => t.amount),
         ),
         expense: sum(
@@ -38,7 +50,7 @@ export function reports(s: State, start: string, end: string) {
         ),
         cash: sum(
           s.accounts
-            .filter((a) => a.kind !== "investment")
+            .filter((a) => !a.businessId && a.kind !== "investment")
             .map((a) => balances.get(a.id)!),
         ),
       };
@@ -48,8 +60,8 @@ export function reports(s: State, start: string, end: string) {
     spending: groups("expense", "category"),
     incomeSources: groups("income", "relatedId"),
     monthly,
-    income: sum(txs.filter((t) => t.type === "income").map((t) => t.amount)),
-    expense: sum(txs.filter((t) => t.type === "expense").map((t) => t.amount)),
+    income: sum(txs.filter((t) => personalIncome(s, t)).map((t) => t.amount)),
+    expense: sum(txs.filter((t) => personalExpense(s, t)).map((t) => t.amount)),
     recoveries: sum(
       txs.filter((t) => t.type === "loan_recovery").map((t) => t.amount),
     ),

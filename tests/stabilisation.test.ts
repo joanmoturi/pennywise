@@ -37,7 +37,7 @@ it.each([1, 2, 3, 4])(
     try {
       const repo = new Repository(db);
       const state = await repo.read();
-      expect(db.version).toBe(4);
+      expect(db.version).toBe(5);
       expect(state.accounts).toEqual(original.accounts);
       expect(state.transactions).toEqual(original.transactions);
       expect(summary(state)).toEqual(summary(original));

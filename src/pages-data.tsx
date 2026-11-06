@@ -907,15 +907,31 @@ export function SettingsPage() {
         <div className="actions">
           <Button
             secondary
-            disabled={s.accounts.length > 0 || s.transactions.length > 0}
+            disabled={
+              s.accounts.length > 0 ||
+              s.transactions.length > 0 ||
+              s.businesses.length > 0 ||
+              s.allowances.length > 0 ||
+              s.budgetChanges.length > 0
+            }
             onClick={() =>
               app.confirm(
                 "Load fictional demonstration data?",
                 "Use this only in an empty database. Reset and remove the demo before recording personal information.",
                 async () =>
-                  app.mutate("Load labeled fictional demonstration", (s) =>
-                    Object.assign(s, demoState()),
-                  ),
+                  app.mutate("Load labeled fictional demonstration", (s) => {
+                    if (
+                      s.accounts.length ||
+                      s.transactions.length ||
+                      s.businesses.length ||
+                      s.allowances.length ||
+                      s.budgetChanges.length
+                    )
+                      throw new Error(
+                        "Workspace is no longer empty. No records were replaced.",
+                      );
+                    Object.assign(s, demoState());
+                  }),
               )
             }
           >

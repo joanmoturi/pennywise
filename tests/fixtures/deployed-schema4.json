@@ -1,0 +1,544 @@
+{
+  "format": "pennywise-full-backup",
+  "backupVersion": 1,
+  "schemaVersion": 4,
+  "appVersion": "1.2.0",
+  "createdAt": "2026-11-06T18:02:53.504Z",
+  "data": {
+    "version": 4,
+    "revision": 1,
+    "settings": {
+      "currency": "KES",
+      "theme": "dark",
+      "setup": true,
+      "demo": true,
+      "activeBudgetId": "683128b0-3b39-4784-ab11-95ad984230fe",
+      "allowanceDays": 30,
+      "backupDays": 7,
+      "backupTransactions": 25,
+      "lastBackupTransactionCount": 0,
+      "lastBackupAppVersion": ""
+    },
+    "accounts": [
+      {
+        "id": "36229d7e-bed4-4c02-a7e0-4aa05072de55",
+        "name": "DEMO everyday account",
+        "kind": "bank",
+        "opening": 45000000,
+        "restricted": 1000000,
+        "notes": "Fictional demonstration only"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "4f0de7ea-77e2-4887-9490-bb3e2cdcf965",
+        "type": "reserve_transfer",
+        "amount": 10000000,
+        "date": "2026-11-06",
+        "description": "DEMO reserve earmark",
+        "category": "Reserve",
+        "subcategory": "",
+        "accountId": "36229d7e-bed4-4c02-a7e0-4aa05072de55",
+        "reserveId": "d3c3159b-9d22-41c8-bfea-f585edbf02ab",
+        "paymentMethod": "",
+        "notes": "",
+        "recurringReference": ""
+      }
+    ],
+    "incomes": [
+      {
+        "id": "42bbd2da-81b9-4aca-abab-c39e4af1497d",
+        "name": "DEMO consulting",
+        "type": "Consulting",
+        "description": "Fictional contract",
+        "amount": 8000000,
+        "frequency": "irregular",
+        "reliability": "uncertain",
+        "taxBps": 0,
+        "accountId": "36229d7e-bed4-4c02-a7e0-4aa05072de55",
+        "active": true,
+        "notes": ""
+      }
+    ],
+    "liabilities": [
+      {
+        "id": "e3e83c50-081b-4297-88e9-2a8d8a113787",
+        "name": "DEMO business funds",
+        "principal": 5000000,
+        "date": "2026-11-06",
+        "due": "2026-12-06",
+        "priority": 1,
+        "accountId": "36229d7e-bed4-4c02-a7e0-4aa05072de55",
+        "source": "DEMO entity",
+        "notes": "Already included in opening balance, not earned income"
+      }
+    ],
+    "receivables": [
+      {
+        "id": "9e58f10c-fd2a-4cd8-a67c-6748a4dae7db",
+        "name": "DEMO borrower",
+        "principal": 2000000,
+        "date": "2026-11-06",
+        "due": "2026-12-26",
+        "priority": 1,
+        "accountId": "36229d7e-bed4-4c02-a7e0-4aa05072de55",
+        "source": "",
+        "notes": "Fictional pre-existing loan",
+        "interestBps": 0,
+        "writtenOff": false
+      }
+    ],
+    "bonds": [
+      {
+        "id": "c4ce781b-25c2-45f0-965a-06287a97c675",
+        "name": "DEMO infrastructure bond",
+        "identifier": "DEMO-NOT-A-REAL-BOND",
+        "issuer": "Fictional issuer",
+        "principal": 10000000,
+        "couponBps": 1000,
+        "taxBps": 0,
+        "paymentsPerYear": 2,
+        "maturity": "2028-11-05",
+        "maturityValue": 10000000,
+        "accountId": "36229d7e-bed4-4c02-a7e0-4aa05072de55",
+        "notes": "Illustrative rate only; not a real security or tax assumption"
+      }
+    ],
+    "events": [
+      {
+        "id": "1001e062-3187-4005-aecc-75bf3af64cbb",
+        "sourceId": "42bbd2da-81b9-4aca-abab-c39e4af1497d",
+        "kind": "income",
+        "due": "2026-11-20",
+        "amount": 8000000,
+        "status": "expected",
+        "reliability": "uncertain",
+        "notes": "DEMO projected consulting"
+      },
+      {
+        "id": "f80edcfd-5c70-429a-9560-c91c62c516b0",
+        "sourceId": "c4ce781b-25c2-45f0-965a-06287a97c675",
+        "kind": "bond",
+        "due": "2026-12-21",
+        "amount": 500000,
+        "status": "expected",
+        "reliability": "reliable",
+        "notes": "DEMO coupon"
+      }
+    ],
+    "budgets": [
+      {
+        "id": "683128b0-3b39-4784-ab11-95ad984230fe",
+        "name": "SURVIVAL MODE",
+        "start": "2026-11-01",
+        "end": "2026-11-30",
+        "frequency": "monthly",
+        "profileId": "683128b0-3b39-4784-ab11-95ad984230fe",
+        "allocations": [
+          {
+            "category": "Housing",
+            "amount": 3000000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Food",
+            "amount": 1500000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Transport",
+            "amount": 600000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Dining",
+            "amount": 400000,
+            "essential": false,
+            "priority": 5,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          }
+        ],
+        "rollover": false,
+        "archived": false,
+        "notes": "Starting template. Enter your own allocations; no income assumptions."
+      },
+      {
+        "id": "cc07fb8a-ef51-49ed-82d3-18f7032a57a6",
+        "name": "PENNY-PINCHING MODE",
+        "start": "2026-11-01",
+        "end": "2026-11-30",
+        "frequency": "monthly",
+        "profileId": "cc07fb8a-ef51-49ed-82d3-18f7032a57a6",
+        "allocations": [
+          {
+            "category": "Housing",
+            "amount": 6000000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Food",
+            "amount": 3000000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Transport",
+            "amount": 1200000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Dining",
+            "amount": 800000,
+            "essential": false,
+            "priority": 5,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          }
+        ],
+        "rollover": false,
+        "archived": false,
+        "notes": "Starting template. Enter your own allocations; no income assumptions."
+      },
+      {
+        "id": "7f0941d1-2a85-4aef-9de7-9517d4eaa763",
+        "name": "NORMAL MODE",
+        "start": "2026-11-01",
+        "end": "2026-11-30",
+        "frequency": "monthly",
+        "profileId": "7f0941d1-2a85-4aef-9de7-9517d4eaa763",
+        "allocations": [
+          {
+            "category": "Housing",
+            "amount": 9000000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Food",
+            "amount": 4500000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Transport",
+            "amount": 1800000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Dining",
+            "amount": 1200000,
+            "essential": false,
+            "priority": 5,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          }
+        ],
+        "rollover": false,
+        "archived": false,
+        "notes": "Starting template. Enter your own allocations; no income assumptions."
+      },
+      {
+        "id": "f8a3c40d-3fde-4d78-8b92-4c9750662a1f",
+        "name": "COMFORTABLE MODE",
+        "start": "2026-11-01",
+        "end": "2026-11-30",
+        "frequency": "monthly",
+        "profileId": "f8a3c40d-3fde-4d78-8b92-4c9750662a1f",
+        "allocations": [
+          {
+            "category": "Housing",
+            "amount": 12000000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Food",
+            "amount": 6000000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Transport",
+            "amount": 2400000,
+            "essential": true,
+            "priority": 1,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          },
+          {
+            "category": "Dining",
+            "amount": 1600000,
+            "essential": false,
+            "priority": 5,
+            "purpose": "spending",
+            "rolloverRule": "none",
+            "rolloverAmount": 0
+          }
+        ],
+        "rollover": false,
+        "archived": false,
+        "notes": "Starting template. Enter your own allocations; no income assumptions."
+      }
+    ],
+    "necessities": [
+      {
+        "id": "8a538a6e-18d9-4108-bbfc-dbcf72972126",
+        "name": "DEMO housing",
+        "category": "Housing",
+        "amount": 3000000,
+        "due": "2026-11-13",
+        "priority": 1,
+        "essential": true,
+        "notes": ""
+      }
+    ],
+    "reserves": [
+      {
+        "id": "d3c3159b-9d22-41c8-bfea-f585edbf02ab",
+        "name": "DEMO emergency fund",
+        "target": 15000000,
+        "due": "2027-05-05",
+        "accountId": "36229d7e-bed4-4c02-a7e0-4aa05072de55",
+        "priority": 1,
+        "contribution": 500000,
+        "frequency": "monthly",
+        "emergency": true,
+        "notes": ""
+      }
+    ],
+    "rules": [
+      {
+        "id": "0886ac10-1432-4b3f-8489-c36f3b1fbe05",
+        "name": "Repay business first",
+        "target": "liability",
+        "targetId": "e3e83c50-081b-4297-88e9-2a8d8a113787",
+        "mode": "percent",
+        "value": 5000,
+        "cap": 0,
+        "minimumCash": 0
+      }
+    ],
+    "scenarios": [],
+    "recurring": [],
+    "occurrences": [],
+    "occasional": [],
+    "prepaids": [],
+    "captures": [],
+    "reviews": [],
+    "audit": [
+      {
+        "id": "0b755919-ea2c-4497-8675-1b5195a57621",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "budgets: {\"id\":\"8d06a7bc-2d0d-4e20-a1ea-b089dee8f9f8\",\"name\":\"SURVIVAL MODE\",\"start\":\"2026-11-01\",\"end\":\"2026-11-30\",\"frequency\":\"monthly\",\"profileId\":\"8d06a7bc-2d0d-4e20-a1ea-b089dee8f9f8\",\"allocations\":[],\"rollover\":false,\"archived\":false,\"notes\":\"Starting template. Enter your own allocations; no income assumptions.\"}",
+        "after": "budgets: deleted"
+      },
+      {
+        "id": "cb3ad971-a208-4a30-8e2f-9cf1bed461b3",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "budgets: {\"id\":\"b5e86ff9-fa0a-40bc-b839-4062ba199357\",\"name\":\"PENNY-PINCHING MODE\",\"start\":\"2026-11-01\",\"end\":\"2026-11-30\",\"frequency\":\"monthly\",\"profileId\":\"b5e86ff9-fa0a-40bc-b839-4062ba199357\",\"allocations\":[],\"rollover\":false,\"archived\":false,\"notes\":\"Starting template. Enter your own allocations; no income assumptions.\"}",
+        "after": "budgets: deleted"
+      },
+      {
+        "id": "0dad057c-b27f-4bd3-a3da-d6a98185bdbd",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "budgets: {\"id\":\"687e3a0d-14b1-4677-9a37-919fde3f47c6\",\"name\":\"NORMAL MODE\",\"start\":\"2026-11-01\",\"end\":\"2026-11-30\",\"frequency\":\"monthly\",\"profileId\":\"687e3a0d-14b1-4677-9a37-919fde3f47c6\",\"allocations\":[],\"rollover\":false,\"archived\":false,\"notes\":\"Starting template. Enter your own allocations; no income assumptions.\"}",
+        "after": "budgets: deleted"
+      },
+      {
+        "id": "ef7110d6-853e-4e03-b225-4c0b949e40df",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "budgets: {\"id\":\"61494303-cd83-4234-b605-e9dd08c947d8\",\"name\":\"COMFORTABLE MODE\",\"start\":\"2026-11-01\",\"end\":\"2026-11-30\",\"frequency\":\"monthly\",\"profileId\":\"61494303-cd83-4234-b605-e9dd08c947d8\",\"allocations\":[],\"rollover\":false,\"archived\":false,\"notes\":\"Starting template. Enter your own allocations; no income assumptions.\"}",
+        "after": "budgets: deleted"
+      },
+      {
+        "id": "42c6203d-562f-45de-a7a6-068e9bc50f76",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "accounts: deleted",
+        "after": "accounts: {\"id\":\"36229d7e-bed4-4c02-a7e0-4aa05072de55\",\"name\":\"DEMO everyday account\",\"kind\":\"bank\",\"opening\":45000000,\"restricted\":1000000,\"notes\":\"Fictional demonstration only\"}"
+      },
+      {
+        "id": "05084173-0f72-4265-b15e-6fd345347b57",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "transactions: deleted",
+        "after": "transactions: {\"id\":\"4f0de7ea-77e2-4887-9490-bb3e2cdcf965\",\"type\":\"reserve_transfer\",\"amount\":10000000,\"date\":\"2026-11-06\",\"description\":\"DEMO reserve earmark\",\"category\":\"Reserve\",\"subcategory\":\"\",\"accountId\":\"36229d7e-bed4-4c02-a7e0-4aa05072de55\",\"reserveId\":\"d3c3159b-9d22-41c8-bfea-f585edbf02ab\",\"notes\":\"\",\"paymentMethod\":\"\",\"recurringReference\":\"\"}"
+      },
+      {
+        "id": "66f36d11-7557-47f0-a907-1aadb78806d2",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "incomes: deleted",
+        "after": "incomes: {\"id\":\"42bbd2da-81b9-4aca-abab-c39e4af1497d\",\"name\":\"DEMO consulting\",\"type\":\"Consulting\",\"description\":\"Fictional contract\",\"amount\":8000000,\"frequency\":\"irregular\",\"reliability\":\"uncertain\",\"taxBps\":0,\"accountId\":\"36229d7e-bed4-4c02-a7e0-4aa05072de55\",\"active\":true,\"notes\":\"\"}"
+      },
+      {
+        "id": "3389ec4d-51fe-430e-b742-3ae7e3920445",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "liabilities: deleted",
+        "after": "liabilities: {\"id\":\"e3e83c50-081b-4297-88e9-2a8d8a113787\",\"name\":\"DEMO business funds\",\"principal\":5000000,\"date\":\"2026-11-06\",\"due\":\"2026-12-06\",\"priority\":1,\"accountId\":\"36229d7e-bed4-4c02-a7e0-4aa05072de55\",\"source\":\"DEMO entity\",\"notes\":\"Already included in opening balance, not earned income\"}"
+      },
+      {
+        "id": "6564d1b5-1d51-4d85-8477-447febb9250f",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "receivables: deleted",
+        "after": "receivables: {\"id\":\"9e58f10c-fd2a-4cd8-a67c-6748a4dae7db\",\"name\":\"DEMO borrower\",\"principal\":2000000,\"date\":\"2026-11-06\",\"due\":\"2026-12-26\",\"priority\":1,\"accountId\":\"36229d7e-bed4-4c02-a7e0-4aa05072de55\",\"source\":\"\",\"interestBps\":0,\"writtenOff\":false,\"notes\":\"Fictional pre-existing loan\"}"
+      },
+      {
+        "id": "df06c683-7c7c-4462-bebe-ddf3543510f5",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "bonds: deleted",
+        "after": "bonds: {\"id\":\"c4ce781b-25c2-45f0-965a-06287a97c675\",\"identifier\":\"DEMO-NOT-A-REAL-BOND\",\"name\":\"DEMO infrastructure bond\",\"issuer\":\"Fictional issuer\",\"principal\":10000000,\"couponBps\":1000,\"taxBps\":0,\"paymentsPerYear\":2,\"maturity\":\"2028-11-05\",\"maturityValue\":10000000,\"accountId\":\"36229d7e-bed4-4c02-a7e0-4aa05072de55\",\"notes\":\"Illustrative rate only; not a real security or tax assumption\"}"
+      },
+      {
+        "id": "8601fb45-bed5-454d-a604-e42ef8eb607f",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "events: deleted",
+        "after": "events: {\"id\":\"1001e062-3187-4005-aecc-75bf3af64cbb\",\"sourceId\":\"42bbd2da-81b9-4aca-abab-c39e4af1497d\",\"kind\":\"income\",\"due\":\"2026-11-20\",\"amount\":8000000,\"status\":\"expected\",\"reliability\":\"uncertain\",\"notes\":\"DEMO projected consulting\"}"
+      },
+      {
+        "id": "263b90b1-b20b-4cc8-b498-ae59a29c2adc",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "events: deleted",
+        "after": "events: {\"id\":\"f80edcfd-5c70-429a-9560-c91c62c516b0\",\"sourceId\":\"c4ce781b-25c2-45f0-965a-06287a97c675\",\"kind\":\"bond\",\"due\":\"2026-12-21\",\"amount\":500000,\"status\":\"expected\",\"reliability\":\"reliable\",\"notes\":\"DEMO coupon\"}"
+      },
+      {
+        "id": "1e911011-b992-4056-9af8-ede853ffa32a",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "budgets: deleted",
+        "after": "budgets: {\"id\":\"683128b0-3b39-4784-ab11-95ad984230fe\",\"profileId\":\"683128b0-3b39-4784-ab11-95ad984230fe\",\"name\":\"SURVIVAL MODE\",\"start\":\"2026-11-01\",\"end\":\"2026-11-30\",\"frequency\":\"monthly\",\"allocations\":[{\"category\":\"Housing\",\"amount\":3000000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Food\",\"amount\":1500000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Transport\",\"amount\":600000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Dining\",\"amount\":400000,\"essential\":false,\"priority\":5,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0}],\"rollover\":false,\"archived\":false,\"notes\":\"Starting template. Enter your own allocations; no income assumptions.\"}"
+      },
+      {
+        "id": "f9a6b306-4963-44af-a53e-a53b12ea2c56",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "budgets: deleted",
+        "after": "budgets: {\"id\":\"cc07fb8a-ef51-49ed-82d3-18f7032a57a6\",\"profileId\":\"cc07fb8a-ef51-49ed-82d3-18f7032a57a6\",\"name\":\"PENNY-PINCHING MODE\",\"start\":\"2026-11-01\",\"end\":\"2026-11-30\",\"frequency\":\"monthly\",\"allocations\":[{\"category\":\"Housing\",\"amount\":6000000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Food\",\"amount\":3000000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Transport\",\"amount\":1200000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Dining\",\"amount\":800000,\"essential\":false,\"priority\":5,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0}],\"rollover\":false,\"archived\":false,\"notes\":\"Starting template. Enter your own allocations; no income assumptions.\"}"
+      },
+      {
+        "id": "77a57e95-24dd-4fda-bb73-97f9ae001a1b",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "budgets: deleted",
+        "after": "budgets: {\"id\":\"7f0941d1-2a85-4aef-9de7-9517d4eaa763\",\"profileId\":\"7f0941d1-2a85-4aef-9de7-9517d4eaa763\",\"name\":\"NORMAL MODE\",\"start\":\"2026-11-01\",\"end\":\"2026-11-30\",\"frequency\":\"monthly\",\"allocations\":[{\"category\":\"Housing\",\"amount\":9000000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Food\",\"amount\":4500000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Transport\",\"amount\":1800000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Dining\",\"amount\":1200000,\"essential\":false,\"priority\":5,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0}],\"rollover\":false,\"archived\":false,\"notes\":\"Starting template. Enter your own allocations; no income assumptions.\"}"
+      },
+      {
+        "id": "02fa7709-fff2-443f-a826-08e27f5f2aec",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "budgets: deleted",
+        "after": "budgets: {\"id\":\"f8a3c40d-3fde-4d78-8b92-4c9750662a1f\",\"profileId\":\"f8a3c40d-3fde-4d78-8b92-4c9750662a1f\",\"name\":\"COMFORTABLE MODE\",\"start\":\"2026-11-01\",\"end\":\"2026-11-30\",\"frequency\":\"monthly\",\"allocations\":[{\"category\":\"Housing\",\"amount\":12000000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Food\",\"amount\":6000000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Transport\",\"amount\":2400000,\"essential\":true,\"priority\":1,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0},{\"category\":\"Dining\",\"amount\":1600000,\"essential\":false,\"priority\":5,\"purpose\":\"spending\",\"rolloverRule\":\"none\",\"rolloverAmount\":0}],\"rollover\":false,\"archived\":false,\"notes\":\"Starting template. Enter your own allocations; no income assumptions.\"}"
+      },
+      {
+        "id": "4c9a816b-a28c-47be-a34d-eb55058605ff",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "necessities: deleted",
+        "after": "necessities: {\"id\":\"8a538a6e-18d9-4108-bbfc-dbcf72972126\",\"name\":\"DEMO housing\",\"category\":\"Housing\",\"amount\":3000000,\"due\":\"2026-11-13\",\"priority\":1,\"essential\":true,\"notes\":\"\"}"
+      },
+      {
+        "id": "d19cb811-11cf-4d5b-b064-a7c2af948da6",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "reserves: deleted",
+        "after": "reserves: {\"id\":\"d3c3159b-9d22-41c8-bfea-f585edbf02ab\",\"name\":\"DEMO emergency fund\",\"target\":15000000,\"due\":\"2027-05-05\",\"accountId\":\"36229d7e-bed4-4c02-a7e0-4aa05072de55\",\"priority\":1,\"contribution\":500000,\"frequency\":\"monthly\",\"emergency\":true,\"notes\":\"\"}"
+      },
+      {
+        "id": "d94b853d-47e1-4ae3-b5cf-b26efd6b8d3c",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "rules: deleted",
+        "after": "rules: {\"id\":\"0886ac10-1432-4b3f-8489-c36f3b1fbe05\",\"name\":\"Repay business first\",\"target\":\"liability\",\"targetId\":\"e3e83c50-081b-4297-88e9-2a8d8a113787\",\"mode\":\"percent\",\"value\":5000,\"cap\":0,\"minimumCash\":0}"
+      },
+      {
+        "id": "bad8dd0f-cd9d-4806-aa3b-05b92f1f4d96",
+        "at": "2026-11-06T18:02:53.357Z",
+        "action": "Load labeled fictional demonstration",
+        "revision": 1,
+        "before": "settings: {\"currency\":\"KES\",\"theme\":\"dark\",\"setup\":false,\"demo\":false,\"activeBudgetId\":\"8d06a7bc-2d0d-4e20-a1ea-b089dee8f9f8\",\"allowanceDays\":30,\"backupDays\":7,\"backupTransactions\":25,\"lastBackupTransactionCount\":0,\"lastBackupAppVersion\":\"\"}",
+        "after": "settings: {\"currency\":\"KES\",\"theme\":\"dark\",\"setup\":true,\"demo\":true,\"activeBudgetId\":\"683128b0-3b39-4784-ab11-95ad984230fe\",\"allowanceDays\":30,\"backupDays\":7,\"backupTransactions\":25,\"lastBackupTransactionCount\":0,\"lastBackupAppVersion\":\"\"}"
+      }
+    ],
+    "notifications": {
+      "inbox": [],
+      "rules": [],
+      "sources": []
+    }
+  },
+  "integrity": {
+    "algorithm": "SHA-256",
+    "digest": "9328151418289a8a7c62180212839798ee2b6ae800d427b0a41539392378da7b"
+  }
+}

@@ -8,8 +8,13 @@ async function nav(page: Page, name: string) {
   if (await menu.isVisible()) await menu.click();
   await page
     .getByRole("navigation", { name: "Main navigation", exact: true })
-    .getByRole("button", { name, exact: true })
+    .getByRole("button", {
+      name: ["Obligations", "Receivables"].includes(name) ? "Debts" : name,
+      exact: true,
+    })
     .click();
+  if (name === "Receivables")
+    await page.getByRole("tab", { name: "Owed to me", exact: true }).click();
 }
 async function save(page: Page, label = "Save") {
   await page

@@ -11,7 +11,18 @@ import {
   type SavingsCapture,
 } from "./domain";
 import { sum, safe } from "./money";
-import { scheduleDates, budgetActual, summary, reserveBalance } from "./engine";
+import {
+  scheduleDates,
+  budgetActual,
+  budgetFunding,
+  summary,
+  reserveBalance,
+} from "./engine";
+import {
+  businessForAccount,
+  personalExpense,
+  personalIncome,
+} from "./connected-finance";
 
 function recurrenceDate(
   first: string,
@@ -302,7 +313,11 @@ export function prepaidRecognition(
   if (end < start) return 0;
   return sum(
     s.prepaids
-      .filter((p) => !category || p.category === category)
+      .filter(
+        (p) =>
+          !businessForAccount(s, p.accountId) &&
+          (!category || p.category === category),
+      )
       .map((p) =>
         sum([
           prepaidRecognized(s, p, end, comparison),
@@ -358,11 +373,18 @@ export function effectiveAllocations(
 ): Budget["allocations"] {
   const allocations = structuredClone(b.allocations);
   const automatic = new Map<string, { amount: number; essential: boolean }>();
+  const allowance = s.allowances.find((p) => p.budgetId === b.id);
   for (const o of s.occurrences.filter(
     (o) => o.due >= b.start && o.due <= b.end && o.status !== "skipped",
   )) {
     const r = s.recurring.find((r) => r.id === o.recurringId)!;
-    if (!r.autoBudget || coveringPrepaid(s, o)) continue;
+    if (
+      !r.autoBudget ||
+      businessForAccount(s, r.accountId) ||
+      (allowance && r.accountId !== allowance.accountId) ||
+      coveringPrepaid(s, o)
+    )
+      continue;
     const previous = automatic.get(r.category);
     automatic.set(r.category, {
       amount: sum([
@@ -373,6 +395,11 @@ export function effectiveAllocations(
     });
   }
   for (const p of s.prepaids) {
+    if (
+      businessForAccount(s, p.accountId) ||
+      (allowance && p.accountId !== allowance.accountId)
+    )
+      continue;
     const amount = prepaidRecognition(
       s,
       b.start,
@@ -406,6 +433,37 @@ export function effectiveAllocations(
         rolloverAmount: 0,
       });
   }
+  for (const change of s.budgetChanges.filter((c) => c.budgetId === b.id))
+    for (const move of change.moves)
+      for (const [category, delta] of [
+        [move.from, -move.amount],
+        [move.to, move.amount],
+      ] as const) {
+        let allocation = allocations.find((a) => a.category === category);
+        if (!allocation) {
+          allocation = {
+            category,
+            amount: 0,
+            essential: false,
+            priority: 5,
+            purpose: "spending",
+            rolloverRule: "none",
+            rolloverAmount: 0,
+          };
+          allocations.push(allocation);
+        }
+        allocation.amount = sum([allocation.amount, delta]);
+      }
+  for (const capture of s.captures.filter(
+    (c) => c.budgetId === b.id && c.reduceAllocation,
+  )) {
+    const allocation = allocations.find((a) => a.category === capture.category);
+    if (allocation)
+      allocation.amount = sum([
+        allocation.amount,
+        -sum(capture.actions.map((a) => a.amount)),
+      ]);
+  }
   return allocations;
 }
 export function categoryUnspent(s: State, b: Budget, category: string): number {
@@ -430,7 +488,9 @@ export function captured(
     s.captures
       .filter(
         (c) =>
-          c.budgetId === budgetId && (!category || c.category === category),
+          !c.reduceAllocation &&
+          c.budgetId === budgetId &&
+          (!category || c.category === category),
       )
       .flatMap((c) => c.actions.map((a) => a.amount)),
   );
@@ -544,6 +604,19 @@ export function undoCapture(s: State, id: string) {
 }
 export function monthlyReview(s: State, b: Budget) {
   const allocations = effectiveAllocations(s, b);
+  for (const t of s.transactions.filter(
+    (t) => personalExpense(s, t) && t.date >= b.start && t.date <= b.end,
+  ))
+    if (!allocations.some((a) => a.category === t.category))
+      allocations.push({
+        category: t.category,
+        amount: 0,
+        purpose: "spending",
+        essential: false,
+        priority: 5,
+        rolloverRule: "none",
+        rolloverAmount: 0,
+      });
   const rows = allocations.map((a) => {
     const planned = sum([a.amount, categoryRollover(s, b, a.category)]);
     const actual = budgetActual(s, b, a.category);
@@ -575,7 +648,12 @@ export function monthlyReview(s: State, b: Budget) {
       planned: sum(rows.map((r) => r.planned)),
       actual: budgetActual(s, b),
       unspent,
-      saved,
+      saved: sum([
+        saved,
+        ...allocations
+          .filter((a) => a.purpose === "savings" || a.purpose === "reserve")
+          .map((a) => budgetFunding(s, b, a.category)),
+      ]),
       carried,
       available: summary(s).available,
     },
@@ -584,14 +662,14 @@ export function monthlyReview(s: State, b: Budget) {
     cashPaid: sum(
       s.transactions
         .filter(
-          (t) => t.type === "expense" && t.date >= b.start && t.date <= b.end,
+          (t) => personalExpense(s, t) && t.date >= b.start && t.date <= b.end,
         )
         .map((t) => t.amount),
     ),
     incomeReceived: sum(
       s.transactions
         .filter(
-          (t) => t.type === "income" && t.date >= b.start && t.date <= b.end,
+          (t) => personalIncome(s, t) && t.date >= b.start && t.date <= b.end,
         )
         .map((t) => t.amount),
     ),

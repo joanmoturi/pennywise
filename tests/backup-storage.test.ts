@@ -98,7 +98,7 @@ describe("comprehensive portable backups", () => {
     const original = allRecords();
     const file = await fullBackup(original);
     const envelope = JSON.parse(file);
-    expect(envelope.schemaVersion).toBe(4);
+    expect(envelope.schemaVersion).toBe(5);
     expect(envelope.integrity.algorithm).toBe("SHA-256");
     const restored = await decodeBackup(file);
     expect(restored).toEqual(original);
@@ -195,7 +195,7 @@ describe("comprehensive portable backups", () => {
       const preview = await inspectBackup(JSON.stringify(legacy));
       expect(preview.integrityVerified).toBe(false);
       expect(preview.state.accounts).toEqual(s.accounts);
-      expect(preview.state.version).toBe(4);
+      expect(preview.state.version).toBe(5);
       expect(preview.state.recurring).toEqual([]);
     }
   });

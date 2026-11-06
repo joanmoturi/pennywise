@@ -57,6 +57,8 @@ import { APP_VERSION } from "./backup";
 import { backupReminder } from "./expense-engine";
 import { Button, Card, FormDialog, errorMessage } from "./ui";
 import { timing } from "./performance";
+import { BusinessesPage } from "./pages-connected";
+import { untouchedWorkspace, connectedExample } from "./connected-example";
 
 const navigation = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -65,9 +67,9 @@ const navigation = [
   { id: "accounts", label: "Accounts", icon: Wallet },
   { id: "inbox", label: "Transaction Inbox", icon: Download },
   { id: "income", label: "Income", icon: TrendingUp },
+  { id: "businesses", label: "Businesses", icon: Landmark },
   { id: "bonds", label: "Bonds", icon: Landmark },
-  { id: "obligations", label: "Obligations", icon: ClipboardList },
-  { id: "receivables", label: "Receivables", icon: HandCoins },
+  { id: "obligations", label: "Debts", icon: HandCoins },
   { id: "reserves", label: "Reserves", icon: PiggyBank },
   { id: "forecast", label: "Forecast", icon: ChartNoAxesCombined },
   { id: "windfalls", label: "Windfalls", icon: Sparkles },
@@ -89,6 +91,7 @@ const navigationGroups = [
     label: "Income & commitments",
     ids: [
       "income",
+      "businesses",
       "recurring",
       "occasional",
       "prepaid",
@@ -119,6 +122,7 @@ const ActivePage = memo(function ActivePage({ section }: { section: string }) {
       transactions: <TransactionsPage />,
       inbox: <NotificationInbox />,
       income: <IncomePage />,
+      businesses: <BusinessesPage />,
       bonds: <BondsPage />,
       obligations: <ObligationsPage />,
       receivables: <ObligationsPage receivables />,
@@ -195,7 +199,18 @@ export default function App() {
           return;
         }
         const repository = new Repository(database);
-        const s = await repository.read();
+        let s = await repository.read();
+        if (
+          new URLSearchParams(location.search).get("example") === "1" &&
+          untouchedWorkspace(s)
+        )
+          s = await repository.update(
+            "Load fictional connected-finance preview",
+            (draft) => {
+              if (untouchedWorkspace(draft))
+                Object.assign(draft, connectedExample());
+            },
+          );
         if (active) {
           setRepo(repository);
           setState(s);
@@ -444,8 +459,18 @@ export default function App() {
                   .map((n) => (
                     <button
                       key={n.id}
-                      className={section === n.id ? "active" : ""}
-                      aria-current={section === n.id ? "page" : undefined}
+                      className={
+                        section === n.id ||
+                        (n.id === "obligations" && section === "receivables")
+                          ? "active"
+                          : ""
+                      }
+                      aria-current={
+                        section === n.id ||
+                        (n.id === "obligations" && section === "receivables")
+                          ? "page"
+                          : undefined
+                      }
                       onClick={() => app.navigate(n.id)}
                     >
                       <n.icon size={19} />
@@ -504,6 +529,10 @@ export default function App() {
               {saving > 0 && <span role="status">Saving locally...</span>}
             </div>
           </header>
+          <div className="notice local-preview-banner">
+            LOCAL CONNECTED-FINANCE PREVIEW / Separate browser storage. Nothing
+            here changes the deployed app.
+          </div>
           {state.settings.demo && (
             <div className="demo-banner">
               DEMONSTRATION DATA / Fictional balances, rates and dates. Remove
@@ -589,7 +618,7 @@ export default function App() {
             {!state.settings.setup && (
               <Card className="setup">
                 <div>
-                  <span className="eyebrow">WELCOME TO KICHELLA</span>
+                  <span className="eyebrow">WELCOME TO PENNYWISE</span>
                   <h2>Start with what you know.</h2>
                   <p>
                     Add an account and its opening balance. Then build your

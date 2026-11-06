@@ -26,6 +26,7 @@ export interface DialogSpec {
   values: Record<string, unknown>;
   submit: (values: Record<string, unknown>) => Promise<void>;
   submitLabel?: string;
+  context?: (values: Record<string, unknown>) => string;
 }
 export interface AppContext {
   state: State;

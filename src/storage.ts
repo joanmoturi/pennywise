@@ -3,7 +3,7 @@ import { validateState } from "./engine";
 import { timing } from "./performance";
 
 const DB_NAME = "pennywise-private";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const DATABASE_DEADLINE_MS = 15000;
 const collections = [
   "accounts",
@@ -25,6 +25,9 @@ const collections = [
   "captures",
   "reviews",
   "audit",
+  "businesses",
+  "budgetChanges",
+  "allowances",
   "notifications.inbox",
   "notifications.rules",
   "notifications.sources",
@@ -37,7 +40,7 @@ interface StoredRecord {
 }
 interface Header {
   format: "kichella-records-v1";
-  version: State["version"];
+  version: number;
   revision: number;
   settings: State["settings"];
   order: Record<Collection, string[]>;
@@ -86,7 +89,10 @@ function assemble(meta: Header, entries: StoredRecord[]): State {
   };
   const notifications: Record<string, unknown> = {};
   for (const key of collections) {
-    const values = meta.order[key].map((id) => {
+    const ids = meta.order[key] ?? (meta.version < 5 ? [] : undefined);
+    if (!ids)
+      throw new Error("Missing financial collection. No data was overwritten.");
+    const values = ids.map((id) => {
       const value = byId.get(recordKey(key, id));
       if (!value)
         throw new Error(
@@ -115,7 +121,10 @@ export function migrate(input: unknown): State {
     const defaults = initialState();
     return validateState({
       ...old,
-      version: 4,
+      version: 5,
+      businesses: [],
+      budgetChanges: [],
+      allowances: [],
       audit: old.audit ?? [],
       settings: {
         ...defaults.settings,
@@ -147,15 +156,31 @@ export function migrate(input: unknown): State {
   ) {
     return validateState({
       ...input,
-      version: 4,
+      version: 5,
+      businesses: [],
+      budgetChanges: [],
+      allowances: [],
       notifications: { inbox: [], rules: [], sources: [] },
     });
   }
   if (
+    typeof input === "object" &&
+    input !== null &&
+    "version" in input &&
+    input.version === 4
+  )
+    return validateState({
+      ...input,
+      version: 5,
+      businesses: [],
+      budgetChanges: [],
+      allowances: [],
+    });
+  if (
     typeof input !== "object" ||
     input === null ||
     !("version" in input) ||
-    input.version !== 4
+    input.version !== 5
   )
     throw new Error("Unsupported financial data schema version");
   return validateState(input);
@@ -174,7 +199,9 @@ export function openDatabase(name = DB_NAME): Promise<IDBDatabase> {
     const request = indexedDB.open(name, DB_VERSION);
     request.onupgradeneeded = () => {
       const tx = request.transaction!;
-      const recordStore = request.result.createObjectStore("records");
+      const recordStore = request.result.objectStoreNames.contains("records")
+        ? tx.objectStore("records")
+        : request.result.createObjectStore("records");
       if (!request.result.objectStoreNames.contains("state")) {
         const store = request.result.createObjectStore("state");
         const state = initialState();
@@ -186,9 +213,30 @@ export function openDatabase(name = DB_NAME): Promise<IDBDatabase> {
         state.onsuccess = () => {
           try {
             if (!state.result) throw new Error("Missing financial state");
-            const migrated = migrate(state.result);
-            snapshot(recordStore, migrated);
-            store.put(header(migrated), "current");
+            if (state.result.format === "kichella-records-v1") {
+              const all = recordStore.getAll();
+              all.onsuccess = () => {
+                try {
+                  const migrated = assemble(
+                    state.result as Header,
+                    all.result as StoredRecord[],
+                  );
+                  store.put(
+                    { header: state.result, records: all.result },
+                    "safety-before-schema-5",
+                  );
+                  snapshot(recordStore, migrated);
+                  store.put(header(migrated), "current");
+                } catch {
+                  tx.abort();
+                }
+              };
+            } else {
+              const migrated = migrate(state.result);
+              store.put(state.result, "safety-before-schema-5");
+              snapshot(recordStore, migrated);
+              store.put(header(migrated), "current");
+            }
           } catch {
             tx.abort();
           }

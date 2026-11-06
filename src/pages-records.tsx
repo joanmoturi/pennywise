@@ -19,8 +19,6 @@ import {
   eventRemaining,
   eventStatus,
   budgetStats,
-  budgetActual,
-  rolloverAmount,
 } from "./engine";
 import {
   editRecord,
@@ -47,12 +45,15 @@ import {
 } from "./ui";
 import { download } from "./storage";
 import { effectiveAllocations } from "./expense-engine";
+import { BudgetActivity, allocationDialog } from "./connected-ui";
+import { summary } from "./engine";
 
 export function AccountsPage() {
   const app = useApp();
   const { state: s } = app;
   const fmt = (n: number) => formatMoney(n, s.settings.currency);
   const balances = useMemo(() => accountBalances(s), [s]);
+  const position = summary(s);
   return (
     <>
       <PageHead
@@ -64,6 +65,22 @@ export function AccountsPage() {
           </AddButton>
         }
       />
+      <div className="metrics">
+        <Metric label="Personal cash" value={fmt(position.liquid)} />
+        <Metric
+          label="Personal liabilities"
+          value={fmt(position.liabilities)}
+        />
+        <Metric
+          label="Owed to me (not cash)"
+          value={fmt(position.receivables)}
+        />
+        <Metric
+          label="Personal net position"
+          value={fmt(position.netWorth)}
+          hint={`Business cash shown separately: ${fmt(position.businessCash)}`}
+        />
+      </div>
       {!s.accounts.length ? (
         <Empty title="Give your money a home">
           Add bank, cash or mobile-money accounts. Track investments separately
@@ -82,6 +99,11 @@ export function AccountsPage() {
                 />
               </div>
               <h3>{a.name}</h3>
+              <Badge>
+                {a.businessId
+                  ? `Business: ${s.businesses.find((b) => b.id === a.businessId)?.name}`
+                  : "Personal / legacy account"}
+              </Badge>
               <div className="big-number">{fmt(balances.get(a.id)!)}</div>
               <p>Restricted: {fmt(a.restricted)}</p>
               <small>{a.notes}</small>
@@ -467,10 +489,28 @@ export function IncomePage() {
           belong in Receivables.
         </Empty>
       )}
+      <div className="notice">
+        Personal income received this month:{" "}
+        <strong>{fmt(summary(s).income)}</strong>. Expected payments are not
+        cash.
+        <button
+          className="text-button"
+          onClick={() => app.navigate("businesses")}
+        >
+          Business revenue & distributions
+        </button>
+      </div>
       {s.incomes.length > 0 && (
         <div className="grid cards">
           {s.incomes.map((i) => (
             <Card key={i.id}>
+              <Badge>
+                {i.businessId
+                  ? "Projected business distribution"
+                  : s.accounts.find((a) => a.id === i.accountId)?.businessId
+                    ? "Business revenue, not personal income"
+                    : "Personal / legacy income source"}
+              </Badge>
               <div className="card-head">
                 <Badge warning={i.reliability === "uncertain"}>
                   {i.active ? i.reliability : "inactive"}
@@ -696,6 +736,12 @@ export function ObligationsPage({
   const fmt = (n: number) => formatMoney(n, s.settings.currency);
   const kind: Collection = receivables ? "receivables" : "liabilities";
   const records = receivables ? s.receivables : s.liabilities;
+  const changeDebtView = (section: string) => {
+    app.navigate(section);
+    requestAnimationFrame(() =>
+      document.getElementById(`debt-tab-${section}`)?.focus(),
+    );
+  };
   return (
     <>
       <PageHead
@@ -713,6 +759,48 @@ export function ObligationsPage({
           </AddButton>
         }
       />
+      <div
+        className="actions"
+        role="tablist"
+        aria-label="Debts"
+        onKeyDown={(event) => {
+          const section =
+            event.key === "ArrowRight" || event.key === "ArrowLeft"
+              ? receivables
+                ? "obligations"
+                : "receivables"
+              : event.key === "Home"
+                ? "obligations"
+                : event.key === "End"
+                  ? "receivables"
+                  : "";
+          if (section) {
+            event.preventDefault();
+            changeDebtView(section);
+          }
+        }}
+      >
+        <button
+          role="tab"
+          id="debt-tab-obligations"
+          tabIndex={receivables ? -1 : 0}
+          aria-selected={!receivables}
+          className="button secondary"
+          onClick={() => changeDebtView("obligations")}
+        >
+          I owe
+        </button>
+        <button
+          role="tab"
+          id="debt-tab-receivables"
+          tabIndex={receivables ? 0 : -1}
+          aria-selected={receivables}
+          className="button secondary"
+          onClick={() => changeDebtView("receivables")}
+        >
+          Owed to me
+        </button>
+      </div>
       {!records.length ? (
         <Empty
           title={
@@ -759,6 +847,10 @@ export function ObligationsPage({
                 </p>
                 <Progress value={r.principal - left} total={r.principal} />
                 <small>Original principal: {fmt(r.principal)}</small>
+                <p>
+                  Already {receivables ? "received" : "paid"}:{" "}
+                  {fmt(r.principal - left)} / originated {r.date}
+                </p>
                 <Button
                   secondary
                   onClick={() =>
@@ -1243,77 +1335,30 @@ export function BudgetsPage() {
         <AddButton onClick={() => allocation(b)}>
           Add category allocation
         </AddButton>
-        {!effectiveAllocations(s, b).length ? (
-          <p className="notice">
-            This template intentionally has no amounts. Enter your real
-            necessities and spending limits.
-          </p>
-        ) : (
-          <Table
-            headers={[
-              "Category",
-              "Purpose",
-              "Budget + rollover",
-              "Actual",
-              "Remaining",
-              "Actions",
-            ]}
-          >
-            {effectiveAllocations(s, b).map((a) => {
-              const i = b.allocations.findIndex(
-                (r) => r.category === a.category,
-              );
-              const planned = sum([a.amount, rolloverAmount(s, b, a.category)]);
-              const actual = budgetActual(s, b, a.category);
-              return (
-                <tr key={a.category}>
-                  <td>
-                    {a.category}
-                    <small>
-                      {a.essential ? "Essential" : "Flexible"} / priority{" "}
-                      {a.priority}
-                    </small>
-                  </td>
-                  <td>{a.purpose}</td>
-                  <td>{fmt(planned)}</td>
-                  <td>{fmt(actual)}</td>
-                  <td>
-                    <Badge warning={actual > planned}>
-                      {fmt(planned - actual)}
-                    </Badge>
-                  </td>
-                  <td>
-                    {i < 0 ? (
-                      <button
-                        className="text-button"
-                        onClick={() => allocation(b, undefined, a)}
-                      >
-                        Scheduled / customize
-                      </button>
-                    ) : (
-                      <Actions
-                        label={a.category}
-                        edit={() => allocation(b, i)}
-                        remove={() =>
-                          app.confirm(
-                            "Remove category allocation?",
-                            "Actual transactions remain unchanged. Automatic recurring costs remain planned.",
-                            async () =>
-                              app.mutate("Remove budget allocation", (s) => {
-                                s.budgets
-                                  .find((r) => r.id === b.id)!
-                                  .allocations.splice(i, 1);
-                              }),
-                          )
-                        }
-                      />
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </Table>
-        )}
+        <BudgetActivity
+          budget={b}
+          edit={(category) => {
+            const index = b.allocations.findIndex(
+              (a) => a.category === category,
+            );
+            if (
+              index < 0 &&
+              !effectiveAllocations(s, b).some((a) => a.category === category)
+            ) {
+              allocationDialog(app, b, category);
+              return;
+            }
+            allocation(
+              b,
+              index >= 0 ? index : undefined,
+              index < 0
+                ? effectiveAllocations(s, b).find(
+                    (a) => a.category === category,
+                  )
+                : undefined,
+            );
+          }}
+        />
         <p className="notice">
           The zero-based difference should be zero when all currently available
           cash has a purpose. Expected receipts are not allocation funding.
