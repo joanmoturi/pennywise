@@ -1,5 +1,10 @@
 # Connected Pennywise local preview
 
+> Historical report for the original local preview. The later approved release
+> adds a separate-database copy so the old version remains usable for rollback.
+> See [the current release and rollback runbook](CONNECTED_FINANCE_RELEASE_AND_ROLLBACK.md)
+> for production storage behaviour and the expanded verification results.
+
 November 6, 2026. Local branch: `preview/connected-financial-planning`.
 Baseline: production commit `82d0a4ece97e28edc426cc9870ccda72f6c59d73`,
 not the simplified navigation prototype.

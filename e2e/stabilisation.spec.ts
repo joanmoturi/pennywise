@@ -39,7 +39,7 @@ async function firstAccount(page: Page) {
 }
 async function counts(page: Page) {
   return page.evaluate(async () => {
-    const request = indexedDB.open("pennywise-private");
+    const request = indexedDB.open("pennywise-connected-v5");
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -313,7 +313,7 @@ test("a genuinely blocked write times out without a false commit and remains ret
     .getByLabel("Description", { exact: true })
     .fill("TEST blocked write");
   await page.evaluate(async () => {
-    const request = indexedDB.open("pennywise-private");
+    const request = indexedDB.open("pennywise-connected-v5");
     const db = await new Promise<IDBDatabase>((resolve) => {
       request.onsuccess = () => resolve(request.result);
     });

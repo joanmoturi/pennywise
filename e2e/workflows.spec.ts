@@ -315,7 +315,7 @@ test("bond coupons appear as linked income with shared schedules and receipts, n
     region.getByRole("cell", { name: "KES 1,000.00", exact: true }),
   ).toHaveCount(0);
   const stored = await page.evaluate(async () => {
-    const request = indexedDB.open("pennywise-private");
+    const request = indexedDB.open("pennywise-connected-v5");
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);

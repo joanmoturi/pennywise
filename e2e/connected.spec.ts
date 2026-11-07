@@ -29,7 +29,7 @@ async function save(page: Page, label = "Save") {
 async function state(page: Page): Promise<State> {
   return page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("pennywise-private");
+      const request = indexedDB.open("pennywise-connected-v5");
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });

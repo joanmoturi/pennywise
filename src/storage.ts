@@ -2,7 +2,8 @@ import { initialState, uid, type State } from "./domain";
 import { validateState } from "./engine";
 import { timing } from "./performance";
 
-const DB_NAME = "pennywise-private";
+export const DB_NAME = "pennywise-connected-v5";
+export const LEGACY_DB_NAME = "pennywise-private";
 const DB_VERSION = 5;
 const DATABASE_DEADLINE_MS = 15000;
 const collections = [
@@ -185,7 +186,7 @@ export function migrate(input: unknown): State {
     throw new Error("Unsupported financial data schema version");
   return validateState(input);
 }
-export function openDatabase(name = DB_NAME): Promise<IDBDatabase> {
+function openStorage(name: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     let abandoned = false;
     const timeout = setTimeout(() => {
@@ -266,6 +267,161 @@ export function openDatabase(name = DB_NAME): Promise<IDBDatabase> {
       reject(new Error("Close other app tabs to upgrade storage, then retry"));
     };
   });
+}
+function copyLegacyDatabase(db: IDBDatabase): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    let legacy: IDBDatabase | undefined;
+    let pending: IDBTransaction | undefined;
+    const finish = (error?: unknown) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(deadline);
+      if (error) {
+        try {
+          pending?.abort();
+        } catch {
+          /* The transaction may have already finished. */
+        }
+      }
+      legacy?.close();
+      if (error) reject(error);
+      else resolve();
+    };
+    const deadline = setTimeout(
+      () =>
+        finish(
+          new Error(
+            "Preparing the upgrade copy timed out. Your previous version's records were not changed. Close other Pennywise tabs and retry.",
+          ),
+        ),
+      DATABASE_DEADLINE_MS,
+    );
+    const commit = (source?: State, before?: unknown, safety?: unknown) => {
+      if (finished) return;
+      const tx = db.transaction(["state", "records"], "readwrite");
+      pending = tx;
+      const store = tx.objectStore("state");
+      const marker = store.get("legacy-copy-complete");
+      marker.onsuccess = () => {
+        if (marker.result) return;
+        const current = store.get("current");
+        current.onsuccess = () => {
+          try {
+            if (source) {
+              if (
+                current.result?.revision !== 0 ||
+                current.result?.order.accounts.length ||
+                current.result?.order.transactions.length
+              )
+                throw new Error(
+                  "The new workspace already has records. Nothing was overwritten.",
+                );
+              tx.objectStore("records").clear();
+              snapshot(tx.objectStore("records"), source);
+              store.put(header(source), "current");
+              store.put(before, "safety-before-schema-5");
+              if (safety) store.put(safety, "safety-before-destructive");
+            }
+            store.put(
+              { database: LEGACY_DB_NAME, revision: source?.revision ?? null },
+              "legacy-copy-complete",
+            );
+          } catch (error) {
+            finish(error);
+          }
+        };
+      };
+      tx.oncomplete = () => finish();
+      tx.onabort = () =>
+        finish(
+          new Error(
+            "The upgrade copy could not be saved. Your previous version's records were not changed. Check storage space and retry.",
+          ),
+        );
+    };
+    const readLegacy = () => {
+      let absent = false;
+      const request = indexedDB.open(LEGACY_DB_NAME);
+      request.onupgradeneeded = () => {
+        absent = true;
+        request.transaction!.abort();
+      };
+      request.onerror = (event) => {
+        event.preventDefault();
+        if (absent) commit();
+        else
+          finish(
+            new Error(
+              "Cannot read the previous workspace. No records were reset.",
+            ),
+          );
+      };
+      request.onsuccess = () => {
+        legacy = request.result;
+        if (finished) {
+          legacy.close();
+          return;
+        }
+        if (!legacy.objectStoreNames.contains("state")) {
+          finish(
+            new Error(
+              "The previous workspace is incomplete. No records were reset.",
+            ),
+          );
+          return;
+        }
+        const hasRecords = legacy.objectStoreNames.contains("records");
+        const tx = legacy.transaction(
+          hasRecords ? ["state", "records"] : ["state"],
+          "readonly",
+        );
+        pending = tx;
+        const current = tx.objectStore("state").get("current");
+        const safety = tx.objectStore("state").get("safety-before-destructive");
+        const all = hasRecords ? tx.objectStore("records").getAll() : undefined;
+        tx.oncomplete = () => {
+          try {
+            const source =
+              current.result?.format === "kichella-records-v1"
+                ? assemble(current.result as Header, all?.result ?? [])
+                : migrate(current.result);
+            commit(
+              source,
+              { header: current.result, records: all?.result ?? [] },
+              safety.result,
+            );
+          } catch (error) {
+            finish(error);
+          }
+        };
+        tx.onabort = () =>
+          finish(
+            new Error(
+              "Cannot read the previous workspace. No records were reset.",
+            ),
+          );
+      };
+    };
+    const tx = db.transaction("state", "readonly");
+    pending = tx;
+    const marker = tx.objectStore("state").get("legacy-copy-complete");
+    tx.oncomplete = () => (marker.result ? finish() : readLegacy());
+    tx.onabort = () =>
+      finish(
+        new Error("Cannot inspect the upgrade copy. No records were reset."),
+      );
+  });
+}
+export async function openDatabase(name = DB_NAME): Promise<IDBDatabase> {
+  const db = await openStorage(name);
+  try {
+    if (name === DB_NAME) await copyLegacyDatabase(db);
+    return db;
+  } catch (error) {
+    db.close();
+    throw error;
+  }
 }
 function auditValue(record: StoredRecord | undefined): string {
   return (

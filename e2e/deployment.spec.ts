@@ -229,6 +229,11 @@ test("source mapping, explicit approval rules and schema-3 recovery preserve the
     const legacy = { ...state } as Record<string, unknown>;
     legacy.version = 3;
     delete legacy.notifications;
+    const target = indexedDB.deleteDatabase("pennywise-connected-v5");
+    await new Promise<void>((resolve, reject) => {
+      target.onsuccess = () => resolve();
+      target.onerror = () => reject(target.error);
+    });
     const deleted = indexedDB.deleteDatabase("pennywise-private");
     await new Promise<void>((resolve, reject) => {
       deleted.onsuccess = () => resolve();
@@ -338,7 +343,7 @@ async function expense(page: Page, description: string, amount = "122.34") {
 async function snapshot(page: Page): Promise<State> {
   return page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("pennywise-private");
+      const request = indexedDB.open("pennywise-connected-v5");
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });

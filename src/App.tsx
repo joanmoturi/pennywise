@@ -60,6 +60,7 @@ import { timing } from "./performance";
 import { BusinessesPage } from "./pages-connected";
 import { untouchedWorkspace, connectedExample } from "./connected-example";
 
+const localPreview = ["localhost", "127.0.0.1"].includes(location.hostname);
 const navigation = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "budgets", label: "Budgets", icon: Wallet },
@@ -201,6 +202,7 @@ export default function App() {
         const repository = new Repository(database);
         let s = await repository.read();
         if (
+          localPreview &&
           new URLSearchParams(location.search).get("example") === "1" &&
           untouchedWorkspace(s)
         )
@@ -529,10 +531,12 @@ export default function App() {
               {saving > 0 && <span role="status">Saving locally...</span>}
             </div>
           </header>
-          <div className="notice local-preview-banner">
-            LOCAL CONNECTED-FINANCE PREVIEW / Separate browser storage. Nothing
-            here changes the deployed app.
-          </div>
+          {localPreview && (
+            <div className="notice local-preview-banner">
+              LOCAL CONNECTED-FINANCE PREVIEW / Separate browser storage.
+              Nothing here changes the deployed app.
+            </div>
+          )}
           {state.settings.demo && (
             <div className="demo-banner">
               DEMONSTRATION DATA / Fictional balances, rates and dates. Remove

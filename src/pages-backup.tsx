@@ -212,6 +212,13 @@ export function BackupCentre() {
           separate device or private storage; IndexedDB alone cannot survive
           clearing site data or device loss.
         </p>
+        <p className="notice">
+          This release copies your existing records into separate storage and
+          leaves the previous version's database untouched. A rollback reopens
+          that earlier workspace, not entries made after this update. Export a
+          full backup before switching versions. Changes made in the two
+          versions are not automatically merged.
+        </p>
       </Card>
       <div className="grid two">
         <Card>
