@@ -23,7 +23,15 @@ import {
   type NotificationBatch,
   type ApprovalRule,
 } from "./notification-schema";
-import { Button, Card, PageHead, Table, Badge, errorMessage } from "./ui";
+import {
+  Button,
+  Card,
+  PageHead,
+  Table,
+  Badge,
+  InfoHelp,
+  errorMessage,
+} from "./ui";
 
 export function NotificationInbox() {
   const app = useApp();
@@ -412,11 +420,16 @@ export function NotificationInbox() {
         subtitle="Local SMS companion imports, explicit financial classification and auditable rules. The PWA does not read SMS or notifications."
       />
       <Card>
-        <h2>Receive from your companion</h2>
-        <p>
-          Shared files are held locally until you inspect and import them.
+        <div className="field-label">
+          <h2>Receive from your companion</h2>
+          <InfoHelp label="Companion imports">
+            Shared files are held locally until you inspect and import them. No
+            historical SMS is accessed.
+          </InfoHelp>
+        </div>
+        <p className="notice warning">
           Select only your own companion exports. A file's claimed source is not
-          proof of authenticity. No historical SMS is accessed.
+          proof of authenticity.
         </p>
         <label>
           Companion transaction file
@@ -594,8 +607,11 @@ export function NotificationInbox() {
           </label>
         </div>
         <p>
-          {visible.length} items. Repeated deliveries are counted on the
-          original item; they do not create more ledger entries.
+          {visible.length} items.
+          <InfoHelp label="Repeated deliveries">
+            Repeated deliveries are counted on the original item; they do not
+            create more ledger entries.
+          </InfoHelp>
         </p>
         <Table
           headers={[
@@ -797,20 +813,25 @@ export function NotificationInbox() {
               </Button>
             </p>
           ))}
-          <p>
-            No default rules treat incoming money as income. Rule changes do not
-            rewrite past approvals.
-          </p>
+          <div className="help-note">
+            <span>Approval rule behavior</span>
+            <InfoHelp label="Approval rule behavior">
+              No default rules treat incoming money as income. Rule changes do
+              not rewrite past approvals.
+            </InfoHelp>
+          </div>
         </Card>
       </div>
       <Card>
-        <h3>Recovery and transfer confirmation</h3>
-        <p>
-          Full backups include imported inbox records, rules, mappings,
-          identities and ledger provenance, but not the companion's separate
-          queue or unimported staged shares. Verify receipt here before marking
-          companion items handed off. Retrying retained files is safe.
-        </p>
+        <h3>
+          Recovery and transfer confirmation
+          <InfoHelp label="Recovery and transfer confirmation">
+            Full backups include imported inbox records, rules, mappings,
+            identities and ledger provenance, but not the companion's separate
+            queue or unimported staged shares. Verify receipt here before
+            marking companion items handed off. Retrying retained files is safe.
+          </InfoHelp>
+        </h3>
         <Button
           secondary
           onClick={() =>

@@ -15,7 +15,16 @@ import {
 import { editRecord, editTransaction } from "./forms";
 import { effectiveAllocations, undoCapture } from "./expense-engine";
 import { BudgetActivity, allocationDialog } from "./connected-ui";
-import { PageHead, Card, Button, AddButton, Metric, Empty } from "./ui";
+import {
+  PageHead,
+  Card,
+  Button,
+  AddButton,
+  Metric,
+  Empty,
+  InfoHelp,
+  HelpNote,
+} from "./ui";
 
 export function BusinessesPage() {
   const app = useApp();
@@ -331,7 +340,7 @@ export function BusinessesPage() {
               <Metric
                 label="Business cash"
                 value={fmt(stats.cash)}
-                hint={`Available for distribution: ${fmt(stats.availableCash)} / liabilities: ${fmt(stats.liabilities)}`}
+                supporting={`Available for distribution: ${fmt(stats.availableCash)} / liabilities: ${fmt(stats.liabilities)}`}
               />
               <Metric label="Business revenue" value={fmt(stats.revenue)} />
               <Metric label="Operating expenses" value={fmt(stats.expenses)} />
@@ -473,13 +482,13 @@ export function BusinessesPage() {
           </Card>
         );
       })}
-      <p className="notice">
+      <HelpNote label="How business figures work">
         Business figures use recorded cash receipts and operating costs, plus
         any explicitly entered opening retained profit. Ownership does not
         override partnership agreements, taxes or unrecorded obligations.
         Account transfers and partner payouts are not operating revenue or
         expenses.
-      </p>
+      </HelpNote>
     </>
   );
 }
@@ -627,19 +636,18 @@ export function AllowanceWorkspace() {
     <Card>
       <div className="card-head">
         <div>
-          <h2>Allowances & allocation plans</h2>
-          <p>
-            Keep advanced planning alongside the forecast. Each allowance uses
-            one linked budget, not a second expense ledger.
-          </p>
+          <div className="field-label">
+            <h2>Allowances & allocation plans</h2>
+            <InfoHelp label="Allowances & allocation plans">
+              Each allowance uses one linked budget, not a second expense
+              ledger. Record actual income separately.
+            </InfoHelp>
+          </div>
         </div>
         <AddButton onClick={create}>Plan an allowance</AddButton>
       </div>
       {!s.allowances.length && (
-        <p>
-          For example, plan 100,000 across rent, groceries, transport, savings
-          and miscellaneous. Record actual income separately.
-        </p>
+        <p>Create a plan and divide it across your budget categories.</p>
       )}
       {s.allowances.map((p) => {
         const b = s.budgets.find((b) => b.id === p.budgetId)!;
@@ -669,12 +677,12 @@ export function AllowanceWorkspace() {
               <Metric
                 label="Planned allocations"
                 value={fmt(stats.planned)}
-                hint={`Unassigned / overallocated: ${fmt(p.amount - stats.planned)}`}
+                supporting={`Unassigned / overallocated: ${fmt(p.amount - stats.planned)}`}
               />
               <Metric
                 label="Actual spending"
                 value={fmt(stats.actual)}
-                hint={`Actually funded savings/commitments: ${fmt(stats.funding)}`}
+                supporting={`Funded savings/commitments: ${fmt(stats.funding)}`}
               />
               <Metric
                 label="Current cash backing"

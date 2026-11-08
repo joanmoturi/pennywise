@@ -329,13 +329,18 @@ async function save(page: Page, name = "Save") {
 async function firstAccount(page: Page, name: string, opening = "12345.67") {
   await page.getByRole("button", { name: "Set up first account" }).click();
   await page.getByRole("dialog").getByLabel("Name", { exact: true }).fill(name);
-  await page.getByRole("dialog").getByLabel("Opening balance").fill(opening);
+  await page
+    .getByRole("dialog")
+    .getByLabel("Opening balance", { exact: true })
+    .fill(opening);
   await save(page);
 }
 async function expense(page: Page, description: string, amount = "122.34") {
   await page.getByRole("button", { name: "Quick add", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Transaction type").selectOption("expense");
+  await dialog
+    .getByLabel("Transaction type", { exact: true })
+    .selectOption("expense");
   await dialog.getByLabel("Amount", { exact: true }).fill(amount);
   await dialog.getByLabel("Description", { exact: true }).fill(description);
   await save(page);

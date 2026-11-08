@@ -55,7 +55,7 @@ import { BackupCentre } from "./pages-backup";
 import { NotificationInbox } from "./pages-notifications";
 import { APP_VERSION } from "./backup";
 import { backupReminder } from "./expense-engine";
-import { Button, Card, FormDialog, errorMessage } from "./ui";
+import { Button, Card, FormDialog, InfoHelp, errorMessage } from "./ui";
 import { timing } from "./performance";
 import { BusinessesPage } from "./pages-connected";
 import { untouchedWorkspace, connectedExample } from "./connected-example";
@@ -533,8 +533,7 @@ export default function App() {
           </header>
           {localPreview && (
             <div className="notice local-preview-banner">
-              LOCAL CONNECTED-FINANCE PREVIEW / Separate browser storage.
-              Nothing here changes the deployed app.
+              LOCAL PREVIEW / Not deployed.
             </div>
           )}
           {state.settings.demo && (
@@ -660,9 +659,11 @@ export default function App() {
             )}
             <ActivePage key={section} section={section} />
             <footer className="page-footer">
-              Pennywise {APP_VERSION}. Figures are based on your records and
-              explicitly labeled assumptions. Not personalized investment
-              advice.
+              <span>Pennywise {APP_VERSION}</span>
+              <InfoHelp label="About these figures">
+                Figures are based on your records and explicitly labeled
+                assumptions. Not personalized investment advice.
+              </InfoHelp>
             </footer>
           </main>
         </div>

@@ -39,7 +39,7 @@ async function account(
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Name", { exact: true }).fill(name);
   await dialog.getByLabel("Account type").selectOption(kind);
-  await dialog.getByLabel("Opening balance").fill(amount);
+  await dialog.getByLabel("Opening balance", { exact: true }).fill(amount);
   await dialogSave(page);
 }
 async function transaction(
@@ -54,7 +54,9 @@ async function transaction(
     .getByRole("button", { name: "Add transaction", exact: true })
     .click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Transaction type").selectOption(type);
+  await dialog
+    .getByLabel("Transaction type", { exact: true })
+    .selectOption(type);
   await dialog.getByLabel("Amount", { exact: true }).fill(amount);
   await dialog.getByLabel("Description", { exact: true }).fill(description);
   await dialog.getByLabel("Category", { exact: true }).fill(category);
@@ -123,7 +125,10 @@ test("complete accounts, income, liabilities, six bonds, budgets, recovery, wind
     .getByRole("dialog")
     .getByLabel("Business / creditor")
     .fill("TEST business");
-  await page.getByRole("dialog").getByLabel("Original principal").fill("1000");
+  await page
+    .getByRole("dialog")
+    .getByLabel("Original principal", { exact: true })
+    .fill("1000");
   await dialogSave(page);
   await nav(page, "Bonds");
   for (let i = 0; i < 6; i++) {
@@ -167,7 +172,10 @@ test("complete accounts, income, liabilities, six bonds, budgets, recovery, wind
     .getByRole("button", { name: "Add receivable", exact: true })
     .click();
   await page.getByRole("dialog").getByLabel("Borrower").fill("TEST borrower");
-  await page.getByRole("dialog").getByLabel("Original principal").fill("2000");
+  await page
+    .getByRole("dialog")
+    .getByLabel("Original principal", { exact: true })
+    .fill("2000");
   await dialogSave(page);
   await page
     .getByRole("button", { name: "Record repayment", exact: true })
@@ -184,7 +192,9 @@ test("complete accounts, income, liabilities, six bonds, budgets, recovery, wind
     .getByLabel("Target record")
     .selectOption({ label: "Liability: TEST business" });
   await rule
-    .getByLabel("Fixed amount / percentage / reserve threshold")
+    .getByLabel("Fixed amount / percentage / reserve threshold", {
+      exact: true,
+    })
     .fill("1000");
   await dialogSave(page);
   await page

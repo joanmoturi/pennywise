@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { Context, type DialogSpec } from "../src/context";
-import { FormDialog } from "../src/ui";
+import { FormDialog, InfoHelp, PageHead, Metric } from "../src/ui";
 import { RecurringPage, MonthlyReviewPage } from "../src/pages-expenses";
 import { IncomePage } from "../src/pages-records";
 import { Repository, openDatabase } from "../src/storage";
@@ -354,4 +354,132 @@ it("successful saves wait for persistence before closing and closing is disabled
   expect(screen.getByRole("button", { name: "Close dialog" })).toBeDisabled();
   finish();
   await waitFor(() => expect(close).toHaveBeenCalledOnce());
+});
+it("keeps explanations on demand without hiding financial supporting values", () => {
+  render(
+    <>
+      <PageHead title="TEST accounts" subtitle="TEST account explanation" />
+      <Metric
+        label="TEST cash"
+        value="KES 1,000.00"
+        supporting="Restricted: KES 100.00"
+        hint="TEST cash explanation"
+      />
+    </>,
+  );
+  expect(
+    screen.queryByText("TEST account explanation"),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText("TEST cash explanation")).not.toBeInTheDocument();
+  expect(screen.getByText("Restricted: KES 100.00")).toBeVisible();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "TEST accounts information",
+    }),
+  );
+  expect(
+    screen.getByRole("region", { name: "About TEST accounts" }),
+  ).toHaveTextContent("TEST account explanation");
+  fireEvent.click(
+    screen.getByRole("button", { name: "TEST cash information" }),
+  );
+  expect(
+    screen.queryByRole("region", { name: "About TEST accounts" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("region", { name: "About TEST cash" }),
+  ).toHaveTextContent("TEST cash explanation");
+});
+it("pins help on click, toggles it off and dismisses on outside input or Escape", () => {
+  render(
+    <>
+      <InfoHelp label="TEST help">TEST details</InfoHelp>
+      <input aria-label="TEST outside" />
+    </>,
+  );
+  const trigger = screen.getByRole("button", {
+    name: "TEST help information",
+  });
+  fireEvent.click(trigger);
+  expect(trigger).toHaveAttribute("aria-expanded", "true");
+  expect(trigger).toHaveAttribute(
+    "aria-controls",
+    screen.getByRole("region").id,
+  );
+  fireEvent.click(trigger);
+  expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  fireEvent.click(trigger);
+  fireEvent.pointerDown(screen.getByLabelText("TEST outside"));
+  expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  fireEvent.click(trigger);
+  const event = new KeyboardEvent("keydown", {
+    key: "Escape",
+    bubbles: true,
+    cancelable: true,
+  });
+  fireEvent(document, event);
+  expect(event.defaultPrevented).toBe(true);
+  expect(screen.queryByRole("region")).not.toBeInTheDocument();
+});
+it("keeps field help inside a native modal without submitting, changing inputs or breaking labels", () => {
+  const submit = vi.fn();
+  const close = vi.fn();
+  render(
+    <FormDialog
+      spec={{
+        title: "TEST entry",
+        description: "TEST form guidance",
+        fields: [
+          {
+            key: "amount",
+            label: "Amount",
+            type: "money",
+            help: "TEST amount explanation",
+          },
+        ],
+        values: { amount: cash("123.45") },
+        submit,
+      }}
+      close={close}
+    />,
+  );
+  const input = screen.getByLabelText("Amount", { exact: true });
+  expect(input).toHaveValue("123.45");
+  expect(input).not.toHaveAttribute("aria-describedby");
+  expect(screen.queryByText("TEST form guidance")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Amount information" }));
+  const popup = screen.getByRole("region", { name: "About Amount" });
+  expect(popup.closest("dialog")).toBe(screen.getByRole("dialog"));
+  expect(popup.closest("form")).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Close Amount information" }),
+  );
+  expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Amount information" }),
+  ).toHaveFocus();
+  expect(input).toHaveValue("123.45");
+  expect(submit).not.toHaveBeenCalled();
+  expect(close).not.toHaveBeenCalled();
+});
+it("leaves destructive descriptions and typed reset confirmation visible", () => {
+  render(
+    <FormDialog
+      spec={{
+        title: "TEST reset",
+        description: "TEST permanent deletion warning",
+        fields: [{ key: "confirmation", label: "Type RESET" }],
+        values: {},
+        submit: async () => {},
+        submitLabel: "Reset permanently",
+      }}
+      close={() => {}}
+    />,
+  );
+  expect(screen.getByText("TEST permanent deletion warning")).toBeVisible();
+  expect(screen.getByRole("dialog")).toHaveAttribute(
+    "aria-describedby",
+    "dialog-description",
+  );
+  expect(screen.getByLabelText("Type RESET")).toBeVisible();
 });

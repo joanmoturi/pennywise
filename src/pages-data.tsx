@@ -36,6 +36,8 @@ import {
   BarChart,
   LineChart,
   errorMessage,
+  InfoHelp,
+  HelpNote,
 } from "./ui";
 
 export function ReportsPage() {
@@ -636,15 +638,17 @@ export function SettingsPage() {
           <h3>
             <ShieldCheck size={19} />
             Privacy & local storage
+            <InfoHelp label="Privacy & local storage">
+              No bank credentials, analytics, cloud sync, external AI or
+              financial-data network requests. Core data lives in IndexedDB in
+              this browser profile. Protect your device and browser profile.
+            </InfoHelp>
           </h3>
           <Badge>Offline-first</Badge>
         </div>
-        <p>
-          No bank credentials, analytics, cloud sync, external AI or
-          financial-data network requests. Core data lives in IndexedDB in this
-          browser profile. Local data is not application-encrypted at rest:
-          protect your device and browser profile. Private browsing, clearing
-          site data or storage eviction can erase records.
+        <p className="notice warning">
+          Local data is not application-encrypted at rest. Private browsing,
+          clearing site data or storage eviction can erase records.
         </p>
         <Button
           secondary
@@ -735,18 +739,22 @@ export function SettingsPage() {
               }}
             />
           </label>
-          <p>
+          <HelpNote label="Currency, locale & timezone">
             Locale en-KE / timezone Africa/Nairobi. All accounts use one
             configured currency; no implicit currency conversion.
-          </p>
+          </HelpNote>
         </Card>
         <Card>
-          <h3>Backup & restore</h3>
-          <p>
-            JSON includes all records and receipts. Unencrypted exports contain
-            private financial information. Encrypted backups use
-            password-derived AES-256-GCM through browser Web Crypto; passphrases
-            are never persisted.
+          <h3>
+            Backup & restore
+            <InfoHelp label="Backup & restore">
+              JSON includes all records and receipts. Encrypted backups use
+              password-derived AES-256-GCM through browser Web Crypto;
+              passphrases are never persisted.
+            </InfoHelp>
+          </h3>
+          <p className="notice warning">
+            Unencrypted exports contain private financial information.
           </p>
           <label>
             Backup / restore passphrase (12+ characters)
@@ -859,25 +867,34 @@ export function SettingsPage() {
         </div>
       </Card>
       <Card>
-        <h3>Install & updates</h3>
-        <p>
-          Open the HTTPS deployment in Android Chrome, then use the browser
-          menu's Install app / Add to Home screen option. Visit once online and
-          wait for the offline-ready notice. Updates are offered with a reload
-          button; no financial records are erased by application-shell updates.
+        <h3>
+          Install & updates
+          <InfoHelp label="Install & updates">
+            <p>
+              Open the HTTPS deployment in Android Chrome, then use the browser
+              menu's Install app / Add to Home screen option. Visit once online
+              and wait for the offline-ready notice. Updates are offered with a
+              reload button; no financial records are erased by
+              application-shell updates.
+            </p>
+            <small>
+              localhost works for development. Production service workers
+              require HTTPS.
+            </small>
+          </InfoHelp>
+        </h3>
+        <p className="notice warning">
+          Clearing site data removes offline cache and financial records.
         </p>
-        <small>
-          localhost works for development. Production service workers require
-          HTTPS. Clearing site data removes both offline cache and financial
-          records.
-        </small>
       </Card>
       <Card>
-        <h3>Local change history</h3>
-        <p>
-          Revision history is for traceability, not a tamper-proof accounting
-          audit or an undo system. Restore backups to recover old records.
-        </p>
+        <h3>
+          Local change history
+          <InfoHelp label="Local change history">
+            Revision history is for traceability, not a tamper-proof accounting
+            audit or an undo system. Restore backups to recover old records.
+          </InfoHelp>
+        </h3>
         <Table headers={["Revision", "Time", "Action", "Changed records"]}>
           {s.audit
             .slice(-30)

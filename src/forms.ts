@@ -624,14 +624,14 @@ export function editTransaction(
   app.dialog({
     title: record ? "Edit transaction" : "Add transaction",
     description:
-      "Income is earned or distributed money only. Draws, transfers and loan recoveries have distinct ledger types. Expected payments belong in Income or Bonds.",
+      "Income is earned or distributed money only. Draws, transfers and loan recoveries have distinct ledger types. Expected payments belong in Income or Bonds. Business receipts and expenses stay separate from personal income and budgets. Budget limits do not block actual spending, even when a category is over budget.",
     fields: transactionFields(app.state),
     context: (values) => {
       const accountId = String(values.accountId ?? "");
       const category = String(values.category ?? "");
       const balance = contextBalances.get(accountId) ?? 0;
       if (app.state.accounts.find((a) => a.id === accountId)?.businessId)
-        return `Business account balance: ${formatMoney(balance, app.state.settings.currency)}. Business receipts and expenses stay separate from personal income and budgets.`;
+        return `Business account balance: ${formatMoney(balance, app.state.settings.currency)}`;
       if (
         contextBudget &&
         knownCategories.has(category) &&
@@ -647,7 +647,7 @@ export function editTransaction(
         remaining: 0,
         status: "Unbudgeted",
       };
-      return `Account balance: ${formatMoney(balance, app.state.settings.currency)}. ${values.type === "expense" && position ? `${category}: ${position.status}; budget ${formatMoney(position.planned, app.state.settings.currency)}, spent ${formatMoney(position.spent, app.state.settings.currency)}, remaining ${formatMoney(position.remaining, app.state.settings.currency)}. Spending is allowed even above this limit.` : "Transfers and borrowing are not new earned income."}`;
+      return `Account balance: ${formatMoney(balance, app.state.settings.currency)}${values.type === "expense" && position ? ` / ${category}: ${position.status}; budget ${formatMoney(position.planned, app.state.settings.currency)}, spent ${formatMoney(position.spent, app.state.settings.currency)}, remaining ${formatMoney(position.remaining, app.state.settings.currency)}` : ""}`;
     },
     values: record
       ? { ...record }

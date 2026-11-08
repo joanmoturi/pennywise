@@ -16,7 +16,16 @@ import { reports } from "./reports";
 import { monthlyReview } from "./expense-engine";
 import { outstanding } from "./engine";
 import { decimal } from "./money";
-import { PageHead, Card, Button, Badge, Table, errorMessage } from "./ui";
+import {
+  PageHead,
+  Card,
+  Button,
+  Badge,
+  Table,
+  InfoHelp,
+  HelpNote,
+  errorMessage,
+} from "./ui";
 
 export function backupFilename(safety = false): string {
   return `Pennywise-${safety ? "SAFETY-" : "Full-Backup-"}${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
@@ -180,49 +189,75 @@ export function BackupCentre() {
         </div>
         <p>
           Last full backup export initiated:{" "}
-          {s.settings.lastBackupAt || "Never"}. Verify downloads yourself;
-          browsers cannot prove that a file was saved safely. App version{" "}
-          {APP_VERSION} / financial schema v{s.version}.
+          {s.settings.lastBackupAt || "Never"}.
+          <InfoHelp label="Backup export status">
+            Verify downloads yourself; browsers cannot prove that a file was
+            saved safely. App version {APP_VERSION} / financial schema v
+            {s.version}.
+          </InfoHelp>
         </p>
         {reasons.map((reason) => (
           <p key={reason} className="notice warning">
             {reason}
           </p>
         ))}
-        <p>
-          Backups preserve accounts, transactions, receipts, income histories,
-          all budgets and review snapshots, savings decisions, recurring
-          definitions and occurrences, occasional plans, prepaids, bonds and
-          coupons, liabilities, receivables, reserves, windfalls, scenarios,
-          settings, IDs and relationships. Transaction Inbox records, approval
-          rules, source mappings and import identities are included. The Android
-          companion's separate queue and unimported local shares are not
-          included.
+        <HelpNote label="Backup contents & reminders">
+          <p>
+            Backups preserve accounts, transactions, receipts, income histories,
+            all budgets and review snapshots, savings decisions, recurring
+            definitions and occurrences, occasional plans, prepaids, bonds and
+            coupons, liabilities, receivables, reserves, windfalls, scenarios,
+            settings, IDs and relationships. Transaction Inbox records, approval
+            rules, source mappings and import identities are included. The
+            Android companion's separate queue and unimported local shares are
+            not included.
+          </p>
+          <p>
+            Business ownership, account classification, distributions, budget
+            funding history and linked allowance plans are included in schema 5.
+            Older backups restore without guessed classifications.
+          </p>
+          <p>
+            Reminders run when the app is opened or data changes. There are no
+            claimed unattended background backups. Move a downloaded backup to a
+            separate device or private storage; IndexedDB alone cannot survive
+            clearing site data or device loss.
+          </p>
+        </HelpNote>
+        <p className="notice warning">
+          Schema-5 backups require this version or newer.
         </p>
-        <p>
-          Business ownership, account classification, distributions, budget
-          funding history and linked allowance plans are included in schema 5.
-          Older backups restore without guessed classifications. A schema-5
-          backup requires this version or newer; do not restore it into the
-          deployed schema-4 app.
-        </p>
-        <p>
-          Reminders run when the app is opened or data changes. There are no
-          claimed unattended background backups. Move a downloaded backup to a
-          separate device or private storage; IndexedDB alone cannot survive
-          clearing site data or device loss.
-        </p>
-        <p className="notice">
-          This release copies your existing records into separate storage and
-          leaves the previous version's database untouched. A rollback reopens
-          that earlier workspace, not entries made after this update. Export a
-          full backup before switching versions. Changes made in the two
-          versions are not automatically merged.
+        <p className="notice warning">
+          Export a full backup before switching versions. Each version keeps a
+          separate history.
+          <InfoHelp label="Switching app versions">
+            This release copies your existing records into separate storage and
+            leaves the previous version's database untouched. A rollback reopens
+            that earlier workspace, not entries made after this update. Export a
+            full backup before switching versions. Changes made in the two
+            versions are not automatically merged.
+          </InfoHelp>
         </p>
       </Card>
       <div className="grid two">
         <Card>
-          <h3>Portable full backup</h3>
+          <h3>
+            Portable full backup
+            <InfoHelp label="Backup encryption & integrity">
+              <p>
+                Encrypted backups use PBKDF2-SHA-256 (600,000 iterations), a
+                fresh salt and AES-256-GCM with a fresh IV. No passwords are
+                stored.
+              </p>
+              <p>
+                Full backup envelopes include schema/app versions, timestamp and
+                a SHA-256 digest over canonical metadata and data. The digest
+                detects corruption, not malicious alteration by someone who can
+                recompute it. Encrypted files additionally provide authenticated
+                encryption.
+              </p>
+            </InfoHelp>
+          </h3>
           <label>
             Optional encryption passphrase (12+ characters)
             <input
@@ -241,21 +276,20 @@ export function BackupCentre() {
               Download Encrypted Backup
             </Button>
           </div>
-          <p>
+          <p className="notice warning">
             Unencrypted JSON contains sensitive financial records and Base64
-            receipts. Encrypted backups use PBKDF2-SHA-256 (600,000 iterations),
-            a fresh salt and AES-256-GCM with a fresh IV. No passwords are
-            stored. Losing the password may make the backup unrecoverable.
+            receipts. Losing the password may make an encrypted backup
+            unrecoverable.
           </p>
-          <small>
-            Full backup envelopes include schema/app versions, timestamp and a
-            SHA-256 digest over canonical metadata and data. The digest detects
-            corruption, not malicious alteration by someone who can recompute
-            it. Encrypted files additionally provide authenticated encryption.
-          </small>
         </Card>
         <Card>
-          <h3>Restore on this or another device</h3>
+          <h3>
+            Restore on this or another device
+            <InfoHelp label="Backup compatibility">
+              Compatible schema 1-4 backups can be migrated. Legacy raw files
+              lack integrity metadata and are explicitly labeled.
+            </InfoHelp>
+          </h3>
           <label>
             Full backup file
             <input
@@ -272,8 +306,6 @@ export function BackupCentre() {
           </label>
           <p>
             For encrypted files, enter the passphrase before choosing the file.
-            Compatible schema 1-4 backups can be migrated. Legacy raw files lack
-            integrity metadata and are explicitly labeled.
           </p>
           {error && (
             <div className="error" role="alert">
@@ -418,7 +450,13 @@ export function BackupCentre() {
         </div>
       </Card>
       <Card>
-        <h3>CSV reporting exports / not restorable backups</h3>
+        <h3>
+          CSV exports / not restorable backups
+          <InfoHelp label="CSV exports">
+            CSV is for reporting and manual statement workflows. Only full JSON
+            or encrypted JSON can restore the entire application.
+          </InfoHelp>
+        </h3>
         <div className="actions">
           {["transactions", "income", "expenses", "budgets", "liabilities"].map(
             (kind) => (
@@ -428,10 +466,6 @@ export function BackupCentre() {
             ),
           )}
         </div>
-        <p>
-          CSV is for reporting and manual statement workflows. Only full JSON or
-          encrypted JSON can restore the entire application.
-        </p>
         <small>
           Actual report rows:{" "}
           {reports(s, "0001-01-01", today()).transactions.length}

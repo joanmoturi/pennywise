@@ -42,6 +42,7 @@ import {
   Table,
   Progress,
   errorMessage,
+  HelpNote,
 } from "./ui";
 import { download } from "./storage";
 import { effectiveAllocations } from "./expense-engine";
@@ -78,7 +79,7 @@ export function AccountsPage() {
         <Metric
           label="Personal net position"
           value={fmt(position.netWorth)}
-          hint={`Business cash shown separately: ${fmt(position.businessCash)}`}
+          supporting={`Business cash: ${fmt(position.businessCash)}`}
         />
       </div>
       {!s.accounts.length ? (
@@ -1227,11 +1228,12 @@ export function BudgetsPage() {
         <Metric
           label="Zero-based difference"
           value={fmt(stats.unallocated)}
-          hint={
+          supporting={
             stats.unallocated < 0
               ? "Overallocated: reduce remaining plans"
-              : "Available cash minus remaining plan"
+              : undefined
           }
+          hint="Available cash minus remaining plan"
         />
       </div>
       <Card>
@@ -1359,18 +1361,18 @@ export function BudgetsPage() {
             );
           }}
         />
-        <p className="notice">
+        <HelpNote label="How zero-based budgeting works">
           The zero-based difference should be zero when all currently available
           cash has a purpose. Expected receipts are not allocation funding.
           Plans do not automatically move or reserve money.
-        </p>
-        <p className="notice">
+        </HelpNote>
+        <HelpNote label="Rollover rules">
           Rollover is configured independently per category. Full/partial
           rollover adds a traceable prior-period allocation, not new cash.
           Savings/manual rules require a confirmed decision in Savings Capture.
           Overspending is shown as a deficit, never silently carried. Create a
           next period to preserve budget history.
-        </p>
+        </HelpNote>
       </Card>
       <Card>
         <h3>Profile comparison</h3>

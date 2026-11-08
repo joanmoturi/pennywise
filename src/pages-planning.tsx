@@ -36,6 +36,8 @@ import {
   Actions,
   errorMessage,
   Progress,
+  InfoHelp,
+  HelpNote,
 } from "./ui";
 import {
   effectiveAllocations,
@@ -121,12 +123,14 @@ export function OverviewPage() {
       </div>
       <div className="hero">
         <div>
-          <span className="eyebrow">AVAILABLE AFTER COMMITMENTS</span>
+          <div className="field-label">
+            <span className="eyebrow">AVAILABLE AFTER COMMITMENTS</span>
+            <InfoHelp label="Available after commitments">
+              Cash in your accounts, minus protected money and everything you
+              owe. Expected payments are not included.
+            </InfoHelp>
+          </div>
           <div className="hero-amount">{fmt(totals.available)}</div>
-          <p>
-            Cash in your accounts, minus protected money and everything you owe.
-            Expected payments are not included.
-          </p>
           <Badge>{b.name}</Badge>
         </div>
         <div className="hero-aside">
@@ -147,12 +151,12 @@ export function OverviewPage() {
         <Metric
           label="Total recorded assets"
           value={fmt(totals.assets)}
-          hint={`Net worth: ${fmt(totals.netWorth)}`}
+          supporting={`Net worth: ${fmt(totals.netWorth)}`}
         />
         <Metric
           label="Restricted + reserved"
           value={fmt(sum([totals.restricted, totals.reserves]))}
-          hint={`Restricted: ${fmt(totals.restricted)}`}
+          supporting={`Restricted: ${fmt(totals.restricted)}`}
         />
         <Metric
           label="Outstanding liabilities"
@@ -195,7 +199,13 @@ export function OverviewPage() {
       {s.businesses.length > 0 && (
         <Card>
           <div className="card-head">
-            <h3>Business position, separately owned</h3>
+            <h3>
+              Business position
+              <InfoHelp label="Business position">
+                Personal net position excludes full business-owned balances.
+                Indicative ownership shares are not spendable personal cash.
+              </InfoHelp>
+            </h3>
             <Button secondary onClick={() => app.navigate("businesses")}>
               Businesses & distributions
             </Button>
@@ -210,10 +220,6 @@ export function OverviewPage() {
               </p>
             );
           })}
-          <p>
-            Personal net position excludes full business-owned balances.
-            Indicative ownership shares are not spendable personal cash.
-          </p>
         </Card>
       )}
       <div className="metrics">
@@ -337,10 +343,10 @@ export function OverviewPage() {
                 : `${projection.runwayDays} days`}
             </dd>
           </dl>
-          <p className="notice">
+          <HelpNote label="Forecast, not available cash">
             Expected receipts are not available money. Forecasts are
             assumptions, not guarantees.
-          </p>
+          </HelpNote>
         </Card>
       </div>
       {(totals.available < 0 ||
@@ -576,13 +582,13 @@ export function ForecastPage() {
           },
         ]}
       />
-      <p className="notice">
+      <HelpNote label="How this forecast is calculated">
         Starting cash excludes all liabilities, restrictions and reserves.
         Budget spending is prorated over 30-day planning months; separately
         listed bills in a budgeted category are not charged twice. Delayed
         events are excluded until rescheduled. Scenario-only one-off income,
         expenses and salary affect all three lines, not your live ledger.
-      </p>
+      </HelpNote>
       <Card>
         <h3>Exact projected balances</h3>
         <Table headers={["Date", "Conservative", "Expected", "Optimistic"]}>
