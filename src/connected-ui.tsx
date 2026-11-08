@@ -6,7 +6,15 @@ import { budgetActual, budgetFunding, rolloverAmount, summary } from "./engine";
 import { effectiveAllocations, captured } from "./expense-engine";
 import { personalExpense, reallocateBudget } from "./connected-finance";
 import { editTransaction } from "./forms";
-import { Table, Button, Badge, Progress, Actions } from "./ui";
+import {
+  Table,
+  Button,
+  Badge,
+  Progress,
+  Actions,
+  InfoHelp,
+  HelpNote,
+} from "./ui";
 
 export function allocationDialog(
   app: AppContext,
@@ -206,11 +214,15 @@ export function BudgetActivity({
   }, [s, b]);
   return (
     <>
-      <p className="notice">
-        Actual personal cash after protected money and liabilities:{" "}
-        <strong>{fmt(summary(s).available)}</strong>. A budget limit is a plan,
-        not another account balance.
-      </p>
+      <div className="help-note">
+        <span>
+          Available personal cash: <strong>{fmt(summary(s).available)}</strong>
+        </span>
+        <InfoHelp label="Available personal cash">
+          Actual personal cash after protected money and liabilities. A budget
+          limit is a plan, not another account balance.
+        </InfoHelp>
+      </div>
       <div className="actions">
         <Button
           secondary
@@ -254,10 +266,10 @@ export function BudgetActivity({
                         {t.date} / {t.description} / {fmt(t.amount)}
                       </p>
                     ))}
-                  <small>
+                  <HelpNote label="Latest 10 cash entries">
                     Latest 10 period cash entries. Prepaid recognition is
                     included in spent, not recorded as a second cash expense.
-                  </small>
+                  </HelpNote>
                 </details>
               </td>
               <td>{row.a?.purpose ?? "spending"}</td>

@@ -3,6 +3,7 @@ import { Download, Upload, ShieldCheck, Database } from "lucide-react";
 import { useApp } from "./context";
 import {
   today,
+  currencies,
   initialState,
   transactionTypes,
   type State,
@@ -10,7 +11,7 @@ import {
 } from "./domain";
 import { formatMoney, sum } from "./money";
 import { reports } from "./reports";
-import { summary, accountBalance } from "./engine";
+import { summary } from "./engine";
 import { editRecord } from "./forms";
 import { download } from "./storage";
 import { decodeBackup, encryptBackup, fullBackup } from "./backup";
@@ -25,6 +26,7 @@ import {
   type ImportRow,
 } from "./import";
 import { AccountsPage } from "./pages-records";
+import { accountCurrency, nativeBalances } from "./currency";
 import {
   PageHead,
   Card,
@@ -36,6 +38,8 @@ import {
   BarChart,
   LineChart,
   errorMessage,
+  InfoHelp,
+  HelpNote,
 } from "./ui";
 
 export function ReportsPage() {
@@ -135,7 +139,7 @@ export function ReportsPage() {
           format={fmt}
         />
         <LineChart
-          title="Actual month-end liquid cash"
+          title="Recorded month-end liquid cash"
           lines={[
             {
               name: "Liquid cash",
@@ -253,7 +257,7 @@ export function StatementImport() {
   const projected =
     account && s.accounts.some((a) => a.id === account)
       ? sum([
-          accountBalance(s, account),
+          nativeBalances(s).get(account)!,
           ...selected.map((r) =>
             r.transaction!.type === "expense" ||
             [
@@ -405,11 +409,17 @@ export function StatementImport() {
                 </td>
                 <td>
                   {r.transaction &&
-                    formatMoney(r.transaction.amount, s.settings.currency)}
+                    formatMoney(
+                      r.transaction.amount,
+                      accountCurrency(s, r.transaction.accountId),
+                    )}
                   {r.balance !== undefined && (
                     <small>
                       Statement balance:{" "}
-                      {formatMoney(r.balance, s.settings.currency)}
+                      {formatMoney(
+                        r.balance,
+                        accountCurrency(s, r.transaction?.accountId ?? account),
+                      )}
                     </small>
                   )}
                 </td>
@@ -520,7 +530,10 @@ export function StatementImport() {
           <p>
             Selected: {selected.length}. Projected statement-account balance
             after selected entries:{" "}
-            <strong>{formatMoney(projected, s.settings.currency)}</strong>.
+            <strong>
+              {formatMoney(projected, accountCurrency(s, account))}
+            </strong>
+            .
           </p>
           <p className="notice">
             Compare this balance with the bank statement, including opening
@@ -636,15 +649,17 @@ export function SettingsPage() {
           <h3>
             <ShieldCheck size={19} />
             Privacy & local storage
+            <InfoHelp label="Privacy & local storage">
+              No bank credentials, analytics, cloud sync, external AI or
+              financial-data network requests. Core data lives in IndexedDB in
+              this browser profile. Protect your device and browser profile.
+            </InfoHelp>
           </h3>
           <Badge>Offline-first</Badge>
         </div>
-        <p>
-          No bank credentials, analytics, cloud sync, external AI or
-          financial-data network requests. Core data lives in IndexedDB in this
-          browser profile. Local data is not application-encrypted at rest:
-          protect your device and browser profile. Private browsing, clearing
-          site data or storage eviction can erase records.
+        <p className="notice warning">
+          Local data is not application-encrypted at rest. Private browsing,
+          clearing site data or storage eviction can erase records.
         </p>
         <Button
           secondary
@@ -692,13 +707,13 @@ export function SettingsPage() {
                     s.bonds.length
                   )
                     throw new Error(
-                      "Currency cannot change after financial records exist; no exchange conversion is implemented",
+                      "The base currency cannot be relabeled after financial records exist. Set currencies on separate accounts and use Exchange currency under Accounts.",
                     );
                   s.settings.currency = currency;
                 });
               }}
             >
-              {["KES", "USD", "EUR", "GBP"].map((c) => (
+              {currencies.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>
@@ -735,18 +750,25 @@ export function SettingsPage() {
               }}
             />
           </label>
-          <p>
-            Locale en-KE / timezone Africa/Nairobi. All accounts use one
-            configured currency; no implicit currency conversion.
-          </p>
+          <HelpNote label="Currency, locale & timezone">
+            Locale en-KE / timezone Africa/Nairobi. This is the fixed base
+            currency for budgets, commitments and historical reports. Each
+            account can hold a different currency. Manage quotes and actual
+            exchanges under Accounts; changing quotes never rewrites saved
+            transactions.
+          </HelpNote>
         </Card>
         <Card>
-          <h3>Backup & restore</h3>
-          <p>
-            JSON includes all records and receipts. Unencrypted exports contain
-            private financial information. Encrypted backups use
-            password-derived AES-256-GCM through browser Web Crypto; passphrases
-            are never persisted.
+          <h3>
+            Backup & restore
+            <InfoHelp label="Backup & restore">
+              JSON includes all records and receipts. Encrypted backups use
+              password-derived AES-256-GCM through browser Web Crypto;
+              passphrases are never persisted.
+            </InfoHelp>
+          </h3>
+          <p className="notice warning">
+            Unencrypted exports contain private financial information.
           </p>
           <label>
             Backup / restore passphrase (12+ characters)
@@ -859,25 +881,34 @@ export function SettingsPage() {
         </div>
       </Card>
       <Card>
-        <h3>Install & updates</h3>
-        <p>
-          Open the HTTPS deployment in Android Chrome, then use the browser
-          menu's Install app / Add to Home screen option. Visit once online and
-          wait for the offline-ready notice. Updates are offered with a reload
-          button; no financial records are erased by application-shell updates.
+        <h3>
+          Install & updates
+          <InfoHelp label="Install & updates">
+            <p>
+              Open the HTTPS deployment in Android Chrome, then use the browser
+              menu's Install app / Add to Home screen option. Visit once online
+              and wait for the offline-ready notice. Updates are offered with a
+              reload button; no financial records are erased by
+              application-shell updates.
+            </p>
+            <small>
+              localhost works for development. Production service workers
+              require HTTPS.
+            </small>
+          </InfoHelp>
+        </h3>
+        <p className="notice warning">
+          Clearing site data removes offline cache and financial records.
         </p>
-        <small>
-          localhost works for development. Production service workers require
-          HTTPS. Clearing site data removes both offline cache and financial
-          records.
-        </small>
       </Card>
       <Card>
-        <h3>Local change history</h3>
-        <p>
-          Revision history is for traceability, not a tamper-proof accounting
-          audit or an undo system. Restore backups to recover old records.
-        </p>
+        <h3>
+          Local change history
+          <InfoHelp label="Local change history">
+            Revision history is for traceability, not a tamper-proof accounting
+            audit or an undo system. Restore backups to recover old records.
+          </InfoHelp>
+        </h3>
         <Table headers={["Revision", "Time", "Action", "Changed records"]}>
           {s.audit
             .slice(-30)

@@ -243,7 +243,7 @@ test("transaction optional fields stay accessible and transfer destinations are 
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel("Notes", { exact: true })).toBeHidden();
   await dialog
-    .getByLabel("Transaction type", { exact: false })
+    .getByLabel("Transaction type", { exact: true })
     .selectOption("transfer");
   await expect(
     dialog.getByLabel("Destination (transfers only)", { exact: true }),

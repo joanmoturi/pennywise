@@ -13,6 +13,15 @@ import {
 } from "./domain";
 import { sum, ratio, floorDivide, safe } from "./money";
 import {
+  accountCurrency,
+  nativeBalances,
+  nativeEventRemaining,
+  incomeValue,
+  toBase,
+  restrictedValue,
+  validateCurrencies,
+} from "./currency";
+import {
   businessForAccount,
   personalIncome,
   personalExpense,
@@ -34,36 +43,22 @@ export function accountBalance(
   id: string,
   until = "9999-12-31",
 ): number {
-  const account = s.accounts.find((a) => a.id === id);
-  if (!account) throw new Error("Account not found");
-  return sum([
-    account.opening,
-    ...s.transactions
-      .filter((t) => t.date <= until)
-      .map((t) => {
-        if (t.type === "reserve_transfer") return 0;
-        if (t.type === "transfer")
-          return t.accountId === id
-            ? -t.amount
-            : t.destinationId === id
-              ? t.amount
-              : 0;
-        if (t.accountId !== id) return 0;
-        return [
-          "expense",
-          "debt_repayment",
-          "loan_disbursement",
-          "liability_repayment",
-        ].includes(t.type)
-          ? -t.amount
-          : t.amount;
-      }),
-  ]);
+  if (!s.accounts.some((a) => a.id === id))
+    throw new Error("Account not found");
+  return accountBalances(s, until).get(id)!;
 }
 export function accountBalances(
   s: State,
   until = "9999-12-31",
+  bookValue = false,
 ): Map<string, number> {
+  if (!bookValue && until >= today())
+    return new Map(
+      [...nativeBalances(s, until)].map(([id, amount]) => [
+        id,
+        toBase(s, amount, accountCurrency(s, id)),
+      ]),
+    );
   const amounts = new Map(s.accounts.map((a) => [a.id, BigInt(a.opening)]));
   const add = (id: string | undefined, amount: bigint) => {
     if (id && amounts.has(id)) amounts.set(id, amounts.get(id)! + amount);
@@ -73,7 +68,7 @@ export function accountBalances(
     const amount = BigInt(t.amount);
     if (t.type === "transfer") {
       add(t.accountId, -amount);
-      add(t.destinationId, amount);
+      add(t.destinationId, BigInt(t.destinationAmount ?? t.amount));
     } else {
       add(
         t.accountId,
@@ -163,7 +158,7 @@ export function summary(s: State, asOf = today()) {
         (a) =>
           personal(a.id) && a.kind !== "investment" && a.kind !== "savings",
       )
-      .map((a) => a.restricted),
+      .map((a) => restrictedValue(s, a)),
   );
   const savingsAccounts = sum(
     s.accounts
@@ -251,7 +246,13 @@ export function summary(s: State, asOf = today()) {
     ),
     totalAccounts: sum([...balances.values()]),
     income: sum(
-      actual.filter((t) => personalIncome(s, t)).map((t) => t.amount),
+      actual
+        .filter((t) => personalIncome(s, t))
+        .map((t) =>
+          t.businessMovement === "owner_distribution"
+            ? (t.destinationAmount ?? t.amount)
+            : t.amount,
+        ),
     ),
     expenses: sum(
       actual.filter((t) => personalExpense(s, t)).map((t) => t.amount),
@@ -269,18 +270,25 @@ export function coupon(b: Bond): { gross: number; tax: number; net: number } {
   return { gross, tax, net: sum([gross, -tax]) };
 }
 export function eventRemaining(s: State, e: PaymentEvent): number {
+  if (e.currency && e.nativeAmount !== undefined) {
+    return toBase(s, nativeEventRemaining(s, e), e.currency);
+  }
   return Math.max(
     0,
     sum([
       e.amount,
-      -sum(
-        s.transactions.filter((t) => t.eventId === e.id).map((t) => t.amount),
-      ),
+      -sum(s.transactions.filter((t) => t.eventId === e.id).map(incomeValue)),
     ]),
   );
 }
 export function eventStatus(s: State, e: PaymentEvent): string {
   if (e.status === "cancelled") return "cancelled";
+  if (e.nativeAmount !== undefined) {
+    const remaining = nativeEventRemaining(s, e);
+    if (remaining === 0) return "received";
+    if (remaining < e.nativeAmount) return "partially received";
+    return e.status === "delayed" || e.due < today() ? "delayed" : "expected";
+  }
   const left = eventRemaining(s, e);
   if (left === 0) return "received";
   if (left < e.amount) return "partially received";
@@ -1292,7 +1300,9 @@ export function validateState(input: unknown): State {
     );
     if (reserved > 0 && a.kind === "investment")
       throw new Error("Reserves need a liquid account");
-    if (sum([reserved, a.restricted]) > Math.max(0, balances.get(a.id)!))
+    if (
+      sum([reserved, restrictedValue(s, a)]) > Math.max(0, balances.get(a.id)!)
+    )
       throw new Error(
         "Restricted and reserved money exceeds account balance; release reserves before spending",
       );
@@ -1313,6 +1323,7 @@ export function validateState(input: unknown): State {
   }
   validateExpenses(s);
   validateConnected(s);
+  validateCurrencies(s);
   summary(s);
   return s;
 }

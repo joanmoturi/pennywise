@@ -5,16 +5,31 @@ import {
   incomeTypes,
   frequencies,
   transactionTypes,
+  currencies,
   type State,
   type Transaction,
   type Scenario,
 } from "./domain";
 import type { AppContext, Field } from "./context";
-import { commitWindfall, coupon, receiveEvent, scheduleDates } from "./engine";
+import {
+  commitWindfall,
+  coupon,
+  receiveEvent,
+  scheduleDates,
+  sourceAccount,
+  eventRemaining,
+} from "./engine";
 import { generateOccurrences } from "./expense-engine";
-import { accountBalances } from "./engine";
 import { categoryPosition } from "./connected-finance";
 import { formatMoney } from "./money";
+import {
+  accountCurrency,
+  nativeBalances,
+  nativeEventRemaining,
+  toBase,
+  rateFor,
+  fromBase,
+} from "./currency";
 
 export type Collection =
   | "accounts"
@@ -51,6 +66,10 @@ export function recordFields(s: State, kind: Collection): Field[] {
       common[0],
       f("kind", "Account type", "select", {
         options: options(["cash", "bank", "mobile", "investment", "savings"]),
+      }),
+      f("currency", "Account currency", "select", {
+        options: options(currencies),
+        help: "Opening balance and restrictions use this currency. Existing accounts cannot be relabeled; use an exchange. Configure rates under Accounts before adding foreign balances.",
       }),
       f("opening", "Opening balance", "money", {
         help: "Existing balance, not income. Record liabilities separately.",
@@ -275,6 +294,7 @@ export function defaultRecord(
       id: base.id,
       name: "",
       kind: "bank",
+      currency: s.settings.currency,
       opening: 0,
       restricted: 0,
       notes: "",
@@ -402,13 +422,25 @@ export function editRecord(
   kind: Collection,
   record?: State[Collection][number],
 ) {
+  const fields = recordFields(app.state, kind);
   app.dialog({
     title: `${record ? "Edit" : "Add"} ${kind === "liabilities" ? "liability" : kind === "necessities" ? "necessity" : kind === "recurring" ? "recurring expense" : kind === "occasional" ? "occasional expense" : kind.slice(0, -1)}`,
+    context:
+      kind === "incomes"
+        ? (values) => {
+            const account = app.state.accounts.find(
+              (a) => a.id === values.accountId,
+            );
+            return `Expected amount currency: ${account?.currency ?? app.state.settings.currency}. Cash is recorded only when actually received.`;
+          }
+        : kind !== "accounts" && fields.some((field) => field.type === "money")
+          ? () => `Amounts in ${app.state.settings.currency} (base currency).`
+          : undefined,
     description:
       kind === "bonds"
         ? "Use your bond documents. No rates or payment schedules are inferred. Add explicit payment dates after saving."
         : undefined,
-    fields: recordFields(app.state, kind).map((field) => ({
+    fields: fields.map((field) => ({
       ...field,
       advanced:
         kind === "accounts"
@@ -429,7 +461,21 @@ export function editRecord(
               ].includes(field.key)
             : false,
     })),
-    values: record ? { ...record } : defaultRecord(app.state, kind),
+    values: record
+      ? {
+          ...record,
+          ...(kind === "accounts" && "opening" in record
+            ? {
+                currency: record.currency ?? app.state.settings.currency,
+                opening: record.nativeOpening ?? record.opening,
+                restricted: record.nativeRestricted ?? record.restricted,
+              }
+            : {}),
+          ...(kind === "incomes" && "nativeAmount" in record
+            ? { amount: record.nativeAmount ?? record.amount }
+            : {}),
+        }
+      : defaultRecord(app.state, kind),
     submit: async (values) =>
       app.mutate(`Save ${kind}`, (s) => {
         for (const key of [
@@ -471,10 +517,40 @@ export function editRecord(
               "Review and confirm this account's full history before changing its ownership.",
             );
           delete values.reclassificationConfirmed;
+          const currency = String(values.currency);
+          const opening = Number(values.opening),
+            restricted = Number(values.restricted);
+          const unchanged =
+            record &&
+            "opening" in record &&
+            opening === (record.nativeOpening ?? record.opening) &&
+            currency === (record.currency ?? s.settings.currency);
+          const rate =
+            unchanged && record && "openingRate" in record && record.openingRate
+              ? record.openingRate
+              : currency === s.settings.currency
+                ? "1"
+                : rateFor(s, currency);
+          values.nativeOpening = opening;
+          values.nativeRestricted = restricted;
+          values.openingRate = rate;
+          values.opening = toBase(s, opening, currency, rate);
+          values.restricted = toBase(s, restricted, currency, rate);
         }
         if (kind === "recurring") {
           for (const key of ["minimum", "maximum"])
             if (values[key] === 0) delete values[key];
+        }
+        if (kind === "incomes") {
+          const currency = accountCurrency(s, String(values.accountId));
+          if (currency !== s.settings.currency) {
+            values.nativeAmount = Number(values.amount);
+            values.currency = currency;
+            values.amount = toBase(s, Number(values.nativeAmount), currency);
+          } else {
+            delete values.nativeAmount;
+            delete values.currency;
+          }
         }
         const list = s[kind] as { id: string }[];
         const index = list.findIndex((r) => r.id === values.id);
@@ -586,6 +662,15 @@ export function editTransaction(
   record?: Transaction,
   defaults: Partial<Transaction> = {},
 ) {
+  if (
+    record?.nativeDestinationAmount !== undefined &&
+    record.destinationAmount !== undefined
+  ) {
+    app.notify(
+      "Undo this exchange from the ledger and record a replacement to preserve both currencies and any fee.",
+    );
+    return;
+  }
   if (!app.state.accounts.length) {
     app.notify(
       "Add an account first so this transaction has somewhere to be saved.",
@@ -612,7 +697,6 @@ export function editTransaction(
     app.notify("Undo this receipt's windfall allocation before editing it.");
     return;
   }
-  const contextBalances = accountBalances(app.state);
   const contextBudget = app.state.budgets.find(
     (b) => b.id === app.state.settings.activeBudgetId,
   );
@@ -624,14 +708,20 @@ export function editTransaction(
   app.dialog({
     title: record ? "Edit transaction" : "Add transaction",
     description:
-      "Income is earned or distributed money only. Draws, transfers and loan recoveries have distinct ledger types. Expected payments belong in Income or Bonds.",
-    fields: transactionFields(app.state),
+      "Income is earned or distributed money only. Draws, transfers and loan recoveries have distinct ledger types. Expected payments belong in Income or Bonds. Business receipts and expenses stay separate from personal income and budgets. Budget limits do not block actual spending, even when a category is over budget.",
+    fields: transactionFields(app.state).map((field) =>
+      field.key === "amount"
+        ? {
+            ...field,
+            help: "Enter the amount in the selected account's currency. Saved base-currency reporting values do not change when rates refresh.",
+          }
+        : field,
+    ),
     context: (values) => {
       const accountId = String(values.accountId ?? "");
       const category = String(values.category ?? "");
-      const balance = contextBalances.get(accountId) ?? 0;
       if (app.state.accounts.find((a) => a.id === accountId)?.businessId)
-        return `Business account balance: ${formatMoney(balance, app.state.settings.currency)}. Business receipts and expenses stay separate from personal income and budgets.`;
+        return `Amount currency: ${accountCurrency(app.state, accountId)} / Business account balance: ${formatMoney(nativeBalances(app.state).get(accountId) ?? 0, accountCurrency(app.state, accountId))}`;
       if (
         contextBudget &&
         knownCategories.has(category) &&
@@ -647,10 +737,11 @@ export function editTransaction(
         remaining: 0,
         status: "Unbudgeted",
       };
-      return `Account balance: ${formatMoney(balance, app.state.settings.currency)}. ${values.type === "expense" && position ? `${category}: ${position.status}; budget ${formatMoney(position.planned, app.state.settings.currency)}, spent ${formatMoney(position.spent, app.state.settings.currency)}, remaining ${formatMoney(position.remaining, app.state.settings.currency)}. Spending is allowed even above this limit.` : "Transfers and borrowing are not new earned income."}`;
+      const currency = accountCurrency(app.state, accountId);
+      return `Amount currency: ${currency} / Account balance: ${formatMoney(nativeBalances(app.state).get(accountId) ?? 0, currency)}${values.type === "expense" && position ? ` / ${category}: ${position.status}; budget ${formatMoney(position.planned, app.state.settings.currency)}, spent ${formatMoney(position.spent, app.state.settings.currency)}, remaining ${formatMoney(position.remaining, app.state.settings.currency)}` : ""}`;
     },
     values: record
-      ? { ...record }
+      ? { ...record, amount: record.nativeAmount ?? record.amount }
       : {
           id: uid(),
           type: "expense",
@@ -679,6 +770,40 @@ export function editTransaction(
         record ? "Edit ledger transaction" : "Add ledger transaction",
         (s) => {
           const t = values as Transaction;
+          const currency = accountCurrency(s, t.accountId);
+          if (
+            t.type === "transfer" &&
+            t.destinationId &&
+            accountCurrency(s, t.destinationId) !== currency
+          )
+            throw new Error(
+              "Use Exchange currency under Accounts to confirm the actual amount received and exchange fee.",
+            );
+          if (currency !== s.settings.currency) {
+            const rate =
+              record &&
+              record.nativeAmount === t.amount &&
+              record.accountId === t.accountId
+                ? (record.exchangeRate ?? rateFor(s, currency))
+                : rateFor(s, currency);
+            t.nativeAmount = t.amount;
+            t.exchangeRate = rate;
+            t.amount = toBase(s, t.nativeAmount, currency, rate);
+            if (t.type === "transfer") {
+              t.nativeDestinationAmount = t.nativeAmount;
+              t.destinationRate = rate;
+            } else {
+              delete t.nativeDestinationAmount;
+              delete t.destinationRate;
+              delete t.destinationAmount;
+            }
+          } else {
+            delete t.nativeAmount;
+            delete t.exchangeRate;
+            delete t.nativeDestinationAmount;
+            delete t.destinationAmount;
+            delete t.destinationRate;
+          }
           if (
             ["loan_recovery", "loan_disbursement"].includes(t.type) &&
             s.receivables.find((r) => r.id === t.relatedId)?.writtenOff
@@ -731,7 +856,9 @@ export function deleteTransaction(app: AppContext, t: Transaction) {
     : [t];
   app.confirm(
     group.length > 1
-      ? "Undo entire windfall allocation?"
+      ? group.some((r) => r.destinationAmount !== undefined)
+        ? "Undo entire currency exchange?"
+        : "Undo entire windfall allocation?"
       : "Delete transaction?",
     "Balances and linked payments will be recalculated. A receipt with allocations cannot be deleted until those allocations are undone.",
     async () =>
@@ -760,8 +887,14 @@ export function addSchedule(
     kind === "bond"
       ? coupon(app.state.bonds.find((b) => b.id === sourceId)!).net
       : kind === "income"
-        ? app.state.incomes.find((i) => i.id === sourceId)!.amount
+        ? (app.state.incomes.find((i) => i.id === sourceId)!.nativeAmount ??
+          app.state.incomes.find((i) => i.id === sourceId)!.amount)
         : app.state.receivables.find((r) => r.id === sourceId)!.principal;
+  const currency =
+    kind === "income"
+      ? (app.state.incomes.find((i) => i.id === sourceId)!.currency ??
+        app.state.settings.currency)
+      : app.state.settings.currency;
   app.dialog({
     title: "Add expected payment schedule",
     description:
@@ -772,7 +905,9 @@ export function addSchedule(
         options: options(frequencies),
       }),
       f("count", "Number of dates", "number"),
-      f("amount", "Net expected amount per date", "money"),
+      f("amount", "Net expected amount per date", "money", {
+        help: `Enter ${currency}. Forecasts convert unpaid amounts using current cached/manual rates.`,
+      }),
       f("reliability", "Reliability", "select", {
         options: options(["confirmed", "reliable", "uncertain"]),
       }),
@@ -818,7 +953,10 @@ export function addSchedule(
             sourceId,
             kind,
             due,
-            amount: Number(v.amount),
+            amount: toBase(s, Number(v.amount), currency),
+            ...(currency !== s.settings.currency
+              ? { currency, nativeAmount: Number(v.amount) }
+              : {}),
             status: "expected",
             reliability: v.reliability as
               "confirmed" | "reliable" | "uncertain",
@@ -830,24 +968,63 @@ export function addSchedule(
 }
 export function receive(app: AppContext, eventId: string) {
   const e = app.state.events.find((e) => e.id === eventId)!;
-  const received = app.state.transactions
-    .filter((t) => t.eventId === e.id)
-    .reduce((sum, t) => sum + t.amount, 0);
+  const receivingCurrency = accountCurrency(
+    app.state,
+    sourceAccount(app.state, e),
+  );
+  let amount: number;
+  try {
+    amount = e.currency
+      ? nativeEventRemaining(app.state, e)
+      : fromBase(app.state, eventRemaining(app.state, e), receivingCurrency);
+  } catch (error) {
+    app.notify(
+      error instanceof Error
+        ? error.message
+        : "Refresh exchange rates before recording this receipt.",
+    );
+    return;
+  }
   app.dialog({
     title: "Confirm actual receipt",
     description:
       "Enter only money actually received. Partial receipts remain outstanding; differing receipts reconcile to the ledger.",
     fields: [
-      f("amount", "Actual amount received", "money"),
+      f("amount", "Actual amount received", "money", {
+        help:
+          receivingCurrency !== app.state.settings.currency
+            ? `Enter ${receivingCurrency}. Historical base-currency reporting records the rate used when this receipt is saved.`
+            : undefined,
+      }),
       f("date", "Actual receipt date", "date"),
     ],
-    values: { amount: Math.max(0, e.amount - received), date: today() },
+    values: { amount, date: today() },
     submit: async (v) =>
-      app.mutate("Confirm actual expected-payment receipt", (s) =>
-        s.transactions.push(
-          receiveEvent(s, e.id, Number(v.amount), String(v.date)),
-        ),
-      ),
+      app.mutate("Confirm actual expected-payment receipt", (s) => {
+        const amount = Number(v.amount);
+        const currency = accountCurrency(s, sourceAccount(s, e));
+        const income = s.incomes.find((i) => i.id === e.sourceId);
+        if (
+          income?.businessId &&
+          income.sourceAccountId &&
+          accountCurrency(s, income.sourceAccountId) !== currency
+        )
+          throw new Error(
+            "Use Exchange currency and link this expected business payout, confirming the source and receiving amounts.",
+          );
+        const rate = rateFor(s, currency);
+        const transaction = receiveEvent(
+          s,
+          e.id,
+          toBase(s, amount, currency, rate),
+          String(v.date),
+        );
+        if (currency !== s.settings.currency || e.currency) {
+          transaction.nativeAmount = amount;
+          transaction.exchangeRate = rate;
+        }
+        s.transactions.push(transaction);
+      }),
   });
 }
 export function transferReserve(

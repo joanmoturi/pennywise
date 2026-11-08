@@ -4,12 +4,15 @@ import {
   isValidElement,
   type ReactElement,
   useEffect,
+  useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
   type FormEvent,
 } from "react";
-import { X, Plus, Pencil, Trash2 } from "lucide-react";
+import { createPortal } from "react-dom";
+import { X, Plus, Pencil, Trash2, Info } from "lucide-react";
 import type { DialogSpec } from "./context";
 import { parseMoney, decimal } from "./money";
 import { ZodError } from "zod";
@@ -90,6 +93,192 @@ export function Empty({
     </Card>
   );
 }
+export function InfoHelp({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  const id = useId();
+  const button = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const pinned = useRef(false);
+  const dismissed = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ left: 16, top: 16 });
+  function show() {
+    clearTimeout(timer.current);
+    if (!dismissed.current) {
+      document.dispatchEvent(
+        new CustomEvent("pennywise-info-open", { detail: id }),
+      );
+      setOpen(true);
+    }
+  }
+  function hide(restoreFocus = false) {
+    clearTimeout(timer.current);
+    pinned.current = false;
+    dismissed.current = true;
+    setOpen(false);
+    if (restoreFocus) button.current?.focus();
+  }
+  function leave() {
+    dismissed.current = false;
+    if (!pinned.current)
+      timer.current = setTimeout(() => {
+        if (!panel.current?.contains(document.activeElement)) setOpen(false);
+      }, 180);
+  }
+  useEffect(() => () => clearTimeout(timer.current), []);
+  useLayoutEffect(() => {
+    if (!open) return;
+    function place() {
+      if (!button.current || !panel.current) return;
+      const anchor = button.current.getBoundingClientRect();
+      if (anchor.bottom < 0 || anchor.top > window.innerHeight) {
+        pinned.current = false;
+        setOpen(false);
+        return;
+      }
+      const popup = panel.current.getBoundingClientRect();
+      const left = Math.max(
+        16,
+        Math.min(anchor.left, window.innerWidth - popup.width - 16),
+      );
+      const below = anchor.bottom + 8;
+      const top = Math.max(
+        16,
+        Math.min(
+          below + popup.height <= window.innerHeight - 16
+            ? below
+            : anchor.top - popup.height - 8,
+          window.innerHeight - popup.height - 16,
+        ),
+      );
+      setPosition((previous) =>
+        previous.left === left && previous.top === top
+          ? previous
+          : { left, top },
+      );
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, children]);
+  useEffect(() => {
+    if (!open) return;
+    function outside(event: PointerEvent) {
+      if (
+        event.target instanceof Node &&
+        !button.current?.contains(event.target) &&
+        !panel.current?.contains(event.target)
+      )
+        hide();
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      // Consume Escape before the native dialog closes.
+      event.preventDefault();
+      event.stopPropagation();
+      hide(Boolean(panel.current?.contains(document.activeElement)));
+    }
+    function otherInfo(event: Event) {
+      if (event instanceof CustomEvent && event.detail !== id) hide();
+    }
+    document.addEventListener("pointerdown", outside, true);
+    document.addEventListener("keydown", escape, true);
+    document.addEventListener("pennywise-info-open", otherInfo);
+    return () => {
+      document.removeEventListener("pointerdown", outside, true);
+      document.removeEventListener("keydown", escape, true);
+      document.removeEventListener("pennywise-info-open", otherInfo);
+    };
+  }, [open]);
+  return (
+    <span className="info-help">
+      <button
+        ref={button}
+        type="button"
+        className="info-button"
+        aria-label={`${label} information`}
+        aria-expanded={open}
+        aria-controls={open ? id : undefined}
+        onPointerEnter={(event) => {
+          if (event.pointerType !== "touch") show();
+        }}
+        onPointerLeave={leave}
+        onBlur={(event) => {
+          if (!panel.current?.contains(event.relatedTarget)) leave();
+        }}
+        onClick={() => {
+          if (pinned.current) hide();
+          else {
+            dismissed.current = false;
+            pinned.current = true;
+            show();
+          }
+        }}
+      >
+        <Info size={16} aria-hidden="true" />
+      </button>
+      {open &&
+        createPortal(
+          <div
+            ref={panel}
+            id={id}
+            role="region"
+            aria-labelledby={`${id}-title`}
+            className="info-popover"
+            style={position}
+            onPointerEnter={show}
+            onPointerLeave={leave}
+            onBlurCapture={(event) => {
+              if (
+                !panel.current?.contains(event.relatedTarget) &&
+                !button.current?.contains(event.relatedTarget)
+              )
+                leave();
+            }}
+          >
+            <div className="info-popover-head">
+              <strong id={`${id}-title`}>About {label}</strong>
+              <button
+                type="button"
+                className="info-button"
+                aria-label={`Close ${label} information`}
+                onClick={() => hide(true)}
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="info-content">{children}</div>
+          </div>,
+          // A body portal would be inert behind an open modal's top layer.
+          button.current?.closest("dialog") ?? document.body,
+        )}
+    </span>
+  );
+}
+export function HelpNote({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="help-note">
+      <span>{label}</span>
+      <InfoHelp label={label}>{children}</InfoHelp>
+    </div>
+  );
+}
 export function PageHead({
   title,
   subtitle,
@@ -101,10 +290,9 @@ export function PageHead({
 }) {
   return (
     <div className="page-head">
-      <div>
-        <span className="eyebrow">YOUR FINANCIAL COMMAND CENTRE</span>
+      <div className="page-title">
         <h1>{title}</h1>
-        <p>{subtitle}</p>
+        <InfoHelp label={title}>{subtitle}</InfoHelp>
       </div>
       {action}
     </div>
@@ -114,18 +302,23 @@ export function Metric({
   label,
   value,
   hint,
+  supporting,
   accent = false,
 }: {
   label: string;
   value: string;
   hint?: string;
+  supporting?: string;
   accent?: boolean;
 }) {
   return (
     <Card className={`metric ${accent ? "accent" : ""}`}>
-      <span>{label}</span>
+      <span className="metric-label">
+        {label}
+        {hint && <InfoHelp label={label}>{hint}</InfoHelp>}
+      </span>
       <strong>{value}</strong>
-      {hint && <small>{hint}</small>}
+      {supporting && <small>{supporting}</small>}
     </Card>
   );
 }
@@ -363,6 +556,10 @@ export function FormDialog({
   const [busy, setBusy] = useState(false);
   const [slow, setSlow] = useState(false);
   const [inputs, setInputs] = useState(spec.values);
+  const showDescription =
+    !spec.fields.length ||
+    spec.fields.some((field) => field.key === "confirmation") ||
+    /confirm|delete|reset|remove/i.test(spec.submitLabel ?? "");
   const [advanced, setAdvanced] = useState(
     spec.fields.some(
       (f) =>
@@ -455,7 +652,9 @@ export function FormDialog({
         else close();
       }}
       aria-labelledby="dialog-title"
-      aria-describedby={spec.description ? "dialog-description" : undefined}
+      aria-describedby={
+        spec.description && showDescription ? "dialog-description" : undefined
+      }
       aria-busy={busy}
     >
       <form
@@ -484,7 +683,12 @@ export function FormDialog({
         }}
       >
         <div className="dialog-head">
-          <h2 id="dialog-title">{spec.title}</h2>
+          <div className="dialog-title">
+            <h2 id="dialog-title">{spec.title}</h2>
+            {spec.description && !showDescription && (
+              <InfoHelp label={spec.title}>{spec.description}</InfoHelp>
+            )}
+          </div>
           <button
             type="button"
             className="icon-button"
@@ -495,7 +699,7 @@ export function FormDialog({
             <X />
           </button>
         </div>
-        {spec.description && (
+        {spec.description && showDescription && (
           <p className="dialog-description" id="dialog-description">
             {spec.description}
           </p>
@@ -548,12 +752,17 @@ export function FormDialog({
                   ? decimal(value)
                   : String(value ?? "");
               return (
-                <label
+                <div
                   key={f.key}
-                  className={f.type === "textarea" ? "full" : ""}
+                  className={`form-field ${f.type === "textarea" ? "full" : ""}`}
                   hidden={f.advanced && !advanced}
                 >
-                  <span id={`label-${f.key}`}>{f.label}</span>
+                  <div className="field-label">
+                    <label id={`label-${f.key}`} htmlFor={`field-${f.key}`}>
+                      {f.label}
+                    </label>
+                    {f.help && <InfoHelp label={f.label}>{f.help}</InfoHelp>}
+                  </div>
                   {f.type === "select" ? (
                     <select
                       id={`field-${f.key}`}
@@ -561,12 +770,7 @@ export function FormDialog({
                       name={f.key}
                       aria-invalid={Boolean(fieldErrors[f.key])}
                       aria-describedby={
-                        [
-                          f.help && `help-${f.key}`,
-                          fieldErrors[f.key] && `error-${f.key}`,
-                        ]
-                          .filter(Boolean)
-                          .join(" ") || undefined
+                        fieldErrors[f.key] ? `error-${f.key}` : undefined
                       }
                       defaultValue={display}
                       required={f.required !== false}
@@ -585,11 +789,7 @@ export function FormDialog({
                       name={f.key}
                       aria-invalid={Boolean(fieldErrors[f.key])}
                       aria-describedby={
-                        fieldErrors[f.key]
-                          ? `error-${f.key}`
-                          : f.help
-                            ? `help-${f.key}`
-                            : undefined
+                        fieldErrors[f.key] ? `error-${f.key}` : undefined
                       }
                       defaultValue={display}
                       rows={3}
@@ -610,12 +810,7 @@ export function FormDialog({
                       name={f.key}
                       aria-invalid={Boolean(fieldErrors[f.key])}
                       aria-describedby={
-                        [
-                          f.help && `help-${f.key}`,
-                          fieldErrors[f.key] && `error-${f.key}`,
-                        ]
-                          .filter(Boolean)
-                          .join(" ") || undefined
+                        fieldErrors[f.key] ? `error-${f.key}` : undefined
                       }
                       type={
                         f.type === "date"
@@ -634,13 +829,12 @@ export function FormDialog({
                       maxLength={f.type === "text" || !f.type ? 160 : undefined}
                     />
                   )}
-                  {f.help && <small id={`help-${f.key}`}>{f.help}</small>}
                   {fieldErrors[f.key] && (
                     <small className="field-error" id={`error-${f.key}`}>
                       {fieldErrors[f.key]}
                     </small>
                   )}
-                </label>
+                </div>
               );
             })}
           </div>

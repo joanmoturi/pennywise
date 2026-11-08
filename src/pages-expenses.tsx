@@ -42,6 +42,7 @@ import {
   Table,
   Actions,
   Empty,
+  HelpNote,
 } from "./ui";
 
 const money = (key: string, label: string): Field => ({
@@ -699,12 +700,12 @@ export function PrepaidPage() {
           ))}
         </div>
       )}
-      <p className="notice">
+      <HelpNote label="Prepaid cash & budget recognition">
         Actual discounted cost is recognized daily within each evenly allocated
         period. Cash reports show the full payment on its payment date; budget
         reports show consumed cost, never both. Coverage blocks ordinary
         recurring payments unless explicitly approved as additional.
-      </p>
+      </HelpNote>
     </>
   );
 }

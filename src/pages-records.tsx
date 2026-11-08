@@ -42,17 +42,27 @@ import {
   Table,
   Progress,
   errorMessage,
+  HelpNote,
 } from "./ui";
 import { download } from "./storage";
 import { effectiveAllocations } from "./expense-engine";
 import { BudgetActivity, allocationDialog } from "./connected-ui";
 import { summary } from "./engine";
+import { MmfWorkspace } from "./mmf-ui";
+import { mmfEventEnabled } from "./mmf";
+import { CurrencyWorkspace } from "./currency-ui";
+import {
+  accountCurrency,
+  nativeBalances,
+  nativeEventRemaining,
+} from "./currency";
 
 export function AccountsPage() {
   const app = useApp();
   const { state: s } = app;
   const fmt = (n: number) => formatMoney(n, s.settings.currency);
   const balances = useMemo(() => accountBalances(s), [s]);
+  const originals = useMemo(() => nativeBalances(s), [s]);
   const position = summary(s);
   return (
     <>
@@ -78,7 +88,7 @@ export function AccountsPage() {
         <Metric
           label="Personal net position"
           value={fmt(position.netWorth)}
-          hint={`Business cash shown separately: ${fmt(position.businessCash)}`}
+          supporting={`Business cash: ${fmt(position.businessCash)}`}
         />
       </div>
       {!s.accounts.length ? (
@@ -104,13 +114,25 @@ export function AccountsPage() {
                   ? `Business: ${s.businesses.find((b) => b.id === a.businessId)?.name}`
                   : "Personal / legacy account"}
               </Badge>
-              <div className="big-number">{fmt(balances.get(a.id)!)}</div>
-              <p>Restricted: {fmt(a.restricted)}</p>
+              <div className="big-number">
+                {formatMoney(originals.get(a.id)!, accountCurrency(s, a.id))}
+              </div>
+              {accountCurrency(s, a.id) !== s.settings.currency && (
+                <small>Estimated base value: {fmt(balances.get(a.id)!)}</small>
+              )}
+              <p>
+                Restricted:{" "}
+                {formatMoney(
+                  a.nativeRestricted ?? a.restricted,
+                  accountCurrency(s, a.id),
+                )}
+              </p>
               <small>{a.notes}</small>
             </Card>
           ))}
         </div>
       )}
+      <CurrencyWorkspace />
       <p className="notice">
         Avoid counting a bond holding in both an investment account and the
         Bonds module. Record only non-bond assets in investment account
@@ -295,7 +317,30 @@ export function TransactionsPage() {
                 <td>
                   <Badge>{t.type.replaceAll("_", " ")}</Badge>
                 </td>
-                <td className="amount">{fmt(t.amount)}</td>
+                <td className="amount">
+                  {formatMoney(
+                    t.type === "reserve_transfer"
+                      ? t.amount
+                      : (t.nativeAmount ?? t.amount),
+                    t.type === "reserve_transfer"
+                      ? s.settings.currency
+                      : accountCurrency(s, t.accountId),
+                  )}
+                  {t.nativeDestinationAmount !== undefined &&
+                    t.destinationId && (
+                      <small>
+                        Received:{" "}
+                        {formatMoney(
+                          t.nativeDestinationAmount,
+                          accountCurrency(s, t.destinationId),
+                        )}
+                      </small>
+                    )}
+                  {t.type !== "reserve_transfer" &&
+                    accountCurrency(s, t.accountId) !== s.settings.currency && (
+                      <small>Saved base value: {fmt(t.amount)}</small>
+                    )}
+                </td>
                 <td>
                   <div className="actions">
                     <Actions
@@ -364,7 +409,8 @@ export function PaymentCalendar({
     .filter(
       (e) =>
         (!sourceId || e.sourceId === sourceId) &&
-        (!kinds || kinds.includes(e.kind)),
+        (!kinds || kinds.includes(e.kind)) &&
+        mmfEventEnabled(s, e.sourceId),
     )
     .sort((a, b) => a.due.localeCompare(b.due));
   function edit(e: PaymentEvent) {
@@ -440,8 +486,15 @@ export function PaymentCalendar({
                 </small>
               </td>
               <td>
-                {fmt(e.amount)}
-                <small>Remaining: {fmt(eventRemaining(s, e))}</small>
+                {e.currency
+                  ? formatMoney(e.nativeAmount ?? e.amount, e.currency)
+                  : fmt(e.amount)}
+                <small>
+                  Remaining:{" "}
+                  {e.currency && e.currency !== s.settings.currency
+                    ? `${formatMoney(nativeEventRemaining(s, e), e.currency)} / ${fmt(eventRemaining(s, e))} estimated`
+                    : fmt(eventRemaining(s, e))}
+                </small>
               </td>
               <td>
                 <Badge warning={eventStatus(s, e) === "delayed"}>
@@ -500,52 +553,62 @@ export function IncomePage() {
           Business revenue & distributions
         </button>
       </div>
-      {s.incomes.length > 0 && (
+      <MmfWorkspace />
+      {s.incomes.some((income) => !income.mmfStudio) && (
         <div className="grid cards">
-          {s.incomes.map((i) => (
-            <Card key={i.id}>
-              <Badge>
-                {i.businessId
-                  ? "Projected business distribution"
-                  : s.accounts.find((a) => a.id === i.accountId)?.businessId
-                    ? "Business revenue, not personal income"
-                    : "Personal / legacy income source"}
-              </Badge>
-              <div className="card-head">
-                <Badge warning={i.reliability === "uncertain"}>
-                  {i.active ? i.reliability : "inactive"}
+          {s.incomes
+            .filter((income) => !income.mmfStudio)
+            .map((i) => (
+              <Card key={i.id}>
+                <Badge>
+                  {i.businessId
+                    ? "Projected business distribution"
+                    : s.accounts.find((a) => a.id === i.accountId)?.businessId
+                      ? "Business revenue, not personal income"
+                      : "Personal / legacy income source"}
                 </Badge>
-                <Actions
-                  label={i.name}
-                  edit={() => editRecord(app, "incomes", i)}
-                  remove={() => deleteRecord(app, "incomes", i)}
-                />
-              </div>
-              <h3>{i.name}</h3>
-              <div className="big-number">{fmt(i.amount)}</div>
-              <p>
-                {i.type} / {i.frequency}
-              </p>
-              <small>
-                Actual received:{" "}
-                {fmt(
-                  sum(
-                    s.transactions
-                      .filter(
-                        (t) => t.relatedId === i.id && t.type === "income",
-                      )
-                      .map((t) => t.amount),
-                  ),
+                <div className="card-head">
+                  <Badge warning={i.reliability === "uncertain"}>
+                    {i.active ? i.reliability : "inactive"}
+                  </Badge>
+                  <Actions
+                    label={i.name}
+                    edit={() => editRecord(app, "incomes", i)}
+                    remove={() => deleteRecord(app, "incomes", i)}
+                  />
+                </div>
+                <h3>{i.name}</h3>
+                <div className="big-number">
+                  {i.currency
+                    ? formatMoney(i.nativeAmount ?? i.amount, i.currency)
+                    : fmt(i.amount)}
+                </div>
+                {i.currency && i.currency !== s.settings.currency && (
+                  <small>Saved base amount: {fmt(i.amount)}</small>
                 )}
-              </small>
-              <Button
-                secondary
-                onClick={() => addSchedule(app, "income", i.id)}
-              >
-                Add payment dates
-              </Button>
-            </Card>
-          ))}
+                <p>
+                  {i.type} / {i.frequency}
+                </p>
+                <small>
+                  Actual received:{" "}
+                  {fmt(
+                    sum(
+                      s.transactions
+                        .filter(
+                          (t) => t.relatedId === i.id && t.type === "income",
+                        )
+                        .map((t) => t.amount),
+                    ),
+                  )}
+                </small>
+                <Button
+                  secondary
+                  onClick={() => addSchedule(app, "income", i.id)}
+                >
+                  Add payment dates
+                </Button>
+              </Card>
+            ))}
         </div>
       )}
       {s.bonds.length > 0 && (
@@ -1227,11 +1290,12 @@ export function BudgetsPage() {
         <Metric
           label="Zero-based difference"
           value={fmt(stats.unallocated)}
-          hint={
+          supporting={
             stats.unallocated < 0
               ? "Overallocated: reduce remaining plans"
-              : "Available cash minus remaining plan"
+              : undefined
           }
+          hint="Available cash minus remaining plan"
         />
       </div>
       <Card>
@@ -1359,18 +1423,18 @@ export function BudgetsPage() {
             );
           }}
         />
-        <p className="notice">
+        <HelpNote label="How zero-based budgeting works">
           The zero-based difference should be zero when all currently available
           cash has a purpose. Expected receipts are not allocation funding.
           Plans do not automatically move or reserve money.
-        </p>
-        <p className="notice">
+        </HelpNote>
+        <HelpNote label="Rollover rules">
           Rollover is configured independently per category. Full/partial
           rollover adds a traceable prior-period allocation, not new cash.
           Savings/manual rules require a confirmed decision in Savings Capture.
           Overspending is shown as a deficit, never silently carried. Create a
           next period to preserve budget history.
-        </p>
+        </HelpNote>
       </Card>
       <Card>
         <h3>Profile comparison</h3>

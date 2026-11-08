@@ -7,6 +7,7 @@ import {
   type SavingsCapture,
 } from "./domain";
 import { sum, ratio } from "./money";
+import { restrictedValue } from "./currency";
 import {
   accountBalances,
   outstanding,
@@ -74,7 +75,9 @@ export function businessStats(s: State, businessId: string, asOf = today()) {
     ...accounts
       .filter((a) => a.kind !== "investment")
       .map((a) =>
-        a.kind === "savings" ? Math.max(0, balances.get(a.id)!) : a.restricted,
+        a.kind === "savings"
+          ? Math.max(0, balances.get(a.id)!)
+          : restrictedValue(s, a),
       ),
     ...s.reserves
       .filter((r) => ids.has(r.accountId))
@@ -118,7 +121,7 @@ export function recordDistribution(
     throw new Error("Choose this business's source account.");
   const cash =
     accountBalances(s).get(source.id)! -
-    source.restricted -
+    restrictedValue(s, source) -
     sum(
       s.reserves
         .filter((r) => r.accountId === source.id)

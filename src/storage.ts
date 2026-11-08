@@ -1,6 +1,7 @@
 import { initialState, uid, type State } from "./domain";
 import { validateState } from "./engine";
 import { timing } from "./performance";
+import { stampCurrency, workspaceHasMoney } from "./currency";
 
 export const DB_NAME = "pennywise-connected-v5";
 export const LEGACY_DB_NAME = "pennywise-private";
@@ -521,6 +522,18 @@ export class Repository {
             const endMutation = timing("mutation");
             next = structuredClone(previous);
             mutate(next);
+            if (!/^(restore|reset)/i.test(action)) {
+              if (
+                next.settings.currency !== previous.settings.currency &&
+                workspaceHasMoney(previous)
+              )
+                throw new Error(
+                  "The base currency cannot be relabeled after recording money. Existing amounts keep their original currency.",
+                );
+              if (next.settings.currency !== previous.settings.currency)
+                delete next.settings.exchange;
+              stampCurrency(next, previous);
+            }
             next.revision = previous.revision + 1;
             endMutation();
             const endDiff = timing("audit-diff");

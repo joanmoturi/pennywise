@@ -1,5 +1,6 @@
 import { dateSchema, today, uid, type Transaction, type State } from "./domain";
 import { parseMoney, decimal } from "./money";
+import { accountCurrency, rateFor, toBase } from "./currency";
 
 export function parseCsv(text: string): string[][] {
   if (text.length > 10_000_000)
@@ -58,7 +59,7 @@ export function fingerprint(t: Transaction): string {
     t.accountId,
     t.date,
     t.type,
-    t.amount,
+    t.nativeAmount ?? t.amount,
     t.description.trim().toLowerCase(),
   ].join("|");
 }
@@ -139,7 +140,22 @@ export function commitStatement(s: State, rows: ImportRow[]) {
     if (seen.has(fp))
       throw new Error("Duplicate transaction; nothing imported");
     seen.add(fp);
-    s.transactions.push(r.transaction);
+    const t = { ...r.transaction };
+    const currency = accountCurrency(s, t.accountId);
+    if (
+      t.type === "transfer" &&
+      t.destinationId &&
+      accountCurrency(s, t.destinationId) !== currency
+    )
+      throw new Error(
+        "Cross-currency statement transfers require actual received amounts. Use Exchange currency under Accounts.",
+      );
+    if (currency !== s.settings.currency) {
+      t.nativeAmount = t.amount;
+      t.exchangeRate = rateFor(s, currency);
+      t.amount = toBase(s, t.nativeAmount, currency, t.exchangeRate);
+    }
+    s.transactions.push(t);
   }
 }
 export function csvCell(value: string | number): string {
@@ -160,6 +176,11 @@ export function transactionsCsv(s: State, start: string, end: string): string {
       "description",
       "related_record",
       "expected_event",
+      "original_currency",
+      "original_amount",
+      "received_currency",
+      "received_amount",
+      "saved_exchange_rate",
     ]
       .map(csvCell)
       .join(","),
@@ -177,6 +198,21 @@ export function transactionsCsv(s: State, start: string, end: string): string {
           t.description,
           t.relatedId ?? "",
           t.eventId ?? "",
+          t.type === "reserve_transfer"
+            ? s.settings.currency
+            : accountCurrency(s, t.accountId),
+          decimal(
+            t.type === "reserve_transfer"
+              ? t.amount
+              : (t.nativeAmount ?? t.amount),
+          ),
+          t.destinationId ? accountCurrency(s, t.destinationId) : "",
+          t.destinationId
+            ? decimal(
+                t.nativeDestinationAmount ?? t.destinationAmount ?? t.amount,
+              )
+            : "",
+          t.exchangeRate ?? "1",
         ]
           .map(csvCell)
           .join(","),
