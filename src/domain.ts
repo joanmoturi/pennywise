@@ -15,6 +15,30 @@ export const dateSchema = z
 const id = z.string().min(1).max(100);
 const text = z.string().max(2000);
 const name = z.string().trim().min(1).max(160);
+export const currencies = [
+  "KES",
+  "USD",
+  "EUR",
+  "GBP",
+  "TZS",
+  "ZAR",
+  "CAD",
+  "AUD",
+  "CHF",
+  "CNY",
+  "NGN",
+  "AED",
+  "INR",
+] as const;
+export const currencySchema = z.enum(currencies);
+const exchangeRateSchema = z
+  .string()
+  .regex(/^\d+(\.\d{1,12})?$/)
+  .max(40)
+  .refine(
+    (rate) => Number(rate) > 0 && Number.isFinite(Number(rate)),
+    "Exchange rate must be positive",
+  );
 export const transactionTypes = [
   "income",
   "expense",
@@ -62,6 +86,10 @@ export const accountSchema = z
     restricted: nonnegative,
     notes: text,
     businessId: id.optional(),
+    currency: currencySchema.optional(),
+    nativeOpening: moneySchema.optional(),
+    nativeRestricted: nonnegative.optional(),
+    openingRate: exchangeRateSchema.optional(),
   })
   .strict();
 export const transactionSchema = z
@@ -93,6 +121,11 @@ export const transactionSchema = z
       .optional(),
     allowanceId: id.optional(),
     partnerName: name.optional(),
+    nativeAmount: moneySchema.optional(),
+    nativeDestinationAmount: moneySchema.optional(),
+    destinationAmount: moneySchema.optional(),
+    exchangeRate: exchangeRateSchema.optional(),
+    destinationRate: exchangeRateSchema.optional(),
     notification: z
       .object({
         inboxId: id,
@@ -123,6 +156,7 @@ export const mmfProjectionSchema = z
     version: z.literal(1),
     filename: name,
     importedAt: z.string().datetime(),
+    currency: currencySchema.optional(),
     rows: z
       .array(
         z
@@ -180,6 +214,8 @@ export const incomeSchema = z
     notes: text,
     businessId: id.optional(),
     sourceAccountId: id.optional(),
+    currency: currencySchema.optional(),
+    nativeAmount: nonnegative.optional(),
     mmfStudio: mmfProjectionSchema.optional(),
   })
   .strict();
@@ -225,6 +261,8 @@ export const eventSchema = z
     kind: z.enum(["income", "bond", "receivable"]),
     due: dateSchema,
     amount: nonnegative,
+    currency: currencySchema.optional(),
+    nativeAmount: nonnegative.optional(),
     status: z.enum(["expected", "delayed", "cancelled"]),
     reliability: z.enum(["confirmed", "reliable", "uncertain"]),
     notes: text,
@@ -501,7 +539,26 @@ export const stateSchema = z
     revision: z.number().int().nonnegative(),
     settings: z
       .object({
-        currency: z.enum(["KES", "USD", "EUR", "GBP"]),
+        currency: currencySchema,
+        exchange: z
+          .object({
+            automatic: z.boolean(),
+            lastAttemptAt: z.string().datetime().optional(),
+            quotes: z
+              .array(
+                z
+                  .object({
+                    currency: currencySchema,
+                    rate: exchangeRateSchema,
+                    asOf: dateSchema,
+                    source: z.enum(["automatic", "manual"]),
+                  })
+                  .strict(),
+              )
+              .max(100),
+          })
+          .strict()
+          .optional(),
         theme: z.enum(["light", "dark"]),
         setup: z.boolean(),
         demo: z.boolean(),

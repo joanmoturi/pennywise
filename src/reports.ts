@@ -2,6 +2,7 @@ import type { State } from "./domain";
 import { sum } from "./money";
 import { accountBalances, outstanding, reserveBalance } from "./engine";
 import { personalIncome, personalExpense } from "./connected-finance";
+import { incomeValue } from "./currency";
 
 export function reports(s: State, start: string, end: string) {
   const txs = s.transactions.filter(
@@ -19,7 +20,10 @@ export function reports(s: State, start: string, end: string) {
       type === "income" ? personalIncome(s, t) : t.type === type,
     )) {
       const key = t[field] || "Unlinked";
-      map.set(key, sum([map.get(key) ?? 0, t.amount]));
+      map.set(
+        key,
+        sum([map.get(key) ?? 0, type === "income" ? incomeValue(t) : t.amount]),
+      );
     }
     return [...map]
       .map(([name, amount]) => ({
@@ -35,13 +39,13 @@ export function reports(s: State, start: string, end: string) {
   const monthly = [...new Set(txs.map((t) => t.date.slice(0, 7)))]
     .sort()
     .map((month) => {
-      const balances = accountBalances(s, `${month}-31`);
+      const balances = accountBalances(s, `${month}-31`, true);
       return {
         month,
         income: sum(
           txs
             .filter((t) => t.date.startsWith(month) && personalIncome(s, t))
-            .map((t) => t.amount),
+            .map(incomeValue),
         ),
         expense: sum(
           txs
@@ -60,7 +64,7 @@ export function reports(s: State, start: string, end: string) {
     spending: groups("expense", "category"),
     incomeSources: groups("income", "relatedId"),
     monthly,
-    income: sum(txs.filter((t) => personalIncome(s, t)).map((t) => t.amount)),
+    income: sum(txs.filter((t) => personalIncome(s, t)).map(incomeValue)),
     expense: sum(txs.filter((t) => personalExpense(s, t)).map((t) => t.amount)),
     recoveries: sum(
       txs.filter((t) => t.type === "loan_recovery").map((t) => t.amount),

@@ -7,6 +7,7 @@ import {
 } from "./domain";
 import { parseCsv } from "./import";
 import { safe } from "./money";
+import { accountCurrency, toBase } from "./currency";
 
 export type MmfProjection = NonNullable<Income["mmfStudio"]>;
 const sourceId = "mmf-studio-income";
@@ -108,6 +109,15 @@ export function importMmf(
       "Choose a personal cash, bank, mobile-money or savings account for actual payouts",
     );
   const existing = s.incomes.find((income) => income.id === sourceId);
+  const currency = accountCurrency(s, accountId);
+  if (
+    existing &&
+    (existing.mmfStudio?.currency ?? s.settings.currency) !== currency &&
+    s.transactions.some((t) => t.relatedId === sourceId)
+  )
+    throw new Error(
+      "MMF receipts already exist in a different currency. Keep this portfolio's original currency.",
+    );
   if (existing && !existing.mmfStudio)
     throw new Error("The MMF income identifier is already in use");
   for (const event of s.events)
@@ -116,7 +126,7 @@ export function importMmf(
       event.due >= asOf &&
       s.transactions.some((transaction) => transaction.eventId === event.id) &&
       projection.rows.find((row) => row.date === event.due)?.payout !==
-        event.amount
+        (event.nativeAmount ?? event.amount)
     )
       throw new Error(
         "An MMF payment already has actual receipts. Keep that month's payout unchanged and review corrections separately.",
@@ -127,16 +137,22 @@ export function importMmf(
     type: "Investment distribution",
     description:
       "Imported monthly projection snapshot. Only configured interest payouts enter the cash forecast; reinvested interest stays in the fund.",
-    amount:
+    amount: toBase(
+      s,
       projection.rows.find((row) => row.date >= asOf && row.payout > 0)
         ?.payout ?? 0,
+      currency,
+    ),
     frequency: "irregular",
     reliability: "reliable",
     taxBps: 0,
     accountId,
     active: existing?.active ?? false,
     notes: existing?.notes ?? "",
-    mmfStudio: projection,
+    mmfStudio: {
+      ...projection,
+      currency: currency as State["settings"]["currency"],
+    },
   };
   const hasReceipt = (id: string) =>
     s.transactions.some((transaction) => transaction.eventId === id);
@@ -158,7 +174,9 @@ export function importMmf(
       sourceId,
       kind: "income" as const,
       due: row.date,
-      amount: row.payout,
+      amount: toBase(s, row.payout, currency),
+      nativeAmount: row.payout,
+      currency: currency as State["settings"]["currency"],
       status: "expected" as const,
       reliability: "reliable" as const,
       notes: "MMF Studio projected interest payout, not a confirmed receipt.",

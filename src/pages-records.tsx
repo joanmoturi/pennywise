@@ -50,12 +50,19 @@ import { BudgetActivity, allocationDialog } from "./connected-ui";
 import { summary } from "./engine";
 import { MmfWorkspace } from "./mmf-ui";
 import { mmfEventEnabled } from "./mmf";
+import { CurrencyWorkspace } from "./currency-ui";
+import {
+  accountCurrency,
+  nativeBalances,
+  nativeEventRemaining,
+} from "./currency";
 
 export function AccountsPage() {
   const app = useApp();
   const { state: s } = app;
   const fmt = (n: number) => formatMoney(n, s.settings.currency);
   const balances = useMemo(() => accountBalances(s), [s]);
+  const originals = useMemo(() => nativeBalances(s), [s]);
   const position = summary(s);
   return (
     <>
@@ -107,13 +114,25 @@ export function AccountsPage() {
                   ? `Business: ${s.businesses.find((b) => b.id === a.businessId)?.name}`
                   : "Personal / legacy account"}
               </Badge>
-              <div className="big-number">{fmt(balances.get(a.id)!)}</div>
-              <p>Restricted: {fmt(a.restricted)}</p>
+              <div className="big-number">
+                {formatMoney(originals.get(a.id)!, accountCurrency(s, a.id))}
+              </div>
+              {accountCurrency(s, a.id) !== s.settings.currency && (
+                <small>Estimated base value: {fmt(balances.get(a.id)!)}</small>
+              )}
+              <p>
+                Restricted:{" "}
+                {formatMoney(
+                  a.nativeRestricted ?? a.restricted,
+                  accountCurrency(s, a.id),
+                )}
+              </p>
               <small>{a.notes}</small>
             </Card>
           ))}
         </div>
       )}
+      <CurrencyWorkspace />
       <p className="notice">
         Avoid counting a bond holding in both an investment account and the
         Bonds module. Record only non-bond assets in investment account
@@ -298,7 +317,30 @@ export function TransactionsPage() {
                 <td>
                   <Badge>{t.type.replaceAll("_", " ")}</Badge>
                 </td>
-                <td className="amount">{fmt(t.amount)}</td>
+                <td className="amount">
+                  {formatMoney(
+                    t.type === "reserve_transfer"
+                      ? t.amount
+                      : (t.nativeAmount ?? t.amount),
+                    t.type === "reserve_transfer"
+                      ? s.settings.currency
+                      : accountCurrency(s, t.accountId),
+                  )}
+                  {t.nativeDestinationAmount !== undefined &&
+                    t.destinationId && (
+                      <small>
+                        Received:{" "}
+                        {formatMoney(
+                          t.nativeDestinationAmount,
+                          accountCurrency(s, t.destinationId),
+                        )}
+                      </small>
+                    )}
+                  {t.type !== "reserve_transfer" &&
+                    accountCurrency(s, t.accountId) !== s.settings.currency && (
+                      <small>Saved base value: {fmt(t.amount)}</small>
+                    )}
+                </td>
                 <td>
                   <div className="actions">
                     <Actions
@@ -444,8 +486,15 @@ export function PaymentCalendar({
                 </small>
               </td>
               <td>
-                {fmt(e.amount)}
-                <small>Remaining: {fmt(eventRemaining(s, e))}</small>
+                {e.currency
+                  ? formatMoney(e.nativeAmount ?? e.amount, e.currency)
+                  : fmt(e.amount)}
+                <small>
+                  Remaining:{" "}
+                  {e.currency && e.currency !== s.settings.currency
+                    ? `${formatMoney(nativeEventRemaining(s, e), e.currency)} / ${fmt(eventRemaining(s, e))} estimated`
+                    : fmt(eventRemaining(s, e))}
+                </small>
               </td>
               <td>
                 <Badge warning={eventStatus(s, e) === "delayed"}>
@@ -529,7 +578,14 @@ export function IncomePage() {
                   />
                 </div>
                 <h3>{i.name}</h3>
-                <div className="big-number">{fmt(i.amount)}</div>
+                <div className="big-number">
+                  {i.currency
+                    ? formatMoney(i.nativeAmount ?? i.amount, i.currency)
+                    : fmt(i.amount)}
+                </div>
+                {i.currency && i.currency !== s.settings.currency && (
+                  <small>Saved base amount: {fmt(i.amount)}</small>
+                )}
                 <p>
                   {i.type} / {i.frequency}
                 </p>

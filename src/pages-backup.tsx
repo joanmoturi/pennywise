@@ -233,6 +233,13 @@ export function BackupCentre() {
             build. Older builds cannot restore these projections.
           </p>
         )}
+        {(s.settings.exchange || s.accounts.some((a) => a.currency)) && (
+          <p className="notice warning">
+            Currency-aware backups require this multi-currency build or newer.
+            Older builds cannot restore exchange metadata. Keep your
+            previous-version backup for rollback.
+          </p>
+        )}
         <p className="notice warning">
           Export a full backup before switching versions. Each version keeps a
           separate history.

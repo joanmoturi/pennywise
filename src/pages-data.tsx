@@ -3,6 +3,7 @@ import { Download, Upload, ShieldCheck, Database } from "lucide-react";
 import { useApp } from "./context";
 import {
   today,
+  currencies,
   initialState,
   transactionTypes,
   type State,
@@ -10,7 +11,7 @@ import {
 } from "./domain";
 import { formatMoney, sum } from "./money";
 import { reports } from "./reports";
-import { summary, accountBalance } from "./engine";
+import { summary } from "./engine";
 import { editRecord } from "./forms";
 import { download } from "./storage";
 import { decodeBackup, encryptBackup, fullBackup } from "./backup";
@@ -25,6 +26,7 @@ import {
   type ImportRow,
 } from "./import";
 import { AccountsPage } from "./pages-records";
+import { accountCurrency, nativeBalances } from "./currency";
 import {
   PageHead,
   Card,
@@ -137,7 +139,7 @@ export function ReportsPage() {
           format={fmt}
         />
         <LineChart
-          title="Actual month-end liquid cash"
+          title="Recorded month-end liquid cash"
           lines={[
             {
               name: "Liquid cash",
@@ -255,7 +257,7 @@ export function StatementImport() {
   const projected =
     account && s.accounts.some((a) => a.id === account)
       ? sum([
-          accountBalance(s, account),
+          nativeBalances(s).get(account)!,
           ...selected.map((r) =>
             r.transaction!.type === "expense" ||
             [
@@ -407,11 +409,17 @@ export function StatementImport() {
                 </td>
                 <td>
                   {r.transaction &&
-                    formatMoney(r.transaction.amount, s.settings.currency)}
+                    formatMoney(
+                      r.transaction.amount,
+                      accountCurrency(s, r.transaction.accountId),
+                    )}
                   {r.balance !== undefined && (
                     <small>
                       Statement balance:{" "}
-                      {formatMoney(r.balance, s.settings.currency)}
+                      {formatMoney(
+                        r.balance,
+                        accountCurrency(s, r.transaction?.accountId ?? account),
+                      )}
                     </small>
                   )}
                 </td>
@@ -522,7 +530,10 @@ export function StatementImport() {
           <p>
             Selected: {selected.length}. Projected statement-account balance
             after selected entries:{" "}
-            <strong>{formatMoney(projected, s.settings.currency)}</strong>.
+            <strong>
+              {formatMoney(projected, accountCurrency(s, account))}
+            </strong>
+            .
           </p>
           <p className="notice">
             Compare this balance with the bank statement, including opening
@@ -696,13 +707,13 @@ export function SettingsPage() {
                     s.bonds.length
                   )
                     throw new Error(
-                      "Currency cannot change after financial records exist; no exchange conversion is implemented",
+                      "The base currency cannot be relabeled after financial records exist. Set currencies on separate accounts and use Exchange currency under Accounts.",
                     );
                   s.settings.currency = currency;
                 });
               }}
             >
-              {["KES", "USD", "EUR", "GBP"].map((c) => (
+              {currencies.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>
@@ -740,8 +751,11 @@ export function SettingsPage() {
             />
           </label>
           <HelpNote label="Currency, locale & timezone">
-            Locale en-KE / timezone Africa/Nairobi. All accounts use one
-            configured currency; no implicit currency conversion.
+            Locale en-KE / timezone Africa/Nairobi. This is the fixed base
+            currency for budgets, commitments and historical reports. Each
+            account can hold a different currency. Manage quotes and actual
+            exchanges under Accounts; changing quotes never rewrites saved
+            transactions.
           </HelpNote>
         </Card>
         <Card>

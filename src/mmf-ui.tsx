@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useApp } from "./context";
 import { today } from "./domain";
 import { sum, formatMoney } from "./money";
-import { eventRemaining } from "./engine";
 import { inspectMmfCsv, importMmf, mmfIncome, type MmfProjection } from "./mmf";
 import { Card, Metric, Button, InfoHelp, Table, errorMessage } from "./ui";
+import { nativeEventRemaining } from "./currency";
 
 export function MmfWorkspace({ forecastEnd }: { forecastEnd?: string }) {
   const app = useApp();
@@ -16,7 +16,10 @@ export function MmfWorkspace({ forecastEnd }: { forecastEnd?: string }) {
   const [currencyConfirmed, setCurrencyConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const fmt = (amount: number) => formatMoney(amount, s.settings.currency);
+  const importCurrency =
+    s.accounts.find((a) => a.id === accountId)?.currency ?? s.settings.currency;
+  const currency = income?.mmfStudio?.currency ?? s.settings.currency;
+  const fmt = (amount: number) => formatMoney(amount, currency);
   const rows = (income?.mmfStudio?.rows ?? []).filter(
     (row) => row.date >= today() && (!forecastEnd || row.date <= forecastEnd),
   );
@@ -118,7 +121,7 @@ export function MmfWorkspace({ forecastEnd }: { forecastEnd?: string }) {
                   .filter(
                     (t) => t.relatedId === income.id && t.type === "income",
                   )
-                  .map((t) => t.amount),
+                  .map((t) => t.nativeAmount ?? t.amount),
               ),
             )}
           </small>
@@ -142,7 +145,7 @@ export function MmfWorkspace({ forecastEnd }: { forecastEnd?: string }) {
                             e.due >= today() &&
                             (!forecastEnd || e.due <= forecastEnd),
                         )
-                        .map((e) => eventRemaining(s, e)),
+                        .map((e) => nativeEventRemaining(s, e)),
                     ),
                   )}
                   hint="Only unpaid configured payouts enter the cash forecast; receipts are recorded separately."
@@ -230,7 +233,10 @@ export function MmfWorkspace({ forecastEnd }: { forecastEnd?: string }) {
                   aria-label="MMF receiving account"
                   value={accountId}
                   disabled={busy}
-                  onChange={(event) => setAccountId(event.target.value)}
+                  onChange={(event) => {
+                    setAccountId(event.target.value);
+                    setCurrencyConfirmed(false);
+                  }}
                 >
                   <option value="">Choose an account</option>
                   {s.accounts
@@ -254,7 +260,7 @@ export function MmfWorkspace({ forecastEnd }: { forecastEnd?: string }) {
                     setCurrencyConfirmed(event.target.checked)
                   }
                 />
-                I confirm these MMF amounts are in {s.settings.currency}
+                I confirm these MMF amounts are in {importCurrency}
               </label>
               <Button
                 disabled={busy || !accountId || !currencyConfirmed}
