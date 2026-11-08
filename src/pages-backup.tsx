@@ -227,6 +227,12 @@ export function BackupCentre() {
         <p className="notice warning">
           Schema-5 backups require this version or newer.
         </p>
+        {s.incomes.some((income) => income.mmfStudio) && (
+          <p className="notice warning">
+            Backups containing MMF projections require an MMF-enabled Pennywise
+            build. Older builds cannot restore these projections.
+          </p>
+        )}
         <p className="notice warning">
           Export a full backup before switching versions. Each version keeps a
           separate history.

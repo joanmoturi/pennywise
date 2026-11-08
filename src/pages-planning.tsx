@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowRight, ArrowUp, ArrowDown } from "lucide-react";
 import { useApp } from "./context";
-import { today, scenarioSchema, type Scenario } from "./domain";
+import { today, addDays, scenarioSchema, type Scenario } from "./domain";
 import { formatMoney, sum } from "./money";
 import {
   summary,
@@ -50,6 +50,8 @@ import {
 import { timing } from "./performance";
 import { AllowanceWorkspace } from "./pages-connected";
 import { businessStats, businessForAccount } from "./connected-finance";
+import { MmfWorkspace } from "./mmf-ui";
+import { mmfEventEnabled } from "./mmf";
 
 export function OverviewPage() {
   const endCalculation = timing("overview-calculation");
@@ -64,6 +66,7 @@ export function OverviewPage() {
     .filter(
       (e) =>
         !businessForAccount(s, sourceAccount(s, e)) &&
+        mmfEventEnabled(s, e.sourceId) &&
         e.due >= today() &&
         e.status === "expected" &&
         eventRemaining(s, e) > 0,
@@ -76,6 +79,7 @@ export function OverviewPage() {
       .filter(
         (e) =>
           !businessForAccount(s, sourceAccount(s, e)) &&
+          mmfEventEnabled(s, e.sourceId) &&
           e.due >= today() &&
           e.status !== "cancelled",
       )
@@ -515,6 +519,7 @@ export function ForecastPage() {
         subtitle="Live cash, explicit commitments and scenario-only assumptions remain separate."
         action={<Button onClick={configure}>Adjust assumptions</Button>}
       />
+      <MmfWorkspace forecastEnd={addDays(today(), assumptions.days)} />
       <AllowanceWorkspace />
       <div className="toolbar">
         <label>

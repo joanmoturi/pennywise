@@ -48,6 +48,8 @@ import { download } from "./storage";
 import { effectiveAllocations } from "./expense-engine";
 import { BudgetActivity, allocationDialog } from "./connected-ui";
 import { summary } from "./engine";
+import { MmfWorkspace } from "./mmf-ui";
+import { mmfEventEnabled } from "./mmf";
 
 export function AccountsPage() {
   const app = useApp();
@@ -365,7 +367,8 @@ export function PaymentCalendar({
     .filter(
       (e) =>
         (!sourceId || e.sourceId === sourceId) &&
-        (!kinds || kinds.includes(e.kind)),
+        (!kinds || kinds.includes(e.kind)) &&
+        mmfEventEnabled(s, e.sourceId),
     )
     .sort((a, b) => a.due.localeCompare(b.due));
   function edit(e: PaymentEvent) {
@@ -501,52 +504,55 @@ export function IncomePage() {
           Business revenue & distributions
         </button>
       </div>
-      {s.incomes.length > 0 && (
+      <MmfWorkspace />
+      {s.incomes.some((income) => !income.mmfStudio) && (
         <div className="grid cards">
-          {s.incomes.map((i) => (
-            <Card key={i.id}>
-              <Badge>
-                {i.businessId
-                  ? "Projected business distribution"
-                  : s.accounts.find((a) => a.id === i.accountId)?.businessId
-                    ? "Business revenue, not personal income"
-                    : "Personal / legacy income source"}
-              </Badge>
-              <div className="card-head">
-                <Badge warning={i.reliability === "uncertain"}>
-                  {i.active ? i.reliability : "inactive"}
+          {s.incomes
+            .filter((income) => !income.mmfStudio)
+            .map((i) => (
+              <Card key={i.id}>
+                <Badge>
+                  {i.businessId
+                    ? "Projected business distribution"
+                    : s.accounts.find((a) => a.id === i.accountId)?.businessId
+                      ? "Business revenue, not personal income"
+                      : "Personal / legacy income source"}
                 </Badge>
-                <Actions
-                  label={i.name}
-                  edit={() => editRecord(app, "incomes", i)}
-                  remove={() => deleteRecord(app, "incomes", i)}
-                />
-              </div>
-              <h3>{i.name}</h3>
-              <div className="big-number">{fmt(i.amount)}</div>
-              <p>
-                {i.type} / {i.frequency}
-              </p>
-              <small>
-                Actual received:{" "}
-                {fmt(
-                  sum(
-                    s.transactions
-                      .filter(
-                        (t) => t.relatedId === i.id && t.type === "income",
-                      )
-                      .map((t) => t.amount),
-                  ),
-                )}
-              </small>
-              <Button
-                secondary
-                onClick={() => addSchedule(app, "income", i.id)}
-              >
-                Add payment dates
-              </Button>
-            </Card>
-          ))}
+                <div className="card-head">
+                  <Badge warning={i.reliability === "uncertain"}>
+                    {i.active ? i.reliability : "inactive"}
+                  </Badge>
+                  <Actions
+                    label={i.name}
+                    edit={() => editRecord(app, "incomes", i)}
+                    remove={() => deleteRecord(app, "incomes", i)}
+                  />
+                </div>
+                <h3>{i.name}</h3>
+                <div className="big-number">{fmt(i.amount)}</div>
+                <p>
+                  {i.type} / {i.frequency}
+                </p>
+                <small>
+                  Actual received:{" "}
+                  {fmt(
+                    sum(
+                      s.transactions
+                        .filter(
+                          (t) => t.relatedId === i.id && t.type === "income",
+                        )
+                        .map((t) => t.amount),
+                    ),
+                  )}
+                </small>
+                <Button
+                  secondary
+                  onClick={() => addSchedule(app, "income", i.id)}
+                >
+                  Add payment dates
+                </Button>
+              </Card>
+            ))}
         </div>
       )}
       {s.bonds.length > 0 && (

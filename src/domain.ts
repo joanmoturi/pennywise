@@ -118,6 +118,53 @@ export const transactionSchema = z
       .optional(),
   })
   .strict();
+export const mmfProjectionSchema = z
+  .object({
+    version: z.literal(1),
+    filename: name,
+    importedAt: z.string().datetime(),
+    rows: z
+      .array(
+        z
+          .object({
+            date: dateSchema.refine(
+              (date) =>
+                !Number.isNaN(Date.parse(date)) &&
+                new Date(Date.parse(date) + 86400000)
+                  .toISOString()
+                  .slice(8, 10) === "01",
+              "MMF projections use month-end dates",
+            ),
+            interest: nonnegative,
+            credited: nonnegative,
+            reinvested: nonnegative,
+            payout: nonnegative,
+            fees: nonnegative,
+            assets: nonnegative,
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(600),
+  })
+  .strict()
+  .superRefine((projection, context) => {
+    if (
+      new Set(projection.rows.map((row) => row.date)).size !==
+      projection.rows.length
+    )
+      context.addIssue({
+        code: "custom",
+        message: "MMF projection months must be unique",
+      });
+    for (const row of projection.rows)
+      if (Math.abs(row.credited - row.reinvested - row.payout) > 1)
+        context.addIssue({
+          code: "custom",
+          message:
+            "MMF credited interest must reconcile with payouts and reinvestment",
+        });
+  });
 export const incomeSchema = z
   .object({
     id,
@@ -133,6 +180,7 @@ export const incomeSchema = z
     notes: text,
     businessId: id.optional(),
     sourceAccountId: id.optional(),
+    mmfStudio: mmfProjectionSchema.optional(),
   })
   .strict();
 export const liabilitySchema = z
