@@ -14,6 +14,7 @@ import { bondReferenceSchema } from "../src/bond-reference-schema";
 import { coupon, validateState } from "../src/engine";
 import { fixture } from "./fixtures";
 import type { Bond } from "../src/domain";
+import { onRequestGet } from "../functions/api/bond-reference";
 
 const reference = reviewedBondCatalogue[1];
 const listing = (rows: string[]) =>
@@ -38,6 +39,30 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("conservative official bond lookup", () => {
+  it("reports hosted upstream refusal safely without exposing provider bodies", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response("Private upstream diagnostics", { status: 403 }),
+        ),
+    );
+    const response = await onRequestGet();
+    expect(response.status).toBe(503);
+    expect(response.headers.get("X-Pennywise-CBK-Status")).toBe("403");
+    expect(await response.text()).not.toContain("Private upstream diagnostics");
+  });
+  it("keeps a failed hosted upstream request noncacheable and usable by the dated fallback", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("Internal network detail")),
+    );
+    const response = await onRequestGet();
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.text()).not.toContain("Internal network detail");
+  });
   it.each([
     "IFB1/2021/018",
     "ifb1/2021/018",
@@ -79,7 +104,7 @@ describe("conservative official bond lookup", () => {
   it("uses reviewed offline fallback without claiming fresh verification", async () => {
     const result = await lookupBond(reference.issueNumber);
     expect(result.matches[0].verifiedAt).toBe(reference.verifiedAt);
-    expect(result.source).toBe("reviewed-catalogue");
+    expect(result.source).toBe("bundled-official-records");
     expect(result.warning).toMatch(/not a fresh verification/);
   });
   it("parses coupon rather than redemption yield, preserving exact rate and dates", () => {
@@ -173,7 +198,7 @@ describe("conservative official bond lookup", () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
     expect((await lookupBond(reference.isin, true)).source).toBe(
-      "reviewed-catalogue",
+      "bundled-official-records",
     );
     expect((await lookupBond("IFB9/2099/999", true)).matches).toEqual([]);
   });

@@ -6,15 +6,15 @@ tests. No personal backup or financial record was committed or uploaded.
 
 ## Actual final results
 
-| Command/check                  | Result                                                  |
-| ------------------------------ | ------------------------------------------------------- |
-| `npm test`                     | 261 tests passed in 14 files                            |
-| `npx playwright test`          | 44 passed, desktop Chrome and Pixel 7 emulation         |
-| `npm run lint`                 | Passed                                                  |
-| `npm run format:check`         | Passed                                                  |
-| `npm run build`                | Passed, including TypeScript and offline PWA generation |
-| Pages Function ESLint/Prettier | Passed separately                                       |
-| `git diff --check`             | Passed                                                  |
+| Command/check                  | Result                                                        |
+| ------------------------------ | ------------------------------------------------------------- |
+| `npm test`                     | 263 tests passed in 14 files after the hosted-source fallback |
+| `npx playwright test`          | 44 passed, desktop Chrome and Pixel 7 emulation               |
+| `npm run lint`                 | Passed                                                        |
+| `npm run format:check`         | Passed                                                        |
+| `npm run build`                | Passed, including TypeScript and offline PWA generation       |
+| Pages Function ESLint/Prettier | Passed separately                                             |
+| `git diff --check`             | Passed                                                        |
 
 Build warnings: existing dependency pure-comment annotations, a main JS chunk
 above 500 kB, and shared modules imported both statically/dynamically. No build
@@ -67,5 +67,6 @@ New cloud documents: architecture audit/architecture, authentication, Drive
 setup, encryption/recovery, automatic behaviour, restore/migration, security,
 cost, release readiness and this report.
 
-No commit, push or deployment was performed. Google setup remains a release
-blocker rather than an invented successful acceptance result.
+Initial checks were local-only. Subsequent publication was explicitly authorized;
+see DEPLOYMENT_REPORT.md for hosted evidence. Google setup remains a blocker for
+enabling Drive, not an invented successful acceptance result.

@@ -42,3 +42,27 @@ Detailed catalogue calendars retain their actual review date even after a new
 listing fetch. The feature never labels a derived six-month date as official.
 Prices, effective returns, auction/redemption yields and personal acquisition
 terms are not substituted for the coupon rate.
+
+## Hosted-source availability fallback
+
+The first hosted deployment returned HTTP 503 for live CBK retrieval although
+the same official page remained accessible through the local adapter. Hosting
+success is not evidence that CBK accepts requests from its network.
+
+`src/bond-listing-snapshot.json` was generated from the actual official HTML at
+`2026-11-10T22:07:30.713Z`. The existing conservative parser admitted 50
+unambiguous issue records and quarantined 161 conflicting rows. These are public
+reference data, not user financial records. The three prospectus-reviewed
+entries retain their earlier detailed-term verification timestamps.
+
+If live retrieval is unavailable and no local cache exists, the application
+loads this versioned snapshot as a same-origin, precached application chunk,
+validates it, blocks conflicting identifiers and explicitly displays its
+retrieval date and lack of fresh verification. It never labels this route as
+live CBK success. Refreshing this bundled snapshot requires checking the official
+source again and publishing an updated build; no unattended freshness guarantee
+is made. The smaller reviewed catalogue remains a final fallback if the snapshot
+cannot load.
+
+The public proxy exposes only a coarse source HTTP status or timeout/network
+category on failure. It does not expose upstream bodies, credentials or logs.

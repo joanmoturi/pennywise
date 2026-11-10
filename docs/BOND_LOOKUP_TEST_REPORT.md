@@ -5,8 +5,10 @@ official-source checks. Test fixtures never claim synthetic issues are real.
 
 ## Actual final results
 
-- Full unit suite: 261 passed in 14 files, including 29 bond-specific cases.
+- Full unit suite after hosted fallback: 263 passed in 14 files, including 31 bond-specific cases.
 - Full browser suite: 44 passed on desktop Chrome and Pixel 7 emulation.
+- Hosted-source fallback follow-up: 6 affected desktop/mobile browser cases passed
+  for draft population, optional Google setup and installed-shell offline behavior.
 - TypeScript/production PWA build, ESLint, formatting and diff checks passed.
 - Original six-bond workflow, linked coupon income/partial receipts,
   principal separation, manual schedules, encrypted backup/restore and offline
@@ -57,7 +59,7 @@ Physical-device/investor custody conditions have not been independently verified
 ## Files changed for bonds
 
 New: `src/bond-reference-schema.ts`, `src/bond-catalogue.ts`,
-`src/bond-lookup.ts`, `src/bond-lookup-ui.tsx`,
+`src/bond-lookup.ts`, `src/bond-lookup-ui.tsx`, `src/bond-listing-snapshot.json`,
 `functions/api/bond-reference.ts`, `tests/bond-lookup.test.tsx`,
 `e2e/enhancements.spec.ts`.
 
@@ -67,5 +69,7 @@ Integrated: `src/domain.ts`, `src/engine.ts`, `src/context.tsx`,
 New bond documents: audit, architecture, data sources, matching/verification
 and this report.
 
-Nothing was pushed or deployed. Automated tests used isolated synthetic
-workspaces; no personal financial records were rewritten or deleted.
+The initial implementation was local-only. Subsequent publication was explicitly
+authorized; see DEPLOYMENT_REPORT.md for hosted evidence and limitations.
+Automated tests used isolated synthetic workspaces; no personal financial records
+were rewritten or deleted.

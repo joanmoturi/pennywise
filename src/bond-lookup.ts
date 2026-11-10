@@ -5,6 +5,7 @@ import {
   type BondReference,
 } from "./bond-reference-schema";
 import type { Bond } from "./domain";
+import { z } from "zod";
 
 export function normaliseBondIdentifier(value: string): string {
   return value
@@ -16,7 +17,7 @@ export function normaliseBondIdentifier(value: string): string {
 export interface BondSearchResult {
   matches: BondReference[];
   suggestions: BondReference[];
-  source: "live" | "cache" | "reviewed-catalogue";
+  source: "live" | "cache" | "reviewed-catalogue" | "bundled-official-records";
   warning?: string;
 }
 function cbkDate(raw: string): string | undefined {
@@ -248,6 +249,40 @@ export async function lookupBond(
   }
   const records = cached.length ? cached : reviewedBondCatalogue;
   assertUnconflicted(conflictCache.success ? conflictCache.data : []);
+  if (!cached.length) {
+    let snapshot:
+      | {
+          retrievedAt: string;
+          records: BondReference[];
+          conflicts: BondReference[];
+        }
+      | undefined;
+    try {
+      const { default: data } = await import("./bond-listing-snapshot.json");
+      snapshot = z
+        .object({
+          format: z.literal("pennywise-cbk-reference-v1"),
+          sourceUrl: z.literal(CBK_LISTING),
+          retrievedAt: z.string().datetime(),
+          records: z.array(bondReferenceSchema).max(10000),
+          conflicts: z.array(bondReferenceSchema).max(10000),
+        })
+        .strict()
+        .parse(data);
+    } catch {
+      // The smaller reviewed catalogue remains available if a snapshot cannot load.
+    }
+    if (snapshot) {
+      assertUnconflicted(snapshot.conflicts);
+      await auxiliaryUpdate("bond-references", () => snapshot!.records);
+      await auxiliaryUpdate("bond-conflicts", () => snapshot!.conflicts);
+      return {
+        ...matchBonds(query, snapshot.records),
+        source: "bundled-official-records",
+        warning: `Live CBK lookup unavailable or offline. Using the official listing snapshot retrieved ${snapshot.retrievedAt}, not a fresh verification. Conflicting rows were excluded. Detailed prospectus terms retain their separate review date.`,
+      };
+    }
+  }
   return {
     ...matchBonds(query, records),
     source: cached.length ? "cache" : "reviewed-catalogue",

@@ -17,7 +17,7 @@ Console. No numerical free-tier quota/cost guarantee is made.
 
 The CBK same-origin adapter is only for public reference retrieval. Local
 development runs it inside Vite, costing no hosted service. A Pages Function is
-provided but NOT deployed; if later approved it consumes the owner's Cloudflare
+provided for the existing Pages project; when published it consumes the owner's Cloudflare
 request/CPU allowance. Evaluate the account's current plan before deployment:
 no paid tier is selected, and ordinary financial/manual operation never needs it.
 

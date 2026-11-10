@@ -15,7 +15,7 @@ conflicting source rows, matches conservatively and caches public references.
 
 The browser requests the fixed same-origin `/api/bond-reference` route without
 sending its selected identifier or any holding data. Vite supplies it locally.
-The optional undeployed Pages Function fetches only the fixed official public
+The optional Pages Function fetches only the fixed official public
 listing, omits credentials, rejects redirects, bounds response size and returns
 inert text. It cannot proxy arbitrary user URLs and stores no financial records.
 
