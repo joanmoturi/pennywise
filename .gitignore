@@ -4,6 +4,7 @@ test-results/
 playwright-report/
 .env
 .env.*
+!.env.example
 Pennywise-Full-Backup-*.json
 Pennywise-SAFETY-*.json
 Pennywise-*.csv

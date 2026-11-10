@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 import type { State } from "./domain";
 import type { Repository } from "./storage";
+import type { ReactNode } from "react";
 
 export interface Field {
   key: string;
@@ -27,6 +28,10 @@ export interface DialogSpec {
   submit: (values: Record<string, unknown>) => Promise<void>;
   submitLabel?: string;
   context?: (values: Record<string, unknown>) => string;
+  draftPanel?: (
+    values: Record<string, unknown>,
+    populate: (values: Record<string, unknown>) => void,
+  ) => ReactNode;
 }
 export interface AppContext {
   state: State;

@@ -56,6 +56,25 @@ Open the printed localhost URL once online and wait for the **Offline ready** no
 
 ## First-time setup with real records
 
+### Optional encrypted backup and official bond lookup
+
+**Backup Centre > Account and Backup** adds Google-only sign-in and separately
+authorized, client-encrypted Drive snapshots. External OAuth setup is required;
+see `docs/GOOGLE_DRIVE_SETUP.md`. No credentials are supplied or committed.
+Automatic backups run only while the app can execute, with unlocked encryption
+and valid Drive permission. This is not live multi-device synchronization.
+Existing local/manual backup workflows require neither sign-in nor configuration.
+
+**Bonds > Add/Edit > Find Bond Details** optionally retrieves public CBK issue
+terms. Review and explicitly select **Use These Details**, then save separately.
+Personal principal, cash, account, notes and receipt history are not supplied by
+lookup. Live listing access uses a Vite adapter locally and a stateless Pages
+Function when hosted. Neither receives personal holding data. A small reviewed prospectus
+catalogue and cached references remain available offline. See
+`docs/BOND_DATA_SOURCES.md` for coverage, dates and excluded conflicting rows.
+
+### Recording your workspace
+
 1. Do not load demonstration data into a personal database. If exploring a demo, remove it in Settings first.
 2. Choose currency before entering financial records. The default is KES; all accounts share one currency. Locale is en-KE and dates use Africa/Nairobi.
 3. In Settings, add bank, mobile-money, cash and savings accounts with their **existing opening balances**. Opening balances are not income. Enter restrictions separately. Savings-account balances are protected from discretionary availability.

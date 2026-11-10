@@ -52,6 +52,7 @@ import {
   MonthlyReviewPage,
 } from "./pages-expenses";
 import { BackupCentre } from "./pages-backup";
+import { CloudBackupMonitor } from "./cloud-backup-ui";
 import { NotificationInbox } from "./pages-notifications";
 import { APP_VERSION } from "./backup";
 import { backupReminder } from "./expense-engine";
@@ -426,6 +427,7 @@ export default function App() {
     );
   return (
     <Context.Provider value={app}>
+      <CloudBackupMonitor />
       <div className="app-shell">
         <a className="skip-link" href="#main-content">
           Skip to main content

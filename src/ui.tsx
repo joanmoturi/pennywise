@@ -363,6 +363,8 @@ export function FormDialog({
   const [busy, setBusy] = useState(false);
   const [slow, setSlow] = useState(false);
   const [inputs, setInputs] = useState(spec.values);
+  const [draftValues, setDraftValues] = useState(spec.values);
+  const [populationVersion, setPopulationVersion] = useState(0);
   const [advanced, setAdvanced] = useState(
     spec.fields.some(
       (f) =>
@@ -411,18 +413,22 @@ export function FormDialog({
         else setTimeout(resolve, 0);
       });
       const endValidation = timing("form-validation");
-      const values = { ...spec.values };
+      const values = { ...draftValues };
       for (const f of spec.fields) {
         activeField = f.key;
         const raw = String(data.get(f.key) ?? "");
         values[f.key] =
-          f.type === "checkbox"
-            ? data.has(f.key)
-            : f.type === "money" || f.type === "rate"
-              ? parseMoney(raw || "0")
-              : f.type === "number"
-                ? Number(raw)
-                : raw;
+          f.required === false &&
+          raw === "" &&
+          ["money", "rate", "number"].includes(f.type ?? "")
+            ? undefined
+            : f.type === "checkbox"
+              ? data.has(f.key)
+              : f.type === "money" || f.type === "rate"
+                ? parseMoney(raw || "0")
+                : f.type === "number"
+                  ? Number(raw)
+                  : raw;
       }
       activeField = "";
       endValidation();
@@ -461,7 +467,7 @@ export function FormDialog({
       <form
         onSubmit={submit}
         onChange={(event) => {
-          if (spec.context)
+          if (spec.context || spec.draftPanel)
             setInputs(
               Object.fromEntries(new FormData(event.currentTarget).entries()),
             );
@@ -505,6 +511,39 @@ export function FormDialog({
             {spec.context(inputs)}
           </p>
         )}
+        {spec.draftPanel && (
+          <fieldset disabled={busy}>
+            <legend className="visually-hidden">
+              Optional official reference lookup
+            </legend>
+            {spec.draftPanel(inputs, (values) => {
+              const form = ref.current?.querySelector("form");
+              const current = form
+                ? Object.fromEntries(new FormData(form).entries())
+                : {};
+              const next = { ...draftValues };
+              for (const field of spec.fields) {
+                const raw = String(current[field.key] ?? "");
+                next[field.key] =
+                  field.required === false &&
+                  raw === "" &&
+                  ["money", "rate", "number"].includes(field.type ?? "")
+                    ? undefined
+                    : field.type === "checkbox"
+                      ? Boolean(current[field.key])
+                      : field.type === "money" || field.type === "rate"
+                        ? parseMoney(raw || "0")
+                        : field.type === "number"
+                          ? Number(raw)
+                          : raw;
+              }
+              Object.assign(next, values);
+              setDraftValues(next);
+              setInputs(next);
+              setPopulationVersion((n) => n + 1);
+            })}
+          </fieldset>
+        )}
         {error && (
           <div className="error" role="alert" tabIndex={-1} ref={errorRef}>
             <strong>Could not save. Your entries are still here.</strong>
@@ -539,9 +578,9 @@ export function FormDialog({
         )}
         <fieldset disabled={busy} id="dialog-fields">
           <legend className="visually-hidden">Record details</legend>
-          <div className="form-grid">
+          <div className="form-grid" key={populationVersion}>
             {spec.fields.map((f) => {
-              const value = spec.values[f.key];
+              const value = draftValues[f.key];
               const display =
                 (f.type === "money" || f.type === "rate") &&
                 typeof value === "number"
@@ -629,6 +668,7 @@ export function FormDialog({
                           ? "decimal"
                           : undefined
                       }
+                      step={f.type === "number" ? "any" : undefined}
                       defaultValue={display}
                       required={f.required !== false}
                       maxLength={f.type === "text" || !f.type ? 160 : undefined}

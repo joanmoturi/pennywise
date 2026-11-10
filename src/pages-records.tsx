@@ -47,6 +47,7 @@ import { download } from "./storage";
 import { effectiveAllocations } from "./expense-engine";
 import { BudgetActivity, allocationDialog } from "./connected-ui";
 import { summary } from "./engine";
+import { editBond, addPublishedCouponDates } from "./bond-lookup-ui";
 
 export function AccountsPage() {
   const app = useApp();
@@ -662,16 +663,13 @@ export function BondsPage() {
       <PageHead
         title="Infrastructure bonds"
         subtitle="Independent holdings, explicit schedules. Principal is an asset, never coupon income."
-        action={
-          <AddButton onClick={() => editRecord(app, "bonds")}>
-            Add bond
-          </AddButton>
-        }
+        action={<AddButton onClick={() => editBond(app)}>Add bond</AddButton>}
       />
       {!s.bonds.length ? (
         <Empty title="Add a bond from your records">
           Enter the documented principal, coupon rate, tax assumption and
-          maturity. This app supplies no real security rates or dates.
+          maturity, or optionally find official Kenyan bond details. Verify the
+          source and your personal holding before saving.
         </Empty>
       ) : (
         <div className="grid cards">
@@ -681,7 +679,7 @@ export function BondsPage() {
                 <Badge>{b.identifier}</Badge>
                 <Actions
                   label={b.name}
-                  edit={() => editRecord(app, "bonds", b)}
+                  edit={() => editBond(app, b)}
                   remove={() => deleteRecord(app, "bonds", b)}
                 />
               </div>
@@ -704,6 +702,26 @@ export function BondsPage() {
               <Button secondary onClick={() => addSchedule(app, "bond", b.id)}>
                 Configure payment dates
               </Button>
+              {b.reference && (
+                <>
+                  <p>
+                    Official reference: {b.reference.isin}; reviewed{" "}
+                    {b.reference.verifiedAt}. Rates and published dates are not
+                    actual receipts.
+                  </p>
+                  <Button secondary onClick={() => editBond(app, b)}>
+                    Refresh / review bond details
+                  </Button>
+                  {b.reference.couponDates.length > 0 && (
+                    <Button
+                      secondary
+                      onClick={() => addPublishedCouponDates(app, b)}
+                    >
+                      Review published expected dates
+                    </Button>
+                  )}
+                </>
+              )}
               <button
                 className="text-button"
                 onClick={() =>

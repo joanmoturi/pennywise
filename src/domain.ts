@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { notificationStateSchema } from "./notification-schema";
+import { bondReferenceSchema } from "./bond-reference-schema";
 
 export const moneySchema = z.number().int().safe();
 const nonnegative = moneySchema.nonnegative();
@@ -162,6 +163,13 @@ export const bondSchema = z
     issuer: name,
     principal: nonnegative,
     couponBps: z.number().int().min(0).max(10000),
+    exactCouponPercent: z.number().min(0).max(100).optional(),
+    reference: bondReferenceSchema.optional(),
+    principalAsOf: dateSchema.optional(),
+    couponPrincipal: nonnegative.optional(),
+    redemptionEstimate: z
+      .enum(["manual", "standard", "full-at-first"])
+      .optional(),
     taxBps: z.number().int().min(0).max(10000),
     paymentsPerYear: z.number().int().min(1).max(12),
     maturity: dateSchema,

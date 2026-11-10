@@ -17,6 +17,7 @@ import { monthlyReview } from "./expense-engine";
 import { outstanding } from "./engine";
 import { decimal } from "./money";
 import { PageHead, Card, Button, Badge, Table, errorMessage } from "./ui";
+import { CloudBackupPanel } from "./cloud-backup-ui";
 
 export function backupFilename(safety = false): string {
   return `Pennywise-${safety ? "SAFETY-" : "Full-Backup-"}${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
@@ -168,6 +169,7 @@ export function BackupCentre() {
           </Button>
         }
       />
+      <CloudBackupPanel />
       <Card>
         <div className="card-head">
           <h3>

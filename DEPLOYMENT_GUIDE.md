@@ -26,20 +26,21 @@ The lockfile now uses public npm tarball URLs instead of the development environ
 
 For updates, use the existing Git-connected Pages project `pennywise`; pushing tested changes to `main` triggers its build. Do not create a replacement project or hostname. Only if configuring a new installation, choose **Workers & Pages > Create application > Pages > Connect to Git**, authorize the selected repository, and choose **Pages**, not a Workers project requiring a deploy command.
 
-| Setting                                   | Value to enter                                    |
-| ----------------------------------------- | ------------------------------------------------- |
-| Git provider                              | GitHub                                            |
-| Repository                                | `joanmoturi/pennywise`                            |
-| Project name                              | `pennywise` (existing project)                     |
-| Production branch                         | `main`                                            |
-| Framework preset                          | `None`                                            |
-| Root directory / advanced path            | Leave blank (repository root)                     |
-| Build command                             | `npm ci && npm run build`                         |
-| Build output directory                    | `dist`                                            |
-| Build environment variable                | `NODE_VERSION` = `26.13.0`                        |
-| Build environment variable                | `SKIP_DEPENDENCY_INSTALL` = `1`                   |
-| Application/runtime environment variables | None                                              |
-| Functions, databases, bindings, secrets   | None                                              |
+| Setting                              | Value to enter                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------- |
+| Git provider                         | GitHub                                                                 |
+| Repository                           | `joanmoturi/pennywise`                                                 |
+| Project name                         | `pennywise` (existing project)                                         |
+| Production branch                    | `main`                                                                 |
+| Framework preset                     | `None`                                                                 |
+| Root directory / advanced path       | Leave blank (repository root)                                          |
+| Build command                        | `npm ci && npm run build`                                              |
+| Build output directory               | `dist`                                                                 |
+| Build environment variable           | `NODE_VERSION` = `26.13.0`                                             |
+| Build environment variable           | `SKIP_DEPENDENCY_INSTALL` = `1`                                        |
+| Optional build configuration         | `VITE_GOOGLE_CLIENT_ID` (public OAuth web client ID; see Drive setup)  |
+| Functions                            | Public-only `/api/bond-reference`; no credentials or financial records |
+| Databases, bindings, runtime secrets | None                                                                   |
 
 Apply the two build variables to both Production and Preview environments. `SKIP_DEPENDENCY_INSTALL=1` prevents a separate automatic install; the explicit `npm ci` then installs the committed lockfile. `.node-version` also records the tested Node version.
 
@@ -62,7 +63,7 @@ Use the actual URL shown by Cloudflare, not an assumed hostname. Do not install 
 - HTML entry points, `sw.js`, the manifest and icons revalidate rather than receiving permanent browser cache lifetimes.
 - Content-hashed files under `/assets/` receive immutable caching. Security headers include CSP, `frame-ancestors 'none'`, `nosniff`, `DENY`, no-referrer and disabled camera/microphone/geolocation.
 - Manifest and service-worker MIME types are explicitly set. Other asset types are determined from their file extensions.
-- No `_redirects`, `404.html`, Pages Function, Worker or Wrangler configuration is needed. Cloudflare Pages' documented SPA default serves the root document for non-asset paths when there is no top-level `404.html`. Do not add such a file without revisiting routing.
+- No `_redirects`, `404.html`, Worker project or Wrangler configuration is needed. The repository's `functions/api/bond-reference.ts` adds one fixed-upstream public CBK reference route through Pages Functions. It receives no financial data and is unnecessary for ordinary offline/manual operations. Cloudflare Pages' documented SPA default serves the root document for non-asset paths when there is no top-level `404.html`. Do not add such a file without revisiting routing.
 - Navigation currently selects views in React state, not a URL router. Refreshing `/monthly/review/` loads the application, but does not select the Monthly Review screen automatically. Use the navigation menu.
 - Workbox supplies the corresponding offline navigation fallback after successful precaching.
 
@@ -117,7 +118,13 @@ The tested update replaced a precached application-shell revision and preserved 
 
 ## 6. Local data, recovery and troubleshooting
 
-The hosting project serves public application assets only. There is no application login, synchronization service or financial-data backend. Cloudflare still processes ordinary website request metadata such as IP addresses; this is not anonymous browsing.
+The hosting project serves application assets and optionally proxies public
+CBK reference information. There is no application-owned financial-data backend
+or live synchronization service. Optional Google identity/Drive backup requires
+the application owner's shared OAuth setup in `docs/GOOGLE_DRIVE_SETUP.md`;
+users consent to their own Drive accounts and encrypted payloads go directly
+to Google, not hosting. Cloudflare still processes ordinary request metadata
+such as IP addresses; this is not anonymous browsing.
 
 Your laptop, another phone and another browser profile have independent local databases, even at the same URL. Chrome and its installed PWA on the **same device/origin** can share storage. A different domain, preview hostname or browser profile is a different workspace. Choose a stable production hostname before starting real records, and use portable backups when changing origin/device.
 

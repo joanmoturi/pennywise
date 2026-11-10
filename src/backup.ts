@@ -146,6 +146,18 @@ export async function inspectBackup(
   if (
     typeof input === "object" &&
     input !== null &&
+    "metadata" in input &&
+    typeof input.metadata === "object" &&
+    input.metadata !== null &&
+    "format" in input.metadata &&
+    input.metadata.format === "pennywise-cloud-v1"
+  ) {
+    const { inspectCloudBackup } = await import("./cloud-crypto");
+    return inspectCloudBackup(text, password);
+  }
+  if (
+    typeof input === "object" &&
+    input !== null &&
     "format" in input &&
     input.format === "pennywise-encrypted-v1"
   ) {

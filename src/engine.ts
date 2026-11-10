@@ -263,8 +263,39 @@ export function summary(s: State, asOf = today()) {
     ),
   };
 }
-export function coupon(b: Bond): { gross: number; tax: number; net: number } {
-  const gross = ratio(b.principal, b.couponBps, b.paymentsPerYear * 10000);
+export function coupon(
+  b: Bond,
+  due?: string,
+): { gross: number; tax: number; net: number } {
+  const estimateDate = due ?? today();
+  let principal =
+    b.principalAsOf && b.principalAsOf <= estimateDate
+      ? (b.couponPrincipal ?? b.principal)
+      : b.principal;
+  if (
+    b.principalAsOf &&
+    b.redemptionEstimate &&
+    b.redemptionEstimate !== "manual"
+  ) {
+    for (const event of [...(b.reference?.amortisation ?? [])].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    )) {
+      if (event.date <= b.principalAsOf || event.date >= estimateDate) continue;
+      principal =
+        b.redemptionEstimate === "full-at-first"
+          ? 0
+          : principal -
+            ratio(
+              principal,
+              Math.round(event.percentOfOutstanding * 100),
+              10000,
+            );
+    }
+  }
+  const rate = Math.round(
+    (b.exactCouponPercent ?? b.couponBps / 100) * 1_000_000,
+  );
+  const gross = ratio(principal, rate, b.paymentsPerYear * 100_000_000);
   const tax = ratio(gross, b.taxBps);
   return { gross, tax, net: sum([gross, -tax]) };
 }

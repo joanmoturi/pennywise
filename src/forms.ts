@@ -131,11 +131,33 @@ export function recordFields(s: State, kind: Collection): Field[] {
       f("identifier", "Bond identifier"),
       f("issuer", "Issuer"),
       f("principal", "Principal held", "money"),
-      f("couponBps", "Annual coupon rate (%)", "rate"),
+      f("exactCouponPercent", "Annual coupon rate (%)", "number", {
+        help: "Coupon rate, not market yield. Retains fractional basis points from official terms.",
+      }),
       f("taxBps", "Applicable tax assumption (%)", "rate"),
       f("paymentsPerYear", "Coupon payments per year", "number"),
       f("maturity", "Maturity date", "date"),
       f("maturityValue", "Expected principal maturity value", "money"),
+      f(
+        "principalAsOf",
+        "Outstanding balance verification date (optional)",
+        "date",
+        { required: false },
+      ),
+      f(
+        "couponPrincipal",
+        "Verified outstanding balance for coupon estimates (optional)",
+        "money",
+        {
+          required: false,
+          help: "Estimate basis only. Do not reduce Principal held for historical repayments: the existing asset ledger already subtracts actual principal-recovery transactions.",
+        },
+      ),
+      f("redemptionEstimate", "Future amortisation estimate", "select", {
+        required: false,
+        options: options(["manual", "standard", "full-at-first"]),
+        help: "Default manual. Standard uses published outstanding-principal percentages only after the verified principal date. Full-at-first is for confirmed full redemption. Review all CSD holdings, pledge and small-holding conditions first; estimates never post repayments.",
+      }),
       account,
       common[1],
     ];
@@ -307,6 +329,7 @@ export function defaultRecord(
       issuer: "",
       principal: 0,
       couponBps: 0,
+      exactCouponPercent: 0,
       taxBps: 0,
       paymentsPerYear: 2,
       maturity: addDays(today(), 365),
@@ -401,6 +424,7 @@ export function editRecord(
   app: AppContext,
   kind: Collection,
   record?: State[Collection][number],
+  draftPanel?: import("./context").DialogSpec["draftPanel"],
 ) {
   app.dialog({
     title: `${record ? "Edit" : "Add"} ${kind === "liabilities" ? "liability" : kind === "necessities" ? "necessity" : kind === "recurring" ? "recurring expense" : kind === "occasional" ? "occasional expense" : kind.slice(0, -1)}`,
@@ -429,7 +453,20 @@ export function editRecord(
               ].includes(field.key)
             : false,
     })),
-    values: record ? { ...record } : defaultRecord(app.state, kind),
+    values: record
+      ? {
+          ...record,
+          ...(kind === "bonds" && "couponBps" in record
+            ? {
+                exactCouponPercent:
+                  "exactCouponPercent" in record
+                    ? record.exactCouponPercent
+                    : record.couponBps / 100,
+              }
+            : {}),
+        }
+      : defaultRecord(app.state, kind),
+    draftPanel,
     submit: async (values) =>
       app.mutate(`Save ${kind}`, (s) => {
         for (const key of [
@@ -438,8 +475,35 @@ export function editRecord(
           "reserveId",
           "businessId",
           "sourceAccountId",
+          "principalAsOf",
+          "redemptionEstimate",
         ])
           if (values[key] === "") delete values[key];
+        if (kind === "bonds") {
+          if (!values.principalAsOf) delete values.couponPrincipal;
+          if (
+            values.principalAsOf &&
+            typeof values.couponPrincipal !== "number"
+          )
+            throw new Error(
+              "Enter the separately verified outstanding balance for coupon estimates, or clear its verification date",
+            );
+          if (values.principalAsOf && String(values.principalAsOf) > today())
+            throw new Error(
+              "Outstanding balance verification date cannot be in the future",
+            );
+          values.couponBps = Math.round(
+            Number(values.exactCouponPercent) * 100,
+          );
+          if (
+            values.redemptionEstimate &&
+            values.redemptionEstimate !== "manual" &&
+            !values.principalAsOf
+          )
+            throw new Error(
+              "Verify the outstanding principal and its date before enabling redemption estimates",
+            );
+        }
         if (kind === "accounts") {
           if (
             record &&
