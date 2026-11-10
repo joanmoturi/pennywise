@@ -1,6 +1,67 @@
 # Pennywise deployment execution report
 
-**Updated:** November 3, 2026. Initial publication: November 1, 2026.
+**Updated:** November 11, 2026 (UTC+3). Initial publication: November 1, 2026.
+
+## November 11 encrypted Drive backup / official bond lookup publication
+
+The user explicitly authorized pushing and deploying the existing enhancements.
+The existing public repository, `main` branch and Pages project were retained.
+No financial database service, paid financial API or Google credentials were
+introduced.
+
+**PUBLISHED AND VERIFIED, WITH THE LIMITATIONS BELOW.** Initial application commit
+`410f02aab54fd84d3780f99a89b4ef68d01161a7` deployed successfully through Pages
+deployment `bce0850b-82e7-400c-ab7f-f6d69d60b0d5`. Hosted-source fallback commit
+`8af186dc9fe8577c7344f99808734b3b8d90fe51` then passed its exact-SHA
+**Cloudflare Pages** check for deployment
+`4585229d-6b9d-4054-af2b-4b5a3577a5a7`.
+
+The stable production origin `https://pennywise-7lz.pages.dev/` serves
+`/assets/index-QfbxraTq.js`; its complete SHA-256 digest matched the locally
+validated production bundle. The separate Workers build check was not used as
+Pages deployment evidence. The following documentation and local Vite adapter
+publication does not change application assets.
+
+Validation evidence:
+
+- The initial enhancement passed 261 unit tests and the full 44-case
+  desktop/mobile browser suite. The hosted-source follow-up passed all 263 unit
+  tests, formatting, ESLint, separate Function lint, TypeScript and production
+  build, plus six affected desktop/mobile browser cases.
+- Isolated production desktop Chromium verified real lookup with explicitly
+  dated fallback, confirmation before draft population, exact 12.667% coupon,
+  preservation of a synthetic personal principal, cancellation without saving a
+  bond, optional Google setup and offline reload preserving the synthetic
+  account. No page errors or network writes were observed in that desktop run.
+- A separate fresh Pixel 7-emulated context verified the backup UI and absence
+  of horizontal overflow. Actual worker/manifest responses, manifest-referenced
+  192/512 PNG icons and dimensions, production CSP and popup policy passed.
+  The generated public-reference chunk is included in the service-worker
+  precache.
+
+**Live CBK limitation:** the published `/api/bond-reference` returns HTTP 503 with
+the safe diagnostic `X-Pennywise-CBK-Status: network`. The underlying hosted
+retrieval failure is not resolved or represented as a successful live source
+request. Lookup instead offers the actual official listing snapshot retrieved
+`2026-11-10T22:07:30.713Z`: 50 admitted records, with 161 conflicting rows
+quarantined. Its visible warning explicitly says this is not fresh verification;
+detailed prospectus terms retain their separate review date. Unknown or
+conflicting identifiers must still be entered manually, not guessed.
+
+**Google readiness limitation:** the optional Drive implementation is published
+but configuration-disabled because no application-owned OAuth client ID has
+been supplied. Real consent, Drive upload/download and physical two-device
+restoration remain unverified. One shared application-owner Google project,
+Drive API enablement, OAuth consent/client and production origin are needed;
+set Pages Production `VITE_GOOGLE_CLIENT_ID` and rebuild. End users do not
+create developer projects or provide OAuth client IDs.
+
+The current web scheduler is active-app automation with an unlocked encryption
+key and valid authorization, not a closed-app backup guarantee. WhatsApp-style
+Android scheduling needs a native storage/snapshot integration, OS-scheduled
+jobs and an explicit protected background-key policy. The existing SMS
+companion cannot read Chrome's private IndexedDB. No such native migration or
+refresh-token backend was added; see `docs/GOOGLE_DRIVE_SETUP.md`.
 
 ## November 3 SMS / Transaction Inbox publication
 

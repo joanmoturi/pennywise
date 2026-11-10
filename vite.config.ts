@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { randomBytes } from "node:crypto";
+import { onRequestGet } from "./functions/api/bond-reference";
 
 export default defineConfig(({ command }) => {
   const nonce =
@@ -12,14 +13,35 @@ export default defineConfig(({ command }) => {
     plugins: [
       react(),
       {
+        name: "official-public-bond-adapter",
+        configureServer(server) {
+          server.middlewares.use(
+            "/api/bond-reference",
+            async (request, response) => {
+              if (request.method !== "GET") {
+                response.statusCode = 405;
+                response.end();
+                return;
+              }
+              const result = await onRequestGet();
+              response.statusCode = result.status;
+              result.headers.forEach((value, key) =>
+                response.setHeader(key, value),
+              );
+              response.end(await result.text());
+            },
+          );
+        },
+      },
+      {
         name: "local-development-csp",
         apply: "serve",
         transformIndexHtml: {
           order: "post",
           handler(html) {
             return html.replace(
-              "script-src 'self';",
-              `script-src 'self' 'nonce-${nonce}';`,
+              "script-src 'self'",
+              `script-src 'self' 'nonce-${nonce}'`,
             );
           },
         },

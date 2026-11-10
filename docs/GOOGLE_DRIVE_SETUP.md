@@ -33,14 +33,16 @@ tokens/consent are necessarily per-user and cannot safely be shared.
    enumerate arbitrary unrelated Drive files.
 4. Create an OAuth client of type **Web application**. Add the exact local
    JavaScript origin `http://127.0.0.1:5173`. Add `http://localhost:5173` only if
-   you also use that origin. Add the exact HTTPS production origin only when
-   deployment is separately approved. Origins have no path/trailing slash.
+   you also use that origin. Add the approved HTTPS production origin
+   `https://pennywise-7lz.pages.dev`. Origins have no path/trailing slash.
    The GIS popup token model does not need a custom redirect-handler backend.
 5. Copy `.env.example` to `.env.local` locally. Set
    `VITE_GOOGLE_CLIENT_ID` to your public web client ID. Never add a client
    secret, service account, refresh token or password. `.env.local` is ignored.
-6. Restart `npm run dev`. Vite substitutes public VITE configuration at build
-   time. Nothing has been pushed or deployed by this enhancement.
+6. Restart `npm run dev` locally. For production, set the shared public client
+   ID in Pages and rebuild. Vite substitutes public VITE configuration at build
+   time. Publishing the application does not configure this owner-controlled
+   Google project; see DEPLOYMENT_REPORT.md for publication evidence.
 7. Open Backup Centre. Sign in if desired, then **Connect Drive** separately.
    Confirm the account shown. The local workspace is explicitly bound to that
    Drive subject to prevent accidentally sending pending snapshots to another
