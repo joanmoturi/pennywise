@@ -141,11 +141,15 @@ test("cloud setup is optional and ordinary local backup remains available withou
     page.getByRole("heading", { name: "Account and Backup", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText(/Google connection needs configuration/),
+    page.getByText(/Google Drive backup is not available yet/),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Connect Drive", exact: true }),
+    page.getByRole("button", {
+      name: "Enable Google Drive Backup",
+      exact: true,
+    }),
   ).toBeDisabled();
+  await expect(page.getByText(/VITE_GOOGLE_CLIENT_ID/)).toHaveCount(0);
   const download = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Download Full Backup", exact: true })
@@ -156,4 +160,55 @@ test("cloud setup is optional and ordinary local backup remains available withou
   expect(after.filter((record) => record.collection !== "audit")).toEqual(
     before.filter((record) => record.collection !== "audit"),
   );
+});
+test("saved Drive preference survives reload and can be disabled without Google authorization", async ({
+  page,
+}) => {
+  const before = await stored(page);
+  await page.evaluate(async () => {
+    const request = indexedDB.open("pennywise-reference-and-backup", 1);
+    request.onupgradeneeded = () =>
+      request.result.createObjectStore("metadata");
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction("metadata", "readwrite");
+        transaction.objectStore("metadata").put(
+          {
+            deviceId: crypto.randomUUID(),
+            owner: "synthetic-owner",
+            enabled: true,
+            retention: 10,
+          },
+          "cloud-config",
+        );
+        transaction.oncomplete = () => resolve();
+        transaction.onabort = () => reject(transaction.error);
+      });
+    } finally {
+      db.close();
+    }
+  });
+  await page.reload();
+  await nav(page, "Backup Centre");
+  await expect(
+    page.getByText(/Google Drive backup is enabled on this device/),
+  ).toBeVisible();
+  const automatic = page.getByRole("checkbox", {
+    name: "Automatic backups while the application is active",
+  });
+  await expect(automatic).toBeChecked();
+  await expect(automatic).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Reconnect Google Drive", exact: true }),
+  ).toBeDisabled();
+  await automatic.uncheck();
+  await expect(page.getByText("Google Drive backup is off.")).toBeVisible();
+  await page.reload();
+  await nav(page, "Backup Centre");
+  await expect(automatic).not.toBeChecked();
+  expect(await stored(page)).toEqual(before);
 });

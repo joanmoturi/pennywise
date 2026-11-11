@@ -2,6 +2,7 @@ import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 import {
   GoogleDriveRepository,
   GoogleSession,
+  DRIVE_SCOPE,
   DriveError,
   GOOGLE_CLIENT_ID,
   verifyGoogleIdentity,
@@ -25,6 +26,7 @@ beforeAll(async () => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 function b64(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes))
@@ -96,6 +98,61 @@ describe("Google application identity validation", () => {
     ).rejects.toThrow();
     const session = new GoogleSession();
     expect(() => session.accessToken("synthetic-user")).toThrow(DriveError);
+  });
+});
+describe("customer Google account authorization", () => {
+  it("opens the account chooser without separate sign-in and rejects missing Drive permission", async () => {
+    vi.stubEnv(
+      "VITE_GOOGLE_CLIENT_ID",
+      "synthetic-client.apps.googleusercontent.com",
+    );
+    vi.resetModules();
+    const { GoogleSession: ConfiguredSession } =
+      await import("../src/google-services");
+    let granted = true;
+    const request = vi.fn();
+    const initTokenClient = vi.fn(
+      (options: {
+        callback: (response: {
+          access_token: string;
+          expires_in: number;
+          scope: string;
+        }) => void;
+      }) => {
+        request.mockImplementation(() =>
+          options.callback({
+            access_token: "synthetic-memory-only-access-token",
+            expires_in: 3600,
+            scope: granted ? `${DRIVE_SCOPE} openid email` : "openid email",
+          }),
+        );
+        return { requestAccessToken: request };
+      },
+    );
+    vi.stubGlobal("google", { accounts: { oauth2: { initTokenClient } } });
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          sub: "synthetic-owner",
+          email: "synthetic@example.test",
+          email_verified: true,
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetch);
+    const session = new ConfiguredSession();
+    await session.connectDrive();
+    expect(request).toHaveBeenCalledWith({ prompt: "select_account" });
+    expect(session.identity).toBeUndefined();
+    expect(session.driveIdentity?.email).toBe("synthetic@example.test");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    granted = false;
+    const denied = new ConfiguredSession();
+    await expect(denied.connectDrive()).rejects.toThrow(
+      "Google Drive permission was not granted",
+    );
+    expect(denied.driveIdentity).toBeUndefined();
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
 function drive() {

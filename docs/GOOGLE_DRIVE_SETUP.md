@@ -43,13 +43,17 @@ tokens/consent are necessarily per-user and cannot safely be shared.
    ID in Pages and rebuild. Vite substitutes public VITE configuration at build
    time. Publishing the application does not configure this owner-controlled
    Google project; see DEPLOYMENT_REPORT.md for publication evidence.
-7. Open Backup Centre. Sign in if desired, then **Connect Drive** separately.
-   Confirm the account shown. The local workspace is explicitly bound to that
-   Drive subject to prevent accidentally sending pending snapshots to another
-   account.
+7. Open Backup Centre and choose **Enable Google Drive Backup**. Select your
+   Google account and grant permission. Separate application sign-in is
+   optional, not required. The local workspace is bound to the selected Drive
+   subject to prevent accidentally sending snapshots to another account.
+   The enabled setting persists on this device across reloads and restarts.
 8. Set and confirm an encryption passphrase. Optionally generate/download a
-   recovery key and keep it outside this device. Choose **Back Up Now**.
+   recovery key and keep it outside this device. Choose **Unlock and Back Up**.
    Verify the visible **Pennywise Backups** folder and encrypted JSON in Drive.
+   If Google authorization expires, reconnect that same account; the saved
+   enabled preference is retained. Encryption still needs unlocking after a
+   restart; secrets and access tokens are not persistently stored.
 9. On an independent device/browser profile using the same OAuth application,
    connect that account, inspect history, unlock and review a backup, then
    explicitly replace only after keeping its safety file.

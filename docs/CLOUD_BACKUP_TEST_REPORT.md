@@ -4,7 +4,31 @@ Local validation performed during the 2026-11-10/11 implementation session.
 Only synthetic financial data and provider responses were used in automated
 tests. No personal backup or financial record was committed or uploaded.
 
-## Actual final results
+## November 11 persistent enablement follow-up
+
+The customer flow now starts with **Enable Google Drive Backup**, requests the
+Google account chooser directly, and saves the enabled preference and owner
+binding. Reopening or losing authorization does not turn the preference off.
+An authorized, unlocked session is still required to upload; this is not
+persistent credentials or closed-app scheduling.
+
+- 34 targeted tests passed across the cloud UI, encrypted backup engine and
+  Google provider files. Six new cases cover customer enablement/reopening,
+  cancellation, wrong account, first verified upload, failed upload and direct
+  account selection without separate sign-in.
+- Eight affected desktop/mobile browser cases passed: persisted enablement and
+  disabling without authorization, unavailable-service/manual-backup behavior,
+  bond draft preservation and offline local editing.
+- TypeScript, production build, ESLint and formatting passed.
+- The first desktop persistence test exposed an asynchronous controlled-checkbox
+  reversion; disabling now updates immediately and rolls back on write failure.
+  The affected desktop/mobile cases then passed without retries.
+
+All Google authorization and HTTP behavior here uses synthetic mocks. The
+application-owned OAuth client is still absent, so real Gmail consent, upload,
+restoration and physical-device behavior are not demonstrated.
+
+## Original enhancement baseline
 
 | Command/check                  | Result                                                        |
 | ------------------------------ | ------------------------------------------------------------- |

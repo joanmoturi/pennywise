@@ -40,7 +40,9 @@ let loading: Promise<GoogleLibrary> | undefined;
 export function googleLibrary(): Promise<GoogleLibrary> {
   if (!GOOGLE_CLIENT_ID)
     return Promise.reject(
-      new Error("Google sign-in is not configured. See Google Drive setup."),
+      new Error(
+        "Google Drive backup is not available yet. Manual backups still work.",
+      ),
     );
   const existing = (window as Window & { google?: GoogleLibrary }).google;
   if (existing) return Promise.resolve(existing);
@@ -225,7 +227,7 @@ export class GoogleSession {
             ),
           ),
       });
-      client.requestAccessToken({ prompt: "consent" });
+      client.requestAccessToken({ prompt: "select_account" });
     });
     if (
       !token.access_token ||

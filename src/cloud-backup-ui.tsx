@@ -145,32 +145,46 @@ export function CloudBackupPanel() {
   async function history() {
     setFiles(await drive().list());
   }
-  async function connect() {
-    await cloudBackup.session.connectDrive();
+  async function connect(enable = false, reconnect = false) {
+    if (reconnect || !cloudBackup.session.driveIdentity)
+      await cloudBackup.session.connectDrive();
     const user = cloudBackup.session.driveIdentity;
-    if (!user) return;
+    if (!user)
+      throw new Error(
+        "Google Drive connection cancelled. Local records are unchanged.",
+      );
     const current = await cloudConfig();
     if (current.owner && current.owner !== user.sub)
       throw new Error(
         "This workspace is bound to another Google Drive account. Disconnect and reconnect the original account; no records were uploaded.",
       );
+    if (!current.owner) cloudBackup.lock();
+    await configureCloud({
+      owner: user.sub,
+      ...(enable ? { enabled: true } : {}),
+    });
     await cloudBackup.retryAfterAuthorization();
-    if (!current.owner) {
-      app.confirm(
-        "Use this Google Drive for this workspace?",
-        `Backups will go to ${user.email}. This does not change or isolate the shared local workspace. Only connect an account you control.`,
-        async () => {
-          await configureCloud({ owner: user.sub, enabled: false });
-          await refresh();
-          setFiles(
-            await new GoogleDriveRepository(
-              cloudBackup.session,
-              user.sub,
-            ).list(),
-          );
-        },
+    await refresh();
+    setFiles(
+      await new GoogleDriveRepository(cloudBackup.session, user.sub).list(),
+    );
+    if (enable && cloudBackup.unlocked) await backUpNow();
+  }
+  async function backUpNow() {
+    const previous = await backupQueue();
+    await cloudBackup.run(app.repo, true, true);
+    await history();
+    const result = await backupQueue();
+    if (
+      result.status !== "verified" ||
+      !result.lastSuccess ||
+      result.lastSuccess === previous.lastSuccess
+    )
+      throw new Error(
+        result.message ||
+          "Backup is still pending. No new verified backup is confirmed yet.",
       );
-    } else await history();
+    app.notify("Google Drive backup uploaded and verified.");
   }
   function restore() {
     if (!preview) return;
@@ -222,9 +236,10 @@ export function CloudBackupPanel() {
       </p>
       {!GOOGLE_CLIENT_ID && (
         <p className="notice">
-          Google connection needs configuration: set VITE_GOOGLE_CLIENT_ID
-          following docs/GOOGLE_DRIVE_SETUP.md, then restart the local server.
-          Manual backups below remain available.
+          Google Drive backup is not available yet. Pennywise needs a one-time
+          service setup by the app owner; you do not need a developer account.
+          Your records remain on this device and manual backups below still
+          work.
         </p>
       )}
       {error && (
@@ -232,53 +247,84 @@ export function CloudBackupPanel() {
           {error}
         </p>
       )}
-      <h3>Account</h3>
-      <p>
-        {identity && identity.expiresAt > Date.now()
-          ? `Signed in with Google: ${identity.email}`
-          : "Not signed in / session expired. Local records are unaffected."}
+      <h3>Google Drive backup</h3>
+      <p role="status">
+        {config?.enabled
+          ? "Google Drive backup is enabled on this device. Your choice is saved when you close Pennywise."
+          : "Google Drive backup is off."}
+        {config?.enabled &&
+          (!connected
+            ? " Reconnect your Google account to resume; you do not need to enable backup again."
+            : !cloudBackup.unlocked
+              ? " Unlock encryption below to resume backing up."
+              : " New changes are backed up while Pennywise is open.")}
       </p>
-      <div ref={signIn} />
-      <Button
-        secondary
-        disabled={busy || !identity}
-        onClick={() => {
-          cloudBackup.session.signOut();
-          cloudBackup.lock();
-          setPassword("");
-          setConfirmation("");
-          setRecovery("");
-          refreshIdentity((n) => n + 1);
-          setSignInEpoch((n) => n + 1);
-        }}
-      >
-        Sign out
-      </Button>
-      {identity && (
+      <p>
+        Choose your Google account to keep encrypted backups in your own Drive.
+        No separate Pennywise sign-in is required. Only choose an account you
+        control; this connects the existing local workspace, not a separate set
+        of financial records.
+      </p>
+      {(!config?.enabled || !connected) && (
         <Button
-          secondary
-          disabled={busy}
-          onClick={() =>
-            app.confirm(
-              "Remove Google sign-in consent?",
-              "Removes the application sign-in connection only. Delete cloud backups separately if wanted. Local financial records and independently authorized Drive access are not deleted.",
-              async () => {
-                const { googleLibrary } = await import("./google-services");
-                const library = await googleLibrary();
-                await new Promise<void>((resolve) =>
-                  library.accounts.id.revoke(identity.sub, resolve),
-                );
-                cloudBackup.session.signOut();
-                cloudBackup.lock();
-                setSignInEpoch((n) => n + 1);
-                await refresh();
-              },
-            )
-          }
+          disabled={busy || !config || !GOOGLE_CLIENT_ID}
+          onClick={() => void action(() => connect(true))}
         >
-          Remove account connection
+          {config?.enabled
+            ? "Reconnect Google Drive"
+            : "Enable Google Drive Backup"}
         </Button>
       )}
+      <details>
+        <summary>Optional Google sign-in</summary>
+        <h3>Account</h3>
+        <p>
+          {identity && identity.expiresAt > Date.now()
+            ? `Signed in with Google: ${identity.email}`
+            : "Not signed in / session expired. Local records are unaffected."}
+        </p>
+        <div ref={signIn} />
+        <Button
+          secondary
+          disabled={busy || !identity}
+          onClick={() => {
+            cloudBackup.session.signOut();
+            cloudBackup.lock();
+            setPassword("");
+            setConfirmation("");
+            setRecovery("");
+            refreshIdentity((n) => n + 1);
+            setSignInEpoch((n) => n + 1);
+          }}
+        >
+          Sign out
+        </Button>
+        {identity && (
+          <Button
+            secondary
+            disabled={busy}
+            onClick={() =>
+              app.confirm(
+                "Remove Google sign-in consent?",
+                "Removes the application sign-in connection only. Delete cloud backups separately if wanted. Local financial records and independently authorized Drive access are not deleted.",
+                async () => {
+                  const { googleLibrary } = await import("./google-services");
+                  const library = await googleLibrary();
+                  await new Promise<void>((resolve) =>
+                    library.accounts.id.revoke(identity.sub, resolve),
+                  );
+                  cloudBackup.session.signOut();
+                  cloudBackup.lock();
+                  setSignInEpoch((n) => n + 1);
+                  await refresh();
+                },
+              )
+            }
+          >
+            Remove account connection
+          </Button>
+        )}
+      </details>
       <h3>Google Drive</h3>
       <p>
         {connected
@@ -286,12 +332,14 @@ export function CloudBackupPanel() {
           : "Disconnected or authorization expired"}
       </p>
       <div className="actions">
-        <Button
-          disabled={busy || !GOOGLE_CLIENT_ID}
-          onClick={() => void action(connect)}
-        >
-          {connected ? "Reconnect Drive" : "Connect Drive"}
-        </Button>
+        {config?.owner && (
+          <Button
+            disabled={busy || !GOOGLE_CLIENT_ID}
+            onClick={() => void action(() => connect(false, true))}
+          >
+            Reconnect Drive
+          </Button>
+        )}
         <Button
           secondary
           disabled={busy || !connected}
@@ -371,10 +419,11 @@ export function CloudBackupPanel() {
               setPassword("");
               setConfirmation("");
               setRecovery("");
+              if ((await cloudConfig()).enabled) await backUpNow();
             })
           }
         >
-          Set up / unlock encryption
+          Unlock and Back Up
         </Button>
         <Button
           secondary
@@ -391,10 +440,10 @@ export function CloudBackupPanel() {
         </Button>
       </div>
       <p>
-        Existing latest backup must unlock successfully before automatic backups
-        are enabled. Recovery keys apply only to files whose envelope includes
-        that key; supply your saved key again when unlocking a new session if
-        you want it on new backups.
+        Existing latest backup must unlock successfully before any new uploads
+        can run. Recovery keys apply only to files whose envelope includes that
+        key; supply your saved key again when unlocking a new session if you
+        want it on new backups.
       </p>
       <h3>Backup</h3>
       <p>
@@ -415,12 +464,23 @@ export function CloudBackupPanel() {
         <input
           type="checkbox"
           checked={config?.enabled ?? false}
-          disabled={busy || !connected || !cloudBackup.unlocked}
-          onChange={(e) =>
+          disabled={busy || !config || (!GOOGLE_CLIENT_ID && !config.enabled)}
+          onChange={(e) => {
+            const enabled = e.target.checked;
+            const previous = config;
+            if (!enabled && config) setConfig({ ...config, enabled: false });
             void action(async () => {
-              await configureCloud({ enabled: e.target.checked });
-            })
-          }
+              if (enabled) await connect(true);
+              else {
+                try {
+                  await configureCloud({ enabled: false });
+                } catch (error) {
+                  setConfig(previous);
+                  throw error;
+                }
+              }
+            });
+          }}
         />{" "}
         Automatic backups while the application is active
       </label>
@@ -441,18 +501,15 @@ export function CloudBackupPanel() {
       </label>
       <p>
         Also retains monthly checkpoints and protected manual backups. Automatic
-        execution stops when the app is closed; pending revisions survive. Drive
-        authorization and encryption must be renewed after restarting.
+        execution stops when the app is closed; your enabled setting and pending
+        revisions survive. Google may ask you to reconnect, and encryption must
+        be unlocked after restarting. These steps do not turn off your saved
+        backup setting.
       </p>
       <div className="actions">
         <Button
           disabled={busy || !connected || !cloudBackup.unlocked}
-          onClick={() =>
-            void action(async () => {
-              await cloudBackup.run(app.repo, true, true);
-              await history();
-            })
-          }
+          onClick={() => void action(backUpNow)}
         >
           Back Up Now
         </Button>

@@ -2,6 +2,30 @@
 
 **Updated:** November 11, 2026 (UTC+3). Initial publication: November 1, 2026.
 
+## November 11 persistent Google backup customer-flow follow-up
+
+The customer entry action is now **Enable Google Drive Backup**, followed by the
+Google account chooser, not mandatory separate application sign-in. The selected
+account and enabled preference persist in auxiliary IndexedDB. Restarting,
+authorization expiry and a failed upload do not switch the preference off.
+Disabling remains available while disconnected. Encryption is still mandatory;
+**Unlock and Back Up** starts an upload, with success reported only after a
+newly verified snapshot.
+
+The production-build candidate is `/assets/index-B8yMJWCY.js`. The existing
+Git-connected Pages project remains the publication target. Local validation
+passed 34 targeted cloud/provider tests, eight affected desktop/mobile browser
+cases, lint, formatting and TypeScript/production build. The customer UI suite
+was also rerun after final presentation changes. The earlier publication
+fingerprints below describe the initial November 11 releases, not this candidate.
+
+**Actual Google connection remains blocked by missing application-owned OAuth
+configuration.** This is a one-time publisher setup, not per-customer developer
+configuration. No credentials were fabricated, no tokens or encryption secrets
+were made persistent, and no real Google integration or closed-app scheduling
+is claimed. Persisting the enabled preference does not itself solve those
+separate prerequisites.
+
 ## November 11 encrypted Drive backup / official bond lookup publication
 
 The user explicitly authorized pushing and deploying the existing enhancements.

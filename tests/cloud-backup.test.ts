@@ -272,11 +272,19 @@ describe("durable active-application backup engine", () => {
       );
       controller.lock();
       const restarted = new CloudBackupController();
-      vi.spyOn(restarted.session, "driveIdentity", "get").mockReturnValue(
-        undefined,
-      );
+      const restartedIdentity = vi
+        .spyOn(restarted.session, "driveIdentity", "get")
+        .mockReturnValue(undefined);
       await restarted.run(repo);
       expect((await backupQueue()).status).toBe("authorization required");
+      expect((await cloudConfig()).enabled).toBe(true);
+      restartedIdentity.mockReturnValue({
+        sub: "owner",
+        email: "synthetic@example.test",
+      });
+      await restarted.run(repo);
+      expect((await backupQueue()).status).toBe("encryption required");
+      expect((await cloudConfig()).enabled).toBe(true);
       expect((await repo.read()).transactions).toHaveLength(1);
       expect(upload).toHaveBeenCalledTimes(1);
     } finally {

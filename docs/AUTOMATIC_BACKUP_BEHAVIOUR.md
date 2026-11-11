@@ -4,6 +4,27 @@ Automatic backup is opt-in. The application must be open, visible when periodic
 checks run, online, connected to the confirmed Drive account and unlocked.
 Ordinary financial saves never depend on cloud success.
 
+Choose **Enable Google Drive Backup** and select the Google account that owns
+the backups. No separate application sign-in is required. This binds only the
+existing workspace's backup destination; it is not an account-switching or
+financial-tenant feature. A different account cannot replace an existing binding.
+The enabled preference and owner binding are persisted in auxiliary IndexedDB
+on this browser profile. Closing/reopening, an expired Google token, locked
+encryption or a failed upload does not disable that preference. Customers can
+also turn it off while disconnected. Clearing site data removes device settings.
+
+After enabling, **Unlock and Back Up** validates encryption and starts the first
+upload without another scheduling switch. Success is reported only for a newly
+verified upload. Subsequent changes use the existing active-app scheduler.
+The saved enabled preference is not a saved authorization token or encryption
+secret. Reconnection/unlocking can still be required after reopening; this does
+not claim unattended closed-browser operation.
+
+An application-owned OAuth registration is still an external prerequisite.
+Customers are not asked to create developer projects or provide client IDs.
+Until the owner configures the shared client, the service is explicitly
+unavailable and manual backups remain usable.
+
 Financial revision is committed inside the existing local transaction and
 survives closure even if no scheduler callback ran. On opening/foregrounding,
 the controller compares current revision with the last verified revision.
