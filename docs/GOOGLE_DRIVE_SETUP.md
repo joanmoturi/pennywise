@@ -4,7 +4,9 @@ No OAuth client or credentials have been fabricated. On November 11, 2026 the
 owner created the shared Google project/Web client and confirmed saving its
 public client ID in the Pages Production `VITE_GOOGLE_CLIENT_ID` variable.
 The configured rebuild is separate from the earlier configuration-disabled
-publication. Ordinary local features need no environment values.
+publication. The owner subsequently reported a successful Google connection
+and Audience **In production**. Ordinary local features need no environment
+values.
 
 ## One-time application setup, not per-user configuration
 
@@ -83,8 +85,10 @@ official references below.
 
 Actual Google consent/upload and two-physical-device acceptance were not
 demonstrated by the earlier automated tests. The owner has now supplied the
-shared configuration; the configured release still needs real consent/upload
-and device acceptance. Configuration alone is not evidence of those operations.
+shared configuration and reported successful account connection. The owner
+explicitly skipped the actual backup test, so upload/read-back, restoration,
+recovery and independent-device acceptance remain unverified. Configuration or
+account connection alone is not evidence of those operations.
 
 ## WhatsApp-style automatic backup: platform work still required
 

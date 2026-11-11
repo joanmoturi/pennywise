@@ -30,6 +30,20 @@ consent, upload, restoration and physical-device behavior were not demonstrated.
 The owner subsequently supplied the public Web client ID and confirmed saving
 it in Pages Production. Real provider acceptance is a separate subsequent gate.
 
+## Live configuration follow-up
+
+The configured release passed its exact-SHA Pages check and its complete
+production bundle matched the local configured build by SHA-256. An isolated
+Chromium browser verified an enabled customer action and Google's real
+authorization popup, without entering credentials or granting an account.
+The 34 cloud/provider unit cases passed again with the shared configuration.
+
+The owner reported a real Google account connection after tester approval,
+then reported Audience **In production**. This is owner-reported authorization,
+not an automated Drive upload/restore test. The owner explicitly chose to skip
+the actual backup test; upload/read-back, recovery and independent-device
+acceptance remain unverified.
+
 ## Original enhancement baseline
 
 | Command/check                  | Result                                                        |
