@@ -4,7 +4,7 @@
 
 ## November 11 full end-to-end regression fixes
 
-The final local candidate passed **270 unit/integration tests**, the complete
+The final application candidate passed **270 unit/integration tests**, the complete
 **52-case desktop/mobile browser suite** without failures/skips, and **four
 additional configuration-disabled browser checks**. ESLint, formatting,
 TypeScript/production build and diff whitespace checks passed.
@@ -17,11 +17,24 @@ fresh-browser restore with safety export, failed upload/read-back, stable retry,
 consent failures and wrong-account preservation. They do not prove real Drive
 file operations, which remain unverified.
 
-The separately built real-client candidate is `/assets/index-BofOZYVq.js`,
+Application commit `2b3dfeafae58cb241b37c3947915b5e44759cac2` was pushed to
+`main` and passed its exact-SHA **Cloudflare Pages** check for deployment
+`b0e9b1b0-4ee9-4e57-8024-7818a388655d`.
+Production serves the separately built real-client `/assets/index-BofOZYVq.js`,
 SHA-256 `1047029acd8c7b04be6674661973b3d009a5999e13e5427dc460035e55389012`.
-This fingerprint is not the synthetic-client test build. Publication and hosted
-verification are a separate step; the historical deployed fingerprints below
-must not be mistaken for this candidate.
+Its complete bytes match the locally validated real-client build, not the
+synthetic-client test build.
+
+Fresh production desktop and Pixel 7-emulated browser contexts passed manual
+full-backup download, no external requests before Google opt-in, offline reload
+with preserved synthetic account records and Google's real authorization popup
+on explicit enable. No credentials were entered, consent granted or real Drive
+files created. No page errors were captured; Google's popup emitted COOP
+`window.closed` console diagnostics, without preventing either popup.
+First-install worker activation was explicitly awaited and followed by an
+online navigation before testing offline control. The local development server
+also remained responsive. Subsequent documentation-only publication retains
+the application fingerprint above.
 
 ## November 11 shared Google authorization configuration
 

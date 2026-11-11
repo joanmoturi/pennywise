@@ -39,9 +39,14 @@ corrected; the final full run passed without retries. These are **mock-provider
 browser tests**, not real Google Drive acceptance.
 
 The final production build uses the actual shared application client, not the
-synthetic E2E value. Real Drive upload/read-back, recovery and physical-device
-restoration remain unverified; the earlier owner-reported account connection
-does not establish them.
+synthetic E2E value. Its complete hosted bundle matched the local build after
+the exact-SHA Pages deployment succeeded. Isolated production desktop/mobile
+checks passed manual backup, no Google requests before opt-in, offline account
+preservation and a real authorization popup without account credentials.
+Google's popup produced COOP console diagnostics but no page errors or popup
+failure. Real Drive upload/read-back, recovery and physical-device restoration
+remain unverified; neither these checks nor the earlier owner-reported account
+connection establish them.
 
 ## November 11 persistent enablement follow-up
 
