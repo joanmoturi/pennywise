@@ -2,6 +2,22 @@
 
 **Updated:** November 11, 2026 (UTC+3). Initial publication: November 1, 2026.
 
+## November 11 shared Google authorization configuration
+
+After the persistent-enablement release, the owner created the Pennywise
+Google project, enabled Drive API, created a Web application OAuth client with
+the production JavaScript origin and confirmed saving its public client ID in
+the existing Pages Production `VITE_GOOGLE_CLIENT_ID` variable. This update
+triggers a configured rebuild through the existing Git integration. No client
+secret, refresh token, customer developer configuration or financial backend
+was introduced.
+
+The earlier configuration-disabled publication evidence below is historical.
+Real Google consent/upload, recovery and physical-device acceptance remain
+separate gates; neither saving a client ID nor a successful build demonstrates
+them. The enabled preference persists locally, but short-lived authorization,
+memory-only encryption and closed-browser limitations are unchanged.
+
 ## November 11 persistent Google backup customer-flow follow-up
 
 The customer entry action is now **Enable Google Drive Backup**, followed by the

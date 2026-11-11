@@ -1,7 +1,10 @@
 # Google Drive setup (manual external prerequisite)
 
-No OAuth client or credentials have been fabricated. The cloud UI remains
-disabled until configured. Ordinary local features need no environment values.
+No OAuth client or credentials have been fabricated. On November 11, 2026 the
+owner created the shared Google project/Web client and confirmed saving its
+public client ID in the Pages Production `VITE_GOOGLE_CLIENT_ID` variable.
+The configured rebuild is separate from the earlier configuration-disabled
+publication. Ordinary local features need no environment values.
 
 ## One-time application setup, not per-user configuration
 
@@ -78,8 +81,10 @@ official references below.
 - https://developers.google.com/drive/api/guides/search-files
 - https://developers.google.com/identity/gsi/web/guides/client-library
 
-Actual Google consent/upload and two-physical-device acceptance have not been
-verified because no authorized OAuth project/client configuration was supplied.
+Actual Google consent/upload and two-physical-device acceptance were not
+demonstrated by the earlier automated tests. The owner has now supplied the
+shared configuration; the configured release still needs real consent/upload
+and device acceptance. Configuration alone is not evidence of those operations.
 
 ## WhatsApp-style automatic backup: platform work still required
 

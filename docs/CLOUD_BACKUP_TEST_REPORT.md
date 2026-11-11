@@ -25,8 +25,10 @@ persistent credentials or closed-app scheduling.
   The affected desktop/mobile cases then passed without retries.
 
 All Google authorization and HTTP behavior here uses synthetic mocks. The
-application-owned OAuth client is still absent, so real Gmail consent, upload,
-restoration and physical-device behavior are not demonstrated.
+application-owned OAuth client was absent during those runs, so real Gmail
+consent, upload, restoration and physical-device behavior were not demonstrated.
+The owner subsequently supplied the public Web client ID and confirmed saving
+it in Pages Production. Real provider acceptance is a separate subsequent gate.
 
 ## Original enhancement baseline
 
@@ -71,7 +73,8 @@ external data requests.
 
 Real Google sign-in/consent, real Drive upload/download/discovery, actual quota
 and revocation, OAuth project review, and two physical-device restoration remain
-unverified. No OAuth web client was supplied. The automated provider tests are
+unverified by these tests. The OAuth Web client was supplied afterwards; its
+configuration must not be confused with real provider acceptance. The automated provider tests are
 not live Google integration tests. A 35 MB full-backup stress run, browser
 background suspension and hardware-specific PBKDF2 calibration were not performed.
 
