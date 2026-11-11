@@ -2,6 +2,27 @@
 
 **Updated:** November 11, 2026 (UTC+3). Initial publication: November 1, 2026.
 
+## November 11 full end-to-end regression fixes
+
+The final local candidate passed **270 unit/integration tests**, the complete
+**52-case desktop/mobile browser suite** without failures/skips, and **four
+additional configuration-disabled browser checks**. ESLint, formatting,
+TypeScript/production build and diff whitespace checks passed.
+
+Fixed Google initialization before opt-in, added blocked-popup guidance,
+excluded generated browser reports from the Windows development watcher and
+made browser tests build current source with explicit configuration.
+Six new mock-provider browser journeys cover encrypted Drive upload, recovery,
+fresh-browser restore with safety export, failed upload/read-back, stable retry,
+consent failures and wrong-account preservation. They do not prove real Drive
+file operations, which remain unverified.
+
+The separately built real-client candidate is `/assets/index-BofOZYVq.js`,
+SHA-256 `1047029acd8c7b04be6674661973b3d009a5999e13e5427dc460035e55389012`.
+This fingerprint is not the synthetic-client test build. Publication and hosted
+verification are a separate step; the historical deployed fingerprints below
+must not be mistaken for this candidate.
+
 ## November 11 shared Google authorization configuration
 
 After the persistent-enablement release, the owner created the Pennywise

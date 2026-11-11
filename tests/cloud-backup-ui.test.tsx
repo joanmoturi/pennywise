@@ -83,6 +83,20 @@ async function unlock() {
 }
 
 describe("customer Google Drive backup flow", () => {
+  it("does not initialize optional Google sign-in until the customer opens it", async () => {
+    render(<CloudBackupPanel />);
+    await screen.findByText("Google Drive backup is off.");
+    expect(cloudBackup.session.renderSignIn).not.toHaveBeenCalled();
+    const details = screen
+      .getByText("Optional Google sign-in")
+      .closest("details")!;
+    details.open = true;
+    fireEvent(details, new Event("toggle"));
+    await waitFor(() =>
+      expect(cloudBackup.session.renderSignIn).toHaveBeenCalledTimes(1),
+    );
+  });
+
   it("chooses one Google account, saves enabled across remount and allows disabling while disconnected", async () => {
     const before = await app.repo.read();
     const view = render(<CloudBackupPanel />);

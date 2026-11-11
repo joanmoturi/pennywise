@@ -4,6 +4,45 @@ Local validation performed during the 2026-11-10/11 implementation session.
 Only synthetic financial data and provider responses were used in automated
 tests. No personal backup or financial record was committed or uploaded.
 
+## November 11 complete end-to-end follow-up
+
+- `npm test`: **270 passed**, 15 files.
+- `npm run test:e2e`: **52 passed**, no failures or skips, desktop Chromium
+  and Pixel 7 emulation. The suite builds the current source with a synthetic
+  public OAuth client instead of testing a potentially stale build.
+- Explicitly configuration-disabled browser checks: **4 passed**, covering
+  optional/manual backup and persisted preferences on desktop/mobile.
+- ESLint, formatting, TypeScript, production build and diff whitespace checks
+  passed. Existing bundle/dependency annotation warnings remain nonfatal.
+
+The configured-build run exposed unsolicited Google SDK loading from the hidden
+optional sign-in section. Initialization now requires explicitly opening that
+section; enabling Drive remains a separate explicit action. Existing local and
+manual-backup journeys again pass their no-external-request assertions.
+Blocked Google popups now explain how to allow popups and retry.
+Playwright report/output paths are excluded from the development watcher to
+avoid the observed Windows locked-report-file crash.
+
+Six new desktop/mobile browser cases exercise synthetic Google consent and
+Drive v3 HTTP responses through the actual UI and encryption/storage code:
+encrypted upload, independent passphrase/recovery decoding, absence of persisted
+secrets, independent-browser restoration, wrong-passphrase rejection, explicit
+preview, safety download and record preservation after reload. Failure journeys
+cover HTTP 503 with durable pending ciphertext, corrupt read-back, retaining
+earlier backups, stable-ID retry without another upload, blocked/cancelled
+popups, missing scope and rejecting another Google account.
+
+Provider routing is intercepted explicitly; service workers are blocked only
+for these synthetic HTTP-contract cases. Existing offline/service-worker suites
+remain enabled. Initial fixture routing and asynchronous action-wait races were
+corrected; the final full run passed without retries. These are **mock-provider
+browser tests**, not real Google Drive acceptance.
+
+The final production build uses the actual shared application client, not the
+synthetic E2E value. Real Drive upload/read-back, recovery and physical-device
+restoration remain unverified; the earlier owner-reported account connection
+does not establish them.
+
 ## November 11 persistent enablement follow-up
 
 The customer flow now starts with **Enable Google Drive Backup**, requests the
@@ -109,5 +148,5 @@ setup, encryption/recovery, automatic behaviour, restore/migration, security,
 cost, release readiness and this report.
 
 Initial checks were local-only. Subsequent publication was explicitly authorized;
-see DEPLOYMENT_REPORT.md for hosted evidence. Google setup remains a blocker for
-enabling Drive, not an invented successful acceptance result.
+see DEPLOYMENT_REPORT.md for hosted evidence. The shared Google setup is now
+configured; real provider file-operation acceptance remains a separate gate.

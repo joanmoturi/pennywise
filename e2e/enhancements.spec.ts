@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 async function nav(page: Page, name: string) {
+  await expect(page.locator(".app-shell")).toBeVisible();
   const menu = page.getByRole("button", {
     name: "Open navigation",
     exact: true,
@@ -134,21 +135,27 @@ test("official review populates only a draft, preserves personal inputs and pers
 });
 test("cloud setup is optional and ordinary local backup remains available without credentials", async ({
   page,
-}) => {
+}, testInfo) => {
   const before = await stored(page);
   await nav(page, "Backup Centre");
   await expect(
     page.getByRole("heading", { name: "Account and Backup", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByText(/Google Drive backup is not available yet/),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", {
-      name: "Enable Google Drive Backup",
-      exact: true,
-    }),
-  ).toBeDisabled();
+  const enable = page.getByRole("button", {
+    name: "Enable Google Drive Backup",
+    exact: true,
+  });
+  if (testInfo.config.metadata.googleConfigured) {
+    await expect(enable).toBeEnabled();
+    await expect(
+      page.getByText(/Google Drive backup is not available yet/),
+    ).toHaveCount(0);
+  } else {
+    await expect(enable).toBeDisabled();
+    await expect(
+      page.getByText(/Google Drive backup is not available yet/),
+    ).toBeVisible();
+  }
   await expect(page.getByText(/VITE_GOOGLE_CLIENT_ID/)).toHaveCount(0);
   const download = page.waitForEvent("download");
   await page
@@ -163,7 +170,7 @@ test("cloud setup is optional and ordinary local backup remains available withou
 });
 test("saved Drive preference survives reload and can be disabled without Google authorization", async ({
   page,
-}) => {
+}, testInfo) => {
   const before = await stored(page);
   await page.evaluate(async () => {
     const request = indexedDB.open("pennywise-reference-and-backup", 1);
@@ -202,9 +209,13 @@ test("saved Drive preference survives reload and can be disabled without Google 
   });
   await expect(automatic).toBeChecked();
   await expect(automatic).toBeEnabled();
-  await expect(
-    page.getByRole("button", { name: "Reconnect Google Drive", exact: true }),
-  ).toBeDisabled();
+  const reconnect = page.getByRole("button", {
+    name: "Reconnect Google Drive",
+    exact: true,
+  });
+  if (testInfo.config.metadata.googleConfigured)
+    await expect(reconnect).toBeEnabled();
+  else await expect(reconnect).toBeDisabled();
   await automatic.uncheck();
   await expect(page.getByText("Google Drive backup is off.")).toBeVisible();
   await page.reload();

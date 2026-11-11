@@ -9,6 +9,9 @@ export default defineConfig(({ command }) => {
     command === "serve" ? randomBytes(16).toString("base64") : undefined;
   return {
     base: "/",
+    server: {
+      watch: { ignored: ["**/playwright-report/**", "**/test-results/**"] },
+    },
     html: { cspNonce: nonce },
     plugins: [
       react(),

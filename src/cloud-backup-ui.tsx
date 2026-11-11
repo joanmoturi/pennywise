@@ -72,6 +72,7 @@ export function CloudBackupPanel() {
   const [busy, setBusy] = useState(false);
   const [, refreshIdentity] = useState(0);
   const [signInEpoch, setSignInEpoch] = useState(0);
+  const [signInOpen, setSignInOpen] = useState(false);
   async function refresh() {
     setConfig(await cloudConfig());
     setQueue(await cloudBackup.reconcile(app.repo));
@@ -114,7 +115,7 @@ export function CloudBackupPanel() {
     };
   }, []);
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !signIn.current) return;
+    if (!signInOpen || !GOOGLE_CLIENT_ID || !signIn.current) return;
     let active = true;
     void cloudBackup.session
       .renderSignIn(
@@ -132,7 +133,7 @@ export function CloudBackupPanel() {
     return () => {
       active = false;
     };
-  }, [signInEpoch]);
+  }, [signInEpoch, signInOpen]);
   const connected = cloudBackup.session.driveIdentity;
   const identity = cloudBackup.session.identity;
   function drive() {
@@ -275,7 +276,7 @@ export function CloudBackupPanel() {
             : "Enable Google Drive Backup"}
         </Button>
       )}
-      <details>
+      <details onToggle={(event) => setSignInOpen(event.currentTarget.open)}>
         <summary>Optional Google sign-in</summary>
         <h3>Account</h3>
         <p>

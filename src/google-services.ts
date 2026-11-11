@@ -30,7 +30,7 @@ interface GoogleLibrary {
         scope: string;
         include_granted_scopes: boolean;
         callback: (r: TokenResponse) => void;
-        error_callback: () => void;
+        error_callback: (error: { type: string }) => void;
       }): { requestAccessToken(options: { prompt: string }): void };
       revoke(token: string, callback: () => void): void;
     };
@@ -220,10 +220,12 @@ export class GoogleSession {
         scope: `${DRIVE_SCOPE} openid email`,
         include_granted_scopes: false,
         callback: resolve,
-        error_callback: () =>
+        error_callback: (error) =>
           reject(
             new Error(
-              "Google Drive connection cancelled. Local records are unchanged.",
+              error.type === "popup_failed_to_open"
+                ? "Google's account chooser could not open. Allow popups for Pennywise and try again. Local records are unchanged."
+                : "Google Drive connection cancelled. Local records are unchanged.",
             ),
           ),
       });

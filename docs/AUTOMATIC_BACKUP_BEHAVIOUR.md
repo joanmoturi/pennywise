@@ -4,6 +4,11 @@ Automatic backup is opt-in. The application must be open, visible when periodic
 checks run, online, connected to the confirmed Drive account and unlocked.
 Ordinary financial saves never depend on cloud success.
 
+Opening Backup Centre or using manual backups does not initialize Google.
+The SDK loads only after an explicit Drive connection action or opening the
+separate optional Google sign-in section. If a browser blocks the account
+chooser, allow popups for Pennywise and retry; local records are unchanged.
+
 Choose **Enable Google Drive Backup** and select the Google account that owns
 the backups. No separate application sign-in is required. This binds only the
 existing workspace's backup destination; it is not an account-switching or
