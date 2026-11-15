@@ -19,6 +19,7 @@ import { decimal } from "./money";
 import { PageHead, Card, Button, Badge, Table, errorMessage } from "./ui";
 import { CloudBackupPanel } from "./cloud-backup-ui";
 import { BackupHealthCard } from "./backup-health-ui";
+import { WorkspaceSyncPanel } from "./workspace-sync-ui";
 
 export function backupFilename(safety = false): string {
   return `Pennywise-${safety ? "SAFETY-" : "Full-Backup-"}${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
@@ -175,6 +176,7 @@ export function BackupCentre() {
         }
       />
       <BackupHealthCard inBackupCentre />
+      <WorkspaceSyncPanel />
       <CloudBackupPanel />
       <Card>
         <div className="card-head">

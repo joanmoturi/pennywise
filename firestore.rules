@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+    function pointer(value) {
+      return value is map && value.keys().hasOnly(['id', 'chunks'])
+        && value.id is string && value.id.matches('^[a-f0-9-]{36}$')
+        && value.chunks is int && value.chunks >= 1 && value.chunks <= 16;
+    }
+    match /users/{uid}/workspaces/main {
+      allow get: if owner(uid);
+      allow create, update: if owner(uid)
+        && request.resource.data.keys().hasOnly(['protocol','id','chunks','digest','previous'])
+        && request.resource.data.protocol == 1
+        && request.resource.data.id is string && request.resource.data.id.matches('^[a-f0-9-]{36}$')
+        && request.resource.data.chunks is int && request.resource.data.chunks >= 1 && request.resource.data.chunks <= 16
+        && request.resource.data.digest is string && request.resource.data.digest.matches('^[a-f0-9]{64}$')
+        && (request.resource.data.previous == null || pointer(request.resource.data.previous));
+    }
+    match /users/{uid}/snapshots/{snapshot}/chunks/{index} {
+      allow get, delete: if owner(uid);
+      allow create: if owner(uid) && snapshot.matches('^[a-f0-9-]{36}$')
+        && index.matches('^([0-9]|1[0-5])$')
+        && request.resource.data.keys().hasOnly(['ciphertext'])
+        && request.resource.data.ciphertext is string
+        && request.resource.data.ciphertext.size() > 0
+        && request.resource.data.ciphertext.size() <= 200000;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

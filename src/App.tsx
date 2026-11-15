@@ -53,6 +53,7 @@ import {
 } from "./pages-expenses";
 import { BackupCentre } from "./pages-backup";
 import { CloudBackupMonitor } from "./cloud-backup-ui";
+import { WorkspaceSyncProvider } from "./workspace-sync-ui";
 import { NotificationInbox } from "./pages-notifications";
 import { APP_VERSION } from "./backup";
 import { backupReminder } from "./expense-engine";
@@ -399,9 +400,11 @@ export default function App() {
               }),
             notify: setToast,
             navigate,
+            canApplySync: !dialog && saving === 0,
+            hasOpenSyncForm: Boolean(dialog),
           }
         : undefined,
-    [repo, state, mutate, navigate],
+    [repo, state, mutate, navigate, dialog, saving],
   );
   if (error)
     return (
@@ -427,288 +430,290 @@ export default function App() {
     );
   return (
     <Context.Provider value={app}>
-      <CloudBackupMonitor />
-      <div className="app-shell">
-        <a className="skip-link" href="#main-content">
-          Skip to main content
-        </a>
-        {drawer && (
-          <button
-            className="drawer-backdrop"
-            aria-label="Close navigation"
-            onClick={() => setDrawer(false)}
-          />
-        )}
-        <aside className={`sidebar ${drawer ? "open" : ""}`}>
-          <a
-            className="brand"
-            href="#overview"
-            onClick={(e) => {
-              e.preventDefault();
-              app.navigate("overview");
-            }}
-          >
-            <span className="logo-mark">P</span>
-            <span>
-              Pennywise<small>A little wiser. Every day.</small>
-            </span>
+      <WorkspaceSyncProvider>
+        <CloudBackupMonitor />
+        <div className="app-shell">
+          <a className="skip-link" href="#main-content">
+            Skip to main content
           </a>
-          <span className="nav-label">YOUR WORKSPACE</span>
-          <nav aria-label="Main navigation">
-            {navigationGroups.map((group) => (
-              <div className="nav-group" key={group.label}>
-                <span className="nav-label">{group.label}</span>
-                {navigation
-                  .filter((n) => group.ids.includes(n.id))
-                  .map((n) => (
-                    <button
-                      key={n.id}
-                      className={
-                        section === n.id ||
-                        (n.id === "obligations" && section === "receivables")
-                          ? "active"
-                          : ""
-                      }
-                      aria-current={
-                        section === n.id ||
-                        (n.id === "obligations" && section === "receivables")
-                          ? "page"
-                          : undefined
-                      }
-                      onClick={() => app.navigate(n.id)}
-                    >
-                      <n.icon size={19} />
-                      {n.label}
-                    </button>
-                  ))}
-              </div>
-            ))}
-          </nav>
-          <div className="sidebar-footer">
-            <ShieldCheck size={21} />
-            <strong>Your money. Your device.</strong>
-            <small>Private / offline-first / no bank login</small>
-          </div>
-        </aside>
-        <div className="workspace">
-          <header className="topbar">
-            <div>
-              <button
-                className="icon-button mobile-menu"
-                aria-label="Open navigation"
-                onClick={() => setDrawer(true)}
-              >
-                <Menu />
-              </button>
-              <span>Personal finance, thoughtfully organized</span>
-            </div>
-            <div className="actions">
-              <span className={`connection ${offline ? "offline" : ""}`}>
-                {offline ? <WifiOff size={15} /> : <CircleCheck size={15} />}
-                {offline ? "Offline / local data" : "Local & private"}
+          {drawer && (
+            <button
+              className="drawer-backdrop"
+              aria-label="Close navigation"
+              onClick={() => setDrawer(false)}
+            />
+          )}
+          <aside className={`sidebar ${drawer ? "open" : ""}`}>
+            <a
+              className="brand"
+              href="#overview"
+              onClick={(e) => {
+                e.preventDefault();
+                app.navigate("overview");
+              }}
+            >
+              <span className="logo-mark">P</span>
+              <span>
+                Pennywise<small>A little wiser. Every day.</small>
               </span>
-              {installEvent && (
+            </a>
+            <span className="nav-label">YOUR WORKSPACE</span>
+            <nav aria-label="Main navigation">
+              {navigationGroups.map((group) => (
+                <div className="nav-group" key={group.label}>
+                  <span className="nav-label">{group.label}</span>
+                  {navigation
+                    .filter((n) => group.ids.includes(n.id))
+                    .map((n) => (
+                      <button
+                        key={n.id}
+                        className={
+                          section === n.id ||
+                          (n.id === "obligations" && section === "receivables")
+                            ? "active"
+                            : ""
+                        }
+                        aria-current={
+                          section === n.id ||
+                          (n.id === "obligations" && section === "receivables")
+                            ? "page"
+                            : undefined
+                        }
+                        onClick={() => app.navigate(n.id)}
+                      >
+                        <n.icon size={19} />
+                        {n.label}
+                      </button>
+                    ))}
+                </div>
+              ))}
+            </nav>
+            <div className="sidebar-footer">
+              <ShieldCheck size={21} />
+              <strong>Your money. Your device.</strong>
+              <small>Private / offline-first / no bank login</small>
+            </div>
+          </aside>
+          <div className="workspace">
+            <header className="topbar">
+              <div>
                 <button
-                  className="icon-button"
-                  aria-label="Install Pennywise"
+                  className="icon-button mobile-menu"
+                  aria-label="Open navigation"
+                  onClick={() => setDrawer(true)}
+                >
+                  <Menu />
+                </button>
+                <span>Personal finance, thoughtfully organized</span>
+              </div>
+              <div className="actions">
+                <span className={`connection ${offline ? "offline" : ""}`}>
+                  {offline ? <WifiOff size={15} /> : <CircleCheck size={15} />}
+                  {offline ? "Offline / local data" : "Local & private"}
+                </span>
+                {installEvent && (
+                  <button
+                    className="icon-button"
+                    aria-label="Install Pennywise"
+                    onClick={() => {
+                      void installEvent.prompt();
+                      setInstallEvent(undefined);
+                    }}
+                  >
+                    <Download size={18} />
+                  </button>
+                )}
+                <Button
+                  aria-label="Quick add"
+                  onClick={() =>
+                    state.accounts.length
+                      ? editTransaction(app)
+                      : editRecord(app, "accounts")
+                  }
+                >
+                  <Plus size={17} />
+                  <span className="quick-add-label">Quick add</span>
+                </Button>
+                {saving > 0 && <span role="status">Saving locally...</span>}
+              </div>
+            </header>
+            {localPreview && (
+              <div className="notice local-preview-banner">
+                LOCAL CONNECTED-FINANCE PREVIEW / Separate browser storage.
+                Nothing here changes the deployed app.
+              </div>
+            )}
+            {state.settings.demo && (
+              <div className="demo-banner">
+                DEMONSTRATION DATA / Fictional balances, rates and dates. Remove
+                demo in Settings before recording real data.
+              </div>
+            )}
+            {updateReady && (
+              <div className="update-banner">
+                <span>
+                  A new version is ready. Download a full backup and save open
+                  forms before reloading.
+                </span>
+                <Button secondary onClick={() => app.navigate("backup")}>
+                  Backup Centre
+                </Button>
+                <Button
+                  secondary
+                  disabled={Boolean(dialog) || saving > 0}
                   onClick={() => {
-                    void installEvent.prompt();
-                    setInstallEvent(undefined);
+                    void updateWorker?.(true);
                   }}
                 >
-                  <Download size={18} />
+                  Reload update
+                </Button>
+              </div>
+            )}
+            {offlineReady && (
+              <div className="ready-banner" role="status">
+                Offline ready. This app can now reopen without a connection.
+                <button
+                  className="icon-button"
+                  aria-label="Dismiss offline notice"
+                  onClick={() => setOfflineReady(false)}
+                >
+                  <X size={14} />
                 </button>
+              </div>
+            )}
+            <main id="main-content" tabIndex={-1}>
+              {preparedDownload && (
+                <Card className="prepared-download no-print">
+                  <div>
+                    <strong>Your portable file is ready.</strong>
+                    <p>
+                      If the automatic download did not start, use this explicit
+                      save link. Verify the file exists before clearing browser
+                      data.
+                    </p>
+                    <small>
+                      {preparedDownload.name} / link expires in 5 minutes
+                    </small>
+                  </div>
+                  <a
+                    className="button"
+                    href={preparedDownload.url}
+                    download={preparedDownload.name}
+                  >
+                    Save prepared file
+                  </a>
+                  <button
+                    className="icon-button"
+                    aria-label="Dismiss prepared file"
+                    onClick={() => setPreparedDownload(undefined)}
+                  >
+                    <X size={17} />
+                  </button>
+                </Card>
               )}
-              <Button
-                aria-label="Quick add"
-                onClick={() =>
-                  state.accounts.length
-                    ? editTransaction(app)
-                    : editRecord(app, "accounts")
-                }
-              >
-                <Plus size={17} />
-                <span className="quick-add-label">Quick add</span>
-              </Button>
-              {saving > 0 && <span role="status">Saving locally...</span>}
-            </div>
-          </header>
-          {localPreview && (
-            <div className="notice local-preview-banner">
-              LOCAL CONNECTED-FINANCE PREVIEW / Separate browser storage.
-              Nothing here changes the deployed app.
-            </div>
+              {section !== "backup" && backupReminder(state).length > 0 && (
+                <div className="backup-reminder">
+                  <span>
+                    {backupReminder(state)[0]}. Keep a portable copy off this
+                    device.
+                  </span>
+                  <button
+                    className="text-button"
+                    onClick={() => app.navigate("backup")}
+                  >
+                    Download full backup
+                  </button>
+                </div>
+              )}
+              {!state.settings.setup && (
+                <Card className="setup">
+                  <div>
+                    <span className="eyebrow">WELCOME TO PENNYWISE</span>
+                    <h2>Start with what you know.</h2>
+                    <p>
+                      Add an account and its opening balance. Then build your
+                      income, obligations and budget gradually. Nothing is
+                      assumed or mandatory.
+                    </p>
+                  </div>
+                  <div className="actions">
+                    <Button onClick={() => editRecord(app, "accounts")}>
+                      Set up first account
+                    </Button>
+                    <Button
+                      secondary
+                      disabled={saving > 0}
+                      onClick={() =>
+                        void (async () => {
+                          try {
+                            await app.mutate(
+                              "Complete progressive welcome",
+                              (s) => {
+                                s.settings.setup = true;
+                              },
+                            );
+                            app.navigate("settings");
+                          } catch {
+                            /* The mutation already displays the error. */
+                          }
+                        })()
+                      }
+                    >
+                      Continue progressively
+                    </Button>
+                  </div>
+                </Card>
+              )}
+              <ActivePage key={section} section={section} />
+              <footer className="page-footer">
+                Pennywise {APP_VERSION}. Figures are based on your records and
+                explicitly labeled assumptions. Not personalized investment
+                advice.
+              </footer>
+            </main>
+          </div>
+          <nav className="bottom-nav" aria-label="Mobile navigation">
+            {navigation
+              .filter((n) =>
+                ["overview", "budgets", "transactions", "forecast"].includes(
+                  n.id,
+                ),
+              )
+              .map((n) => (
+                <button
+                  key={n.id}
+                  className={section === n.id ? "active" : ""}
+                  onClick={() => app.navigate(n.id)}
+                >
+                  <n.icon size={20} />
+                  <span>{n.label}</span>
+                </button>
+              ))}
+            <button onClick={() => setDrawer(true)}>
+              <Menu size={20} />
+              <span>More</span>
+            </button>
+          </nav>
+          {dialog && (
+            <FormDialog
+              key={dialog.title}
+              spec={dialog}
+              close={() => setDialog(undefined)}
+            />
           )}
-          {state.settings.demo && (
-            <div className="demo-banner">
-              DEMONSTRATION DATA / Fictional balances, rates and dates. Remove
-              demo in Settings before recording real data.
-            </div>
-          )}
-          {updateReady && (
-            <div className="update-banner">
-              <span>
-                A new version is ready. Download a full backup and save open
-                forms before reloading.
-              </span>
-              <Button secondary onClick={() => app.navigate("backup")}>
-                Backup Centre
-              </Button>
-              <Button
-                secondary
-                disabled={Boolean(dialog) || saving > 0}
-                onClick={() => {
-                  void updateWorker?.(true);
-                }}
-              >
-                Reload update
-              </Button>
-            </div>
-          )}
-          {offlineReady && (
-            <div className="ready-banner" role="status">
-              Offline ready. This app can now reopen without a connection.
+          {toast && (
+            <div className="toast" role="status">
+              {toast}
               <button
-                className="icon-button"
-                aria-label="Dismiss offline notice"
-                onClick={() => setOfflineReady(false)}
+                aria-label="Dismiss notification"
+                onClick={() => setToast("")}
               >
                 <X size={14} />
               </button>
             </div>
           )}
-          <main id="main-content" tabIndex={-1}>
-            {preparedDownload && (
-              <Card className="prepared-download no-print">
-                <div>
-                  <strong>Your portable file is ready.</strong>
-                  <p>
-                    If the automatic download did not start, use this explicit
-                    save link. Verify the file exists before clearing browser
-                    data.
-                  </p>
-                  <small>
-                    {preparedDownload.name} / link expires in 5 minutes
-                  </small>
-                </div>
-                <a
-                  className="button"
-                  href={preparedDownload.url}
-                  download={preparedDownload.name}
-                >
-                  Save prepared file
-                </a>
-                <button
-                  className="icon-button"
-                  aria-label="Dismiss prepared file"
-                  onClick={() => setPreparedDownload(undefined)}
-                >
-                  <X size={17} />
-                </button>
-              </Card>
-            )}
-            {section !== "backup" && backupReminder(state).length > 0 && (
-              <div className="backup-reminder">
-                <span>
-                  {backupReminder(state)[0]}. Keep a portable copy off this
-                  device.
-                </span>
-                <button
-                  className="text-button"
-                  onClick={() => app.navigate("backup")}
-                >
-                  Download full backup
-                </button>
-              </div>
-            )}
-            {!state.settings.setup && (
-              <Card className="setup">
-                <div>
-                  <span className="eyebrow">WELCOME TO PENNYWISE</span>
-                  <h2>Start with what you know.</h2>
-                  <p>
-                    Add an account and its opening balance. Then build your
-                    income, obligations and budget gradually. Nothing is assumed
-                    or mandatory.
-                  </p>
-                </div>
-                <div className="actions">
-                  <Button onClick={() => editRecord(app, "accounts")}>
-                    Set up first account
-                  </Button>
-                  <Button
-                    secondary
-                    disabled={saving > 0}
-                    onClick={() =>
-                      void (async () => {
-                        try {
-                          await app.mutate(
-                            "Complete progressive welcome",
-                            (s) => {
-                              s.settings.setup = true;
-                            },
-                          );
-                          app.navigate("settings");
-                        } catch {
-                          /* The mutation already displays the error. */
-                        }
-                      })()
-                    }
-                  >
-                    Continue progressively
-                  </Button>
-                </div>
-              </Card>
-            )}
-            <ActivePage key={section} section={section} />
-            <footer className="page-footer">
-              Pennywise {APP_VERSION}. Figures are based on your records and
-              explicitly labeled assumptions. Not personalized investment
-              advice.
-            </footer>
-          </main>
         </div>
-        <nav className="bottom-nav" aria-label="Mobile navigation">
-          {navigation
-            .filter((n) =>
-              ["overview", "budgets", "transactions", "forecast"].includes(
-                n.id,
-              ),
-            )
-            .map((n) => (
-              <button
-                key={n.id}
-                className={section === n.id ? "active" : ""}
-                onClick={() => app.navigate(n.id)}
-              >
-                <n.icon size={20} />
-                <span>{n.label}</span>
-              </button>
-            ))}
-          <button onClick={() => setDrawer(true)}>
-            <Menu size={20} />
-            <span>More</span>
-          </button>
-        </nav>
-        {dialog && (
-          <FormDialog
-            key={dialog.title}
-            spec={dialog}
-            close={() => setDialog(undefined)}
-          />
-        )}
-        {toast && (
-          <div className="toast" role="status">
-            {toast}
-            <button
-              aria-label="Dismiss notification"
-              onClick={() => setToast("")}
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-      </div>
+      </WorkspaceSyncProvider>
     </Context.Provider>
   );
 }

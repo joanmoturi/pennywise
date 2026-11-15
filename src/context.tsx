@@ -45,6 +45,8 @@ export interface AppContext {
   ) => void;
   notify: (message: string) => void;
   navigate: (section: string) => void;
+  canApplySync?: boolean;
+  hasOpenSyncForm?: boolean;
 }
 export const Context = createContext<AppContext | null>(null);
 export function useApp(): AppContext {

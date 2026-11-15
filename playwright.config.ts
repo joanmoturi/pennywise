@@ -9,7 +9,10 @@ export default defineConfig({
   timeout: 120000,
   expect: { timeout: 10000 },
   workers: 1,
-  metadata: { googleConfigured: Boolean(googleClientId) },
+  metadata: {
+    googleConfigured: Boolean(googleClientId),
+    syncConfigured: Boolean(process.env.VITE_FIREBASE_PROJECT_ID),
+  },
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: "http://127.0.0.1:4179",

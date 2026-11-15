@@ -13,6 +13,10 @@ rename. Current product name: Pennywise.
 
 ## Backup and recovery
 
+- [Encrypted cross-device sync setup](CROSS_DEVICE_SYNC_SETUP.md)
+- [Sync architecture, privacy and limitations](CROSS_DEVICE_SYNC_ARCHITECTURE.md)
+- [Sync test evidence and remaining release gates](CROSS_DEVICE_SYNC_TEST_REPORT.md)
+
 - [Cloud architecture](CLOUD_BACKUP_ARCHITECTURE.md)
 - [Original architecture audit](CLOUD_BACKUP_ARCHITECTURE_AUDIT.md)
 - [Google Drive setup](GOOGLE_DRIVE_SETUP.md)

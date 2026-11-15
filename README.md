@@ -1,8 +1,24 @@
 # Pennywise
 
-Local-first personal financial command centre. Standalone React/TypeScript PWA in its own public `joanmoturi/pennywise` source repository; financial records remain private to each device/browser. Engineering Academy remains unchanged in its original repository.
+Local-first personal financial command centre. Standalone React/TypeScript PWA in its own public `joanmoturi/pennywise` source repository. Records stay in this browser unless you explicitly export them or enable an optional encrypted cloud feature. Engineering Academy remains unchanged in its original repository.
 
 Production: `https://pennywise-7lz.pages.dev/`. Financial records remain local to each device/browser; hosting is not a backup service. Download portable full backups and keep encrypted copies outside the device.
+
+## Optional encrypted cross-device sync (feature branch)
+
+`feature/encrypted-cross-device-sync` adds Google account-based synchronization
+through an application-owned Firebase Spark project. It includes the earlier
+daily dashboard and backup-health branch. **This is not deployed to production.**
+Owner setup is still required; it has not been tested with a real Firebase
+project or customer account. Customers use the same Google account and separate
+sync passphrase on each device, explicitly review the initial workspace, then
+one-sided edits synchronize while the app is open and unlocked. Concurrent edits
+stop for review instead of silently merging financial records. Local records,
+manual exports and Google Drive backups remain independent and usable.
+
+See [setup](docs/CROSS_DEVICE_SYNC_SETUP.md),
+[architecture, privacy and limitations](docs/CROSS_DEVICE_SYNC_ARCHITECTURE.md)
+and [actual test evidence](docs/CROSS_DEVICE_SYNC_TEST_REPORT.md).
 
 New workspaces use a midnight-navy and warm-gold theme. Existing saved preferences are preserved; select **Settings > Theme > Dark** for the premium dark palette, or Light for its warm ivory counterpart.
 
@@ -43,7 +59,7 @@ and test recovery in an independent browser profile first.
 
 ## Optional Android SMS integration
 
-Transaction Inbox imports local companion JSON files, stages offline shares, reviews ambiguous candidates and evaluates explicitly configured deterministic rules. The separate Kotlin application under `android-companion` receives only new SMS broadcasts from explicitly enabled senders, using `RECEIVE_SMS`; it does not request `READ_SMS` or notification access. The PWA does not read SMS. No historical inbox scan or cloud synchronization is introduced.
+Transaction Inbox imports local companion JSON files, stages offline shares, reviews ambiguous candidates and evaluates explicitly configured deterministic rules. The separate Kotlin application under `android-companion` receives only new SMS broadcasts from explicitly enabled senders, using `RECEIVE_SMS`; it does not request `READ_SMS` or notification access. The PWA does not read SMS. The companion introduces no historical inbox scan or cloud synchronization; optional workspace sync is a separate PWA feature.
 
 Start with `ANDROID_COMPANION_GUIDE.md`, `SMS_INTEGRATION_GUIDE.md` and `APPROVAL_RULES_GUIDE.md`. Parser fixtures are synthetic, not certified real-bank formats. A local debug APK has been built: 27 JVM tests, 13 API-35 emulator instrumentation tests and the explicit native-file/local-PWA/receipt workflow passed. See `ANDROID_BUILD_AND_DEVICE_REPORT.md` for its path, checksum, installation steps and remaining physical-phone/Android Sharesheet limitations, and `SMS_PRIVACY_AND_SECURITY.md` before exporting. Production is updated through the existing Cloudflare Pages Git integration; `DEPLOYMENT_REPORT.md` records the verified web revision. The Android APK is not published.
 

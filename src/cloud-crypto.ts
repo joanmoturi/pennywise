@@ -26,6 +26,7 @@ const metadataSchema = z
     algorithm: z.literal("AES-256-GCM"),
     kdf: z.literal("PBKDF2-SHA-256"),
     iterations: z.literal(600000),
+    context: z.string().max(300).optional(),
   })
   .strict();
 export const cloudEnvelopeSchema = z
@@ -115,6 +116,7 @@ export async function createCloudBackup(
   password: string,
   deviceId: string,
   recovery?: string,
+  context?: string,
 ): Promise<string> {
   const metadata = metadataSchema.parse({
     format: "pennywise-cloud-v1",
@@ -127,6 +129,7 @@ export async function createCloudBackup(
     algorithm: "AES-256-GCM",
     kdf: "PBKDF2-SHA-256",
     iterations: 600000,
+    ...(context ? { context } : {}),
   });
   const raw = crypto.getRandomValues(new Uint8Array(32));
   const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, [
@@ -150,11 +153,16 @@ export async function inspectCloudBackup(
   text: string,
   secret: string,
   useRecovery = false,
+  expectedContext?: string,
 ): Promise<BackupPreview> {
   if (text.length > 50_000_000)
     throw new Error("Backup exceeds the 50 MB limit");
   try {
     const envelope = cloudEnvelopeSchema.parse(JSON.parse(text));
+    if (expectedContext && envelope.metadata.context !== expectedContext)
+      throw new Error(
+        "Encrypted workspace belongs to another account or project",
+      );
     const wrapper = useRecovery ? envelope.recovery : envelope.password;
     if (!wrapper) throw new Error("No recovery key on this backup");
     const raw = await unwrap(wrapper, secret, envelope.metadata);

@@ -1,10 +1,19 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { randomBytes } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
 import { onRequestGet } from "./functions/api/bond-reference";
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), "VITE_");
+  const project =
+    process.env.VITE_FIREBASE_PROJECT_ID ?? env.VITE_FIREBASE_PROJECT_ID;
+  if (project && !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(project))
+    throw new Error("Use a valid Firebase project ID");
+  const syncOrigin = project ? `https://${project}.firebaseapp.com` : "";
+  const syncCsp = (text: string) =>
+    text.replaceAll("__PENNYWISE_SYNC_AUTH_ORIGIN__", syncOrigin);
   const nonce =
     command === "serve" ? randomBytes(16).toString("base64") : undefined;
   return {
@@ -15,6 +24,17 @@ export default defineConfig(({ command }) => {
     html: { cspNonce: nonce },
     plugins: [
       react(),
+      {
+        name: "optional-sync-csp",
+        transformIndexHtml: { order: "pre", handler: syncCsp },
+        async closeBundle() {
+          if (command === "build")
+            await writeFile(
+              "dist/_headers",
+              syncCsp(await readFile("public/_headers", "utf8")),
+            );
+        },
+      },
       {
         name: "official-public-bond-adapter",
         configureServer(server) {
