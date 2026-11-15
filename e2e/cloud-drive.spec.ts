@@ -332,3 +332,71 @@ test("mock Google cancellation, popup blocking, missing permission and wrong acc
   expect(await financialRecords(page)).toEqual(before);
   expect([...googleDrive.files.values()]).toHaveLength(0);
 });
+
+test("backup health guides enablement, unlocking, verified snapshots, new changes and reconnection", async ({
+  page,
+  googleDrive,
+}) => {
+  await account(page, "TEST health account");
+  const health = () =>
+    page.getByRole("region", { name: "Backup health", exact: true });
+  await expect(health().getByRole("status")).toHaveText("Backup is off");
+  await health()
+    .getByRole("button", { name: "Manage backups", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Backup Centre", exact: true }),
+  ).toBeVisible();
+  await health()
+    .getByRole("button", { name: "Manage backups", exact: true })
+    .click();
+  await expect(page.locator("#drive-connect")).toBeFocused();
+  await enable(page);
+  await expect(health().getByRole("status")).toHaveText("Action needed");
+  await health()
+    .getByRole("button", { name: "Unlock backup encryption", exact: true })
+    .click();
+  await expect(page.locator("#drive-passphrase")).toBeFocused();
+  await unlock(page);
+  await expect(health().getByRole("status")).toHaveText("Backed up");
+  await expect(health()).not.toContainText("Never on this device");
+  await nav(page, "Overview");
+  await expect(health().getByRole("status")).toHaveText("Backed up");
+  await page
+    .getByRole("button", { name: "Record expense", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Amount", { exact: true }).fill("10");
+  await dialog
+    .getByLabel("Description", { exact: true })
+    .fill("TEST health expense");
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(health().getByRole("status")).toHaveText("Changes pending");
+  await health()
+    .getByRole("button", { name: "Review pending backup", exact: true })
+    .click();
+  await health()
+    .getByRole("button", { name: "Review pending backup", exact: true })
+    .click();
+  await expect(page.locator("#drive-backup-now")).toBeFocused();
+  await page.locator("#drive-backup-now").click();
+  await expect(health().getByRole("status")).toHaveText("Backed up");
+  const records = await financialRecords(page);
+  expect(
+    [...googleDrive.files.values()].filter(
+      (file) => !file.folder && file.appProperties.verified === "true",
+    ),
+  ).toHaveLength(2);
+  await page.reload();
+  await expect(page.locator(".app-shell")).toBeVisible();
+  await expect(health().getByRole("status")).toHaveText("Action needed");
+  await health()
+    .getByRole("button", { name: "Review Google connection", exact: true })
+    .click();
+  await health()
+    .getByRole("button", { name: "Review Google connection", exact: true })
+    .click();
+  await expect(page.locator("#drive-connect")).toBeFocused();
+  expect(await financialRecords(page)).toEqual(records);
+});

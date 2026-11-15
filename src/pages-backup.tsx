@@ -18,6 +18,7 @@ import { outstanding } from "./engine";
 import { decimal } from "./money";
 import { PageHead, Card, Button, Badge, Table, errorMessage } from "./ui";
 import { CloudBackupPanel } from "./cloud-backup-ui";
+import { BackupHealthCard } from "./backup-health-ui";
 
 export function backupFilename(safety = false): string {
   return `Pennywise-${safety ? "SAFETY-" : "Full-Backup-"}${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
@@ -163,12 +164,17 @@ export function BackupCentre() {
         title="Backup Centre"
         subtitle="A portable copy of your entire financial workspace, not just the current dashboard."
         action={
-          <Button disabled={busy} onClick={() => void save()}>
+          <Button
+            id="backup-download"
+            disabled={busy}
+            onClick={() => void save()}
+          >
             <Download size={17} />
             Download Full Backup
           </Button>
         }
       />
+      <BackupHealthCard inBackupCentre />
       <CloudBackupPanel />
       <Card>
         <div className="card-head">

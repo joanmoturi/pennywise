@@ -155,6 +155,11 @@ test("cloud setup is optional and ordinary local backup remains available withou
     await expect(
       page.getByText(/Google Drive backup is not available yet/),
     ).toBeVisible();
+    await page
+      .getByRole("region", { name: "Backup health", exact: true })
+      .getByRole("button", { name: "Create a manual backup", exact: true })
+      .click();
+    await expect(page.locator("#backup-download")).toBeFocused();
   }
   await expect(page.getByText(/VITE_GOOGLE_CLIENT_ID/)).toHaveCount(0);
   const download = page.waitForEvent("download");

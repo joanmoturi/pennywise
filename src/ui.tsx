@@ -26,12 +26,14 @@ export function errorMessage(error: unknown): string {
     : "The operation failed; please retry";
 }
 export function Button({
+  id,
   children,
   onClick,
   secondary = false,
   disabled = false,
   "aria-label": ariaLabel,
 }: {
+  id?: string;
   children: ReactNode;
   onClick?: () => void;
   secondary?: boolean;
@@ -40,6 +42,7 @@ export function Button({
 }) {
   return (
     <button
+      id={id}
       className={secondary ? "button secondary" : "button"}
       onClick={onClick}
       disabled={disabled}

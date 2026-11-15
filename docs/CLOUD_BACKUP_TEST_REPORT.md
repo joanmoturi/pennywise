@@ -1,5 +1,18 @@
 # Cloud backup test report
 
+## November 15 usability branch follow-up
+
+`feature/backup-health-daily-overview` passed 283 unit/integration tests, all 58
+desktop/mobile E2E cases and six explicitly configuration-disabled browser
+checks. Backup health/next-action focus and the simpler daily overview reuse
+existing financial/backup logic. See `USABILITY_TEST_REPORT.md` for the detailed
+coverage and `BACKUP_HEALTH_AND_DAILY_OVERVIEW.md` for behavior and limitations.
+The owner reported completing a real-account test on November 15; individual
+upload/restore/recovery/device outcomes were not supplied. Automated Google
+coverage remains mock-provider coverage, not new live acceptance evidence.
+
+## Historical implementation evidence
+
 Local validation performed during the 2026-11-10/11 implementation session.
 Only synthetic financial data and provider responses were used in automated
 tests. No personal backup or financial record was committed or uploaded.

@@ -6,6 +6,20 @@ Production: `https://pennywise-7lz.pages.dev/`. Financial records remain local t
 
 New workspaces use a midnight-navy and warm-gold theme. Existing saved preferences are preserved; select **Settings > Theme > Dark** for the premium dark palette, or Light for its warm ivory counterpart.
 
+## Daily overview and backup health
+
+The usability update on `feature/backup-health-daily-overview` keeps available
+money, the daily allowance, backup health, remaining budget, upcoming unpaid
+bills and transaction-review tasks upfront. Existing financial detail and charts
+remain under **Financial details & reports**. Backup health shows the last
+verified Drive snapshot and a clear next action without connecting to Google
+just to display status. Financial calculations and storage formats are unchanged.
+
+See [the feature guide](docs/BACKUP_HEALTH_AND_DAILY_OVERVIEW.md),
+[actual usability test results](docs/USABILITY_TEST_REPORT.md) and
+[the complete documentation index](docs/README.md).
+This branch has not been merged into the production `main` branch.
+
 ## Save reliability and usability update
 
 Pennywise retains its financial modules, ledger rules, Transaction Inbox,

@@ -48,6 +48,8 @@ import {
 import { timing } from "./performance";
 import { AllowanceWorkspace } from "./pages-connected";
 import { businessStats, businessForAccount } from "./connected-finance";
+import { BackupHealthCard } from "./backup-health-ui";
+import { dailyOverview } from "./daily-overview";
 
 export function OverviewPage() {
   const endCalculation = timing("overview-calculation");
@@ -56,6 +58,7 @@ export function OverviewPage() {
   const fmt = (n: number) => formatMoney(n, s.settings.currency);
   const totals = summary(s);
   const allowance = dailyAllowance(s);
+  const daily = dailyOverview(s);
   const projection = forecast(s, baseScenario());
   const report = reports(s, today().slice(0, 4) + "-01-01", today());
   const next = s.events
@@ -138,261 +141,370 @@ export function OverviewPage() {
           <p>{allowance.days} day planning horizon</p>
         </div>
       </div>
-      <div className="metrics">
-        <Metric
-          label="Liquid cash"
-          value={fmt(totals.liquid)}
-          hint="Actual account balances"
-        />
-        <Metric
-          label="Total recorded assets"
-          value={fmt(totals.assets)}
-          hint={`Net worth: ${fmt(totals.netWorth)}`}
-        />
-        <Metric
-          label="Restricted + reserved"
-          value={fmt(sum([totals.restricted, totals.reserves]))}
-          hint={`Restricted: ${fmt(totals.restricted)}`}
-        />
-        <Metric
-          label="Outstanding liabilities"
-          value={fmt(totals.liabilities)}
-          hint="Not personal earned income"
-        />
-      </div>
-      <div className="metrics">
-        <Metric label="Owed to me (not cash)" value={fmt(totals.receivables)} />
-        <Metric
-          label="Business-owned cash"
-          value={fmt(totals.businessCash)}
-          hint="Excluded from personal available money"
-        />
-        <Metric
-          label="Personal savings / earmarks"
-          value={fmt(totals.reserves)}
-          hint="Already owned, not extra income"
-        />
-        <Metric
-          label="Month-end available (forecast)"
-          value={fmt(
-            projection.lines.find(
-              (l) =>
-                l.date ===
-                new Date(
-                  Date.UTC(
-                    Number(today().slice(0, 4)),
-                    Number(today().slice(5, 7)),
-                    0,
-                  ),
-                )
-                  .toISOString()
-                  .slice(0, 10),
-            )?.expected ?? totals.available,
-          )}
-          hint="After protected money and liabilities; not actual cash"
-        />
-      </div>
-      {s.businesses.length > 0 && (
-        <Card>
-          <div className="card-head">
-            <h3>Business position, separately owned</h3>
-            <Button secondary onClick={() => app.navigate("businesses")}>
-              Businesses & distributions
+      <BackupHealthCard />
+      <section aria-label="Daily priorities">
+        <h2>Your daily overview</h2>
+        {totals.available < 0 && (
+          <p className="notice warning">
+            <strong>Protect the essentials.</strong> Your recorded commitments
+            exceed available liquid cash. Review your bills and budget before
+            spending.
+          </p>
+        )}
+        <div className="grid two">
+          <Card>
+            <div className="card-head">
+              <h3>Budget remaining</h3>
+              <Badge>{b.name}</Badge>
+            </div>
+            <p className="daily-amount">{fmt(budget.remaining)}</p>
+            <p>
+              {fmt(budget.actual)} spent of {fmt(budget.planned)} planned.
+              Budget remaining is a plan, not extra cash.
+            </p>
+            <Progress value={budget.actual} total={budget.planned} />
+            <Button secondary onClick={() => app.navigate("budgets")}>
+              Review budget
             </Button>
-          </div>
-          {s.businesses.map((b) => {
-            const stats = businessStats(s, b.id);
-            return (
-              <p key={b.id}>
-                <strong>{b.name}</strong>: cash {fmt(stats.cash)} / revenue{" "}
-                {fmt(stats.revenue)} / retained profit {fmt(stats.retained)} /
-                actually distributed to me {fmt(stats.ownerDistributions)}.
-              </p>
-            );
-          })}
-          <p>
-            Personal net position excludes full business-owned balances.
-            Indicative ownership shares are not spendable personal cash.
-          </p>
-        </Card>
-      )}
-      <div className="metrics">
-        <Metric
-          label="Recurring expenses due this month"
-          value={fmt(
-            sum(
-              s.occurrences
-                .filter((o) => o.due.startsWith(today().slice(0, 7)))
-                .map((o) => occurrenceRemaining(s, o)),
-            ),
-          )}
-        />
-        <Metric
-          label="Under-budget, not yet saved"
-          value={fmt(monthlyReview(s, b).remainingDecision)}
-        />
-        <Metric
-          label="Captured savings / earmarks"
-          value={fmt(monthlyReview(s, b).snapshot.saved)}
-        />
-        <Metric
-          label="Advance-payment savings"
-          value={fmt(sum(s.prepaids.map(prepaidSavings)))}
-        />
-      </div>
-      <Card>
-        <div className="card-head">
-          <h3>Planned expenses & coverage</h3>
-          <button
-            className="text-button"
-            onClick={() => app.navigate("review")}
-          >
-            Monthly review
-          </button>
+          </Card>
+          <Card>
+            <h3>Transactions to review</h3>
+            <p className="daily-amount">{daily.reviewCount}</p>
+            <p>
+              {daily.reviewCount
+                ? "Imported items need approval or correction. They are not confirmed ledger entries."
+                : "No imported transactions need your review."}
+            </p>
+            <Button secondary onClick={() => app.navigate("inbox")}>
+              Review transaction inbox
+            </Button>
+          </Card>
         </div>
-        {recurringReminders(s)
-          .slice(0, 5)
-          .map((o) => (
-            <p key={o.id} className="notice warning">
-              <strong>Recurring reminder:</strong>{" "}
-              {s.recurring.find((r) => r.id === o.recurringId)?.name} / due{" "}
-              {o.due} / unpaid {fmt(occurrenceRemaining(s, o))}.
-            </p>
-          ))}
-        <p>
-          {s.occasional.filter((o) => o.month >= today().slice(0, 7)).length}{" "}
-          upcoming occasional plans /{" "}
-          {
-            s.occurrences.filter(
-              (o) =>
-                coveringPrepaid(s, o) && o.due.startsWith(today().slice(0, 7)),
-            ).length
-          }{" "}
-          recurring periods already prepaid / remaining budget{" "}
-          {fmt(budget.remaining)}.
-        </p>
-        {s.prepaids
-          .filter(
-            (p) =>
-              !p.terminatedOn &&
-              p.coverageEnd >= today() &&
-              p.coverageEnd <=
-                new Date(Date.parse(today()) + 30 * 86400000)
-                  .toISOString()
-                  .slice(0, 10),
-          )
-          .map((p) => (
-            <p key={p.id}>
-              {p.name} renews after {p.coverageEnd}.
-            </p>
-          ))}
-      </Card>
-      <div className="grid two">
         <Card>
           <div className="card-head">
-            <h3>This month's rhythm</h3>
-            <Badge>Actual only</Badge>
+            <h3>Upcoming bills & overdue items</h3>
+            <Badge
+              warning={daily.commitments.some((item) => item.due < today())}
+            >
+              {daily.commitments.length} to review
+            </Badge>
           </div>
-          <div className="mini-metrics">
-            <div>
-              <span>Earned / distributed income</span>
-              <strong>{fmt(totals.income)}</strong>
-            </div>
-            <div>
-              <span>Expenses</span>
-              <strong>{fmt(totals.expenses)}</strong>
-            </div>
-          </div>
-          <h4>Active budget consumption</h4>
-          <Progress value={budget.actual} total={budget.planned} />
           <p>
-            {fmt(budget.actual)} spent of {fmt(budget.planned)} planned
+            Unpaid recorded items due through{" "}
+            {new Date(Date.parse(today()) + 7 * 86400000)
+              .toISOString()
+              .slice(0, 10)}
+            , including overdue items. Reviewing does not record a payment.
           </p>
-          <button
-            className="text-button"
-            onClick={() => app.navigate("budgets")}
-          >
-            Review category allocations <ArrowRight size={15} />
-          </button>
+          {daily.commitments.length ? (
+            <ul className="daily-commitments">
+              {daily.commitments.slice(0, 4).map((item) => (
+                <li key={item.id}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <p>
+                      {item.kind} /{" "}
+                      {item.due < today()
+                        ? "Overdue"
+                        : item.due === today()
+                          ? "Due today"
+                          : "Due"}{" "}
+                      {item.due} / {fmt(item.remaining)} remaining
+                    </p>
+                  </div>
+                  <Button
+                    secondary
+                    aria-label={`Review ${item.name}`}
+                    onClick={() => app.navigate(item.section)}
+                  >
+                    Review
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>
+              No unpaid recorded bills are due in this window. This does not
+              include bills you have not entered.
+            </p>
+          )}
+          {daily.commitments.length > 4 && (
+            <p>
+              Showing the first 4 of {daily.commitments.length}. Open Recurring
+              Expenses, Debts or Budgets for the full lists.
+            </p>
+          )}
+          <Button secondary onClick={() => app.navigate("recurring")}>
+            Manage recurring bills
+          </Button>
         </Card>
-        <Card>
-          <h3>On the horizon</h3>
-          <dl>
-            <dt>Next expected receipt</dt>
-            <dd>
-              {next
-                ? `${next.due} / ${fmt(eventRemaining(s, next))}`
-                : "None configured"}
-            </dd>
-            <dt>All upcoming projections</dt>
-            <dd>{fmt(expected)}</dd>
-            <dt>Receivables outstanding</dt>
-            <dd>{fmt(totals.receivables)}</dd>
-            <dt>Emergency reserve</dt>
-            <dd>{fmt(totals.emergency)}</dd>
-            <dt>Forecast runway</dt>
-            <dd>
-              {projection.runwayDays === null
-                ? `Beyond ${baseScenario().days} days under assumptions`
-                : `${projection.runwayDays} days`}
-            </dd>
-          </dl>
-          <p className="notice">
-            Expected receipts are not available money. Forecasts are
-            assumptions, not guarantees.
-          </p>
-        </Card>
-      </div>
-      {(totals.available < 0 ||
-        allowance.safeAmount === 0 ||
-        s.necessities.some((n) => n.due < today())) && (
-        <div className="notice warning">
-          <strong>Protect the essentials.</strong>{" "}
-          {totals.available < 0
-            ? "Your recorded commitments exceed available liquid cash."
-            : "Review essential bills and discretionary allocations before spending."}
+      </section>
+      <details className="overview-details">
+        <summary>Financial details & reports</summary>
+        <p>
+          Your existing asset, business, savings and forecasting views remain
+          below. Forecasts are not spendable cash.
+        </p>
+        <div className="metrics">
+          <Metric
+            label="Liquid cash"
+            value={fmt(totals.liquid)}
+            hint="Actual account balances"
+          />
+          <Metric
+            label="Total recorded assets"
+            value={fmt(totals.assets)}
+            hint={`Net worth: ${fmt(totals.netWorth)}`}
+          />
+          <Metric
+            label="Restricted + reserved"
+            value={fmt(sum([totals.restricted, totals.reserves]))}
+            hint={`Restricted: ${fmt(totals.restricted)}`}
+          />
+          <Metric
+            label="Outstanding liabilities"
+            value={fmt(totals.liabilities)}
+            hint="Not personal earned income"
+          />
         </div>
-      )}
-      <div className="grid two">
-        <BarChart
-          title="Income versus expenses"
-          data={report.monthly.map((m) => ({
-            name: m.month,
-            amount: m.income,
-            secondary: m.expense,
-          }))}
-          format={fmt}
-        />
-        <BarChart
-          title="Spending by category"
-          data={report.spending}
-          format={fmt}
-        />
-      </div>
-      <div className="grid two">
-        <LineChart
-          title="Actual liquid cash over time"
-          lines={[
+        <div className="metrics">
+          <Metric
+            label="Owed to me (not cash)"
+            value={fmt(totals.receivables)}
+          />
+          <Metric
+            label="Business-owned cash"
+            value={fmt(totals.businessCash)}
+            hint="Excluded from personal available money"
+          />
+          <Metric
+            label="Personal savings / earmarks"
+            value={fmt(totals.reserves)}
+            hint="Already owned, not extra income"
+          />
+          <Metric
+            label="Month-end available (forecast)"
+            value={fmt(
+              projection.lines.find(
+                (l) =>
+                  l.date ===
+                  new Date(
+                    Date.UTC(
+                      Number(today().slice(0, 4)),
+                      Number(today().slice(5, 7)),
+                      0,
+                    ),
+                  )
+                    .toISOString()
+                    .slice(0, 10),
+              )?.expected ?? totals.available,
+            )}
+            hint="After protected money and liabilities; not actual cash"
+          />
+        </div>
+        {s.businesses.length > 0 && (
+          <Card>
+            <div className="card-head">
+              <h3>Business position, separately owned</h3>
+              <Button secondary onClick={() => app.navigate("businesses")}>
+                Businesses & distributions
+              </Button>
+            </div>
+            {s.businesses.map((b) => {
+              const stats = businessStats(s, b.id);
+              return (
+                <p key={b.id}>
+                  <strong>{b.name}</strong>: cash {fmt(stats.cash)} / revenue{" "}
+                  {fmt(stats.revenue)} / retained profit {fmt(stats.retained)} /
+                  actually distributed to me {fmt(stats.ownerDistributions)}.
+                </p>
+              );
+            })}
+            <p>
+              Personal net position excludes full business-owned balances.
+              Indicative ownership shares are not spendable personal cash.
+            </p>
+          </Card>
+        )}
+        <div className="metrics">
+          <Metric
+            label="Recurring expenses due this month"
+            value={fmt(
+              sum(
+                s.occurrences
+                  .filter((o) => o.due.startsWith(today().slice(0, 7)))
+                  .map((o) => occurrenceRemaining(s, o)),
+              ),
+            )}
+          />
+          <Metric
+            label="Under-budget, not yet saved"
+            value={fmt(monthlyReview(s, b).remainingDecision)}
+          />
+          <Metric
+            label="Captured savings / earmarks"
+            value={fmt(monthlyReview(s, b).snapshot.saved)}
+          />
+          <Metric
+            label="Advance-payment savings"
+            value={fmt(sum(s.prepaids.map(prepaidSavings)))}
+          />
+        </div>
+        <Card>
+          <div className="card-head">
+            <h3>Planned expenses & coverage</h3>
+            <button
+              className="text-button"
+              onClick={() => app.navigate("review")}
+            >
+              Monthly review
+            </button>
+          </div>
+          {recurringReminders(s)
+            .slice(0, 5)
+            .map((o) => (
+              <p key={o.id} className="notice warning">
+                <strong>Recurring reminder:</strong>{" "}
+                {s.recurring.find((r) => r.id === o.recurringId)?.name} / due{" "}
+                {o.due} / unpaid {fmt(occurrenceRemaining(s, o))}.
+              </p>
+            ))}
+          <p>
+            {s.occasional.filter((o) => o.month >= today().slice(0, 7)).length}{" "}
+            upcoming occasional plans /{" "}
             {
-              name: "Recorded cash",
-              values: report.monthly.map((m) => m.cash),
-              color: "var(--chart-primary)",
-            },
-          ]}
-        />
-        <BarChart
-          title="Actual versus category budget"
-          data={effectiveAllocations(s, b)
-            .filter((a) => a.purpose === "spending")
-            .map((a) => ({
-              name: a.category,
-              amount: budgetActual(s, b, a.category),
-              secondary: a.amount,
+              s.occurrences.filter(
+                (o) =>
+                  coveringPrepaid(s, o) &&
+                  o.due.startsWith(today().slice(0, 7)),
+              ).length
+            }{" "}
+            recurring periods already prepaid / remaining budget{" "}
+            {fmt(budget.remaining)}.
+          </p>
+          {s.prepaids
+            .filter(
+              (p) =>
+                !p.terminatedOn &&
+                p.coverageEnd >= today() &&
+                p.coverageEnd <=
+                  new Date(Date.parse(today()) + 30 * 86400000)
+                    .toISOString()
+                    .slice(0, 10),
+            )
+            .map((p) => (
+              <p key={p.id}>
+                {p.name} renews after {p.coverageEnd}.
+              </p>
+            ))}
+        </Card>
+        <div className="grid two">
+          <Card>
+            <div className="card-head">
+              <h3>This month's rhythm</h3>
+              <Badge>Actual only</Badge>
+            </div>
+            <div className="mini-metrics">
+              <div>
+                <span>Earned / distributed income</span>
+                <strong>{fmt(totals.income)}</strong>
+              </div>
+              <div>
+                <span>Expenses</span>
+                <strong>{fmt(totals.expenses)}</strong>
+              </div>
+            </div>
+            <h4>Active budget consumption</h4>
+            <Progress value={budget.actual} total={budget.planned} />
+            <p>
+              {fmt(budget.actual)} spent of {fmt(budget.planned)} planned
+            </p>
+            <button
+              className="text-button"
+              onClick={() => app.navigate("budgets")}
+            >
+              Review category allocations <ArrowRight size={15} />
+            </button>
+          </Card>
+          <Card>
+            <h3>On the horizon</h3>
+            <dl>
+              <dt>Next expected receipt</dt>
+              <dd>
+                {next
+                  ? `${next.due} / ${fmt(eventRemaining(s, next))}`
+                  : "None configured"}
+              </dd>
+              <dt>All upcoming projections</dt>
+              <dd>{fmt(expected)}</dd>
+              <dt>Receivables outstanding</dt>
+              <dd>{fmt(totals.receivables)}</dd>
+              <dt>Emergency reserve</dt>
+              <dd>{fmt(totals.emergency)}</dd>
+              <dt>Forecast runway</dt>
+              <dd>
+                {projection.runwayDays === null
+                  ? `Beyond ${baseScenario().days} days under assumptions`
+                  : `${projection.runwayDays} days`}
+              </dd>
+            </dl>
+            <p className="notice">
+              Expected receipts are not available money. Forecasts are
+              assumptions, not guarantees.
+            </p>
+          </Card>
+        </div>
+        {(totals.available < 0 ||
+          allowance.safeAmount === 0 ||
+          s.necessities.some((n) => n.due < today())) && (
+          <div className="notice warning">
+            <strong>Protect the essentials.</strong>{" "}
+            {totals.available < 0
+              ? "Your recorded commitments exceed available liquid cash."
+              : "Review essential bills and discretionary allocations before spending."}
+          </div>
+        )}
+        <div className="grid two">
+          <BarChart
+            title="Income versus expenses"
+            data={report.monthly.map((m) => ({
+              name: m.month,
+              amount: m.income,
+              secondary: m.expense,
             }))}
-          format={fmt}
-        />
-      </div>
-      <DecisionPanel />
+            format={fmt}
+          />
+          <BarChart
+            title="Spending by category"
+            data={report.spending}
+            format={fmt}
+          />
+        </div>
+        <div className="grid two">
+          <LineChart
+            title="Actual liquid cash over time"
+            lines={[
+              {
+                name: "Recorded cash",
+                values: report.monthly.map((m) => m.cash),
+                color: "var(--chart-primary)",
+              },
+            ]}
+          />
+          <BarChart
+            title="Actual versus category budget"
+            data={effectiveAllocations(s, b)
+              .filter((a) => a.purpose === "spending")
+              .map((a) => ({
+                name: a.category,
+                amount: budgetActual(s, b, a.category),
+                secondary: a.amount,
+              }))}
+            format={fmt}
+          />
+        </div>
+        <DecisionPanel />
+      </details>
     </>
   );
 }

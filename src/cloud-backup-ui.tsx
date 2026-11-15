@@ -268,6 +268,7 @@ export function CloudBackupPanel() {
       </p>
       {(!config?.enabled || !connected) && (
         <Button
+          id="drive-connect"
           disabled={busy || !config || !GOOGLE_CLIENT_ID}
           onClick={() => void action(() => connect(true))}
         >
@@ -335,6 +336,7 @@ export function CloudBackupPanel() {
       <div className="actions">
         {config?.owner && (
           <Button
+            id="drive-reconnect"
             disabled={busy || !GOOGLE_CLIENT_ID}
             onClick={() => void action(() => connect(false, true))}
           >
@@ -367,6 +369,7 @@ export function CloudBackupPanel() {
       <label>
         Drive encryption passphrase (12+ characters)
         <input
+          id="drive-passphrase"
           type="password"
           autoComplete="new-password"
           value={password}
@@ -447,7 +450,7 @@ export function CloudBackupPanel() {
         want it on new backups.
       </p>
       <h3>Backup</h3>
-      <p>
+      <p id="backup-progress" tabIndex={-1}>
         Status: {queue?.status ?? "Loading"}
         {queue?.message ? ` — ${queue.message}` : ""}
       </p>
@@ -509,6 +512,7 @@ export function CloudBackupPanel() {
       </p>
       <div className="actions">
         <Button
+          id="drive-backup-now"
           disabled={busy || !connected || !cloudBackup.unlocked}
           onClick={() => void action(backUpNow)}
         >

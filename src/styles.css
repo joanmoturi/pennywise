@@ -484,6 +484,44 @@ main {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 17px;
 }
+.daily-amount {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.daily-commitments {
+  list-style: none;
+  padding: 0;
+}
+.daily-commitments li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.daily-commitments li > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.daily-commitments p {
+  margin: 6px 0 0;
+}
+.backup-health .card-head {
+  flex-wrap: wrap;
+}
+.backup-timestamp {
+  overflow-wrap: anywhere;
+}
+.overview-details {
+  margin: 22px 0;
+}
+.overview-details > summary {
+  cursor: pointer;
+  padding: 16px 0;
+  font-weight: 650;
+}
 .metric {
   display: flex;
   flex-direction: column;

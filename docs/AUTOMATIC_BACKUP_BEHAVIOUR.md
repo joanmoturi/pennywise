@@ -1,5 +1,10 @@
 # Automatic backup behaviour
 
+The November 15 feature branch adds a local-only backup health card to Overview
+and Backup Centre. It distinguishes current verified revisions from pending,
+in-flight, disabled and action-required states; it never starts Google consent
+or backup merely to display status. See `BACKUP_HEALTH_AND_DAILY_OVERVIEW.md`.
+
 Automatic backup is opt-in. The application must be open, visible when periodic
 checks run, online, connected to the confirmed Drive account and unlocked.
 Ordinary financial saves never depend on cloud success.
