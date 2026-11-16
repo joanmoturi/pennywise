@@ -2,17 +2,18 @@
 
 Local-first personal financial command centre. Standalone React/TypeScript PWA in its own public `joanmoturi/pennywise` source repository. Records stay in this browser unless you explicitly export them or enable an optional encrypted cloud feature. Engineering Academy remains unchanged in its original repository.
 
-Production: `https://pennywise-7lz.pages.dev/`. Financial records remain local to each device/browser; hosting is not a backup service. Download portable full backups and keep encrypted copies outside the device.
+Production: `https://pennywise-7lz.pages.dev/`. Records remain local unless you explicitly enable encrypted sync or Drive backup. Hosting is not a backup service. Download portable full backups and keep encrypted copies outside the device.
 
-## Optional encrypted cross-device sync (feature branch)
+## Optional encrypted cross-device sync
 
-`feature/encrypted-cross-device-sync` adds Google account-based synchronization
-through an application-owned Firebase Spark project. It includes the earlier
-daily dashboard and backup-health branch. **This is not deployed to production.**
-The owner-configured Firebase backend now has verified protected rules and
-Google sign-in, with billing disabled. The configured Pages preview is deployed;
-hosted desktop/mobile-emulated Google popup checks passed without signing in.
-Real-account/two-device acceptance and production approval are still pending.
+**Live since November 16, 2026.** The owner approved production deployment of
+`feature/encrypted-cross-device-sync`, including the earlier daily dashboard and
+backup-health changes. Google account-based synchronization uses an
+application-owned Firebase Spark project with protected rules and billing
+disabled. Production desktop/mobile-emulated checks covered the actual Google
+popup, local record preservation, offline use and portable backup recovery.
+Completed Google consent, physical two-device delivery and real Drive recovery
+remain unconfirmed; the owner explicitly requested release before that acceptance.
 Customers use the same Google account and separate
 sync passphrase on each device, explicitly review the initial workspace, then
 one-sided edits synchronize while the app is open and unlocked. Concurrent edits
@@ -37,7 +38,7 @@ just to display status. Financial calculations and storage formats are unchanged
 See [the feature guide](docs/BACKUP_HEALTH_AND_DAILY_OVERVIEW.md),
 [actual usability test results](docs/USABILITY_TEST_REPORT.md) and
 [the complete documentation index](docs/README.md).
-This branch has not been merged into the production `main` branch.
+These changes are included in the November 16 production release on `main`.
 
 ## Save reliability and usability update
 

@@ -6,16 +6,18 @@ The existing Git-connected Pages project is `pennywise`; its actual production U
 
 ## Encrypted-sync activation status
 
-The `feature/encrypted-cross-device-sync` candidate uses an optional
-owner-configured Firebase backend, separate from Google Drive backups. Protected
-Firestore rules and Google Auth setup are verified; public Firebase build values
-are configured in **Preview only**. Existing production settings are unchanged.
-Use `docs/CROSS_DEVICE_SYNC_SETUP.md` for current setup and
-`docs/CROSS_DEVICE_SYNC_TEST_REPORT.md` for actual evidence. The local-only
-production instructions below remain the baseline until the staged sync release
-is explicitly approved. Do not copy real financial records or the intended
-real-data Google UID into preview: use the separate test account and synthetic
-records. A successful Pages build does not prove real cross-device delivery.
+Optional encrypted sync is live on the existing production origin as of
+November 16, 2026, following the owner's explicit release request. Protected
+Firestore rules and Google Auth are verified. The three public Firebase build
+values are configured in Preview and Production; existing Drive settings and
+the hosting project were preserved. Sync remains an explicit customer opt-in,
+separate from Drive backup. Physical two-device delivery and real Drive recovery
+remain unconfirmed; release did not establish that acceptance passed.
+Use `docs/CROSS_DEVICE_SYNC_SETUP.md` for setup and
+`docs/CROSS_DEVICE_SYNC_TEST_REPORT.md` for actual evidence. Never copy real
+financial records or the intended real-data Google UID into preview: use the
+separate test account and synthetic records. A successful build or Google popup
+does not prove completed consent or real cross-device delivery.
 
 ## 1. Publish the application from your laptop
 
@@ -33,33 +35,34 @@ Review your Git changes, commit only the intended Pennywise files, and push them
 
 Commit `package-lock.json`, `.node-version`, source, public assets, configuration, tests and these guides. Do **not** commit `dist` or `node_modules`.
 
-The lockfile now uses public npm tarball URLs instead of the development environment's package feed. Package versions and integrity hashes are unchanged. An isolated install from the local npm cache passed; an uncached public-registry install could not be verified here because outbound registry TLS connections failed. The first Cloudflare build must verify that network installation succeeds. Do not add private feed credentials or disable certificate/integrity checks.
+The lockfile uses public npm tarball URLs instead of the development environment's package feed. Versions and integrity hashes are unchanged. The configured Pages preview and production builds succeeded with this lockfile; no claim is made that every tarball bypassed build caches. Do not add private feed credentials or disable certificate/integrity checks.
 
 ## 2. Enter these exact Cloudflare settings
 
 For updates, use the existing Git-connected Pages project `pennywise`; pushing tested changes to `main` triggers its build. Do not create a replacement project or hostname. Only if configuring a new installation, choose **Workers & Pages > Create application > Pages > Connect to Git**, authorize the selected repository, and choose **Pages**, not a Workers project requiring a deploy command.
 
-| Setting                              | Value to enter                                                         |
-| ------------------------------------ | ---------------------------------------------------------------------- |
-| Git provider                         | GitHub                                                                 |
-| Repository                           | `joanmoturi/pennywise`                                                 |
-| Project name                         | `pennywise` (existing project)                                         |
-| Production branch                    | `main`                                                                 |
-| Framework preset                     | `None`                                                                 |
-| Root directory / advanced path       | Leave blank (repository root)                                          |
-| Build command                        | `npm ci && npm run build`                                              |
-| Build output directory               | `dist`                                                                 |
-| Build environment variable           | `NODE_VERSION` = `26.13.0`                                             |
-| Build environment variable           | `SKIP_DEPENDENCY_INSTALL` = `1`                                        |
-| Optional build configuration         | `VITE_GOOGLE_CLIENT_ID` (public OAuth web client ID; see Drive setup)  |
-| Functions                            | Public-only `/api/bond-reference`; no credentials or financial records |
-| Databases, bindings, runtime secrets | None                                                                   |
+| Setting                              | Value to enter                                                              |
+| ------------------------------------ | --------------------------------------------------------------------------- |
+| Git provider                         | GitHub                                                                      |
+| Repository                           | `joanmoturi/pennywise`                                                      |
+| Project name                         | `pennywise` (existing project)                                              |
+| Production branch                    | `main`                                                                      |
+| Framework preset                     | `None`                                                                      |
+| Root directory / advanced path       | Leave blank (repository root)                                               |
+| Build command                        | `npm ci && npm run build`                                                   |
+| Build output directory               | `dist`                                                                      |
+| Build environment variable           | `NODE_VERSION` = `26.13.0`                                                  |
+| Build environment variable           | `SKIP_DEPENDENCY_INSTALL` = `1`                                             |
+| Optional build configuration         | `VITE_GOOGLE_CLIENT_ID` (public OAuth web client ID; see Drive setup)       |
+| Optional encrypted-sync build values | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` |
+| Functions                            | Public-only `/api/bond-reference`; no credentials or financial records      |
+| Databases, bindings, runtime secrets | None                                                                        |
 
 Apply the two build variables to both Production and Preview environments. `SKIP_DEPENDENCY_INSTALL=1` prevents a separate automatic install; the explicit `npm ci` then installs the committed lockfile. `.node-version` also records the tested Node version.
 
 **Important:** Pennywise is now at the repository root. Leave the root directory field blank; the output field is **`dist`**, not `pennywise/dist`, `.next`, `out`, `public` or the repository root. The npm build script is exactly `tsc --noEmit && vite build`. Select `None` to avoid framework presets silently substituting another build command.
 
-Use the free `pages.dev` hostname; a purchased domain is unnecessary. Do not enable Web Analytics, add analytics snippets, or configure cloud financial storage. The build uses development dependencies as well as runtime dependencies: do not set npm to omit dev dependencies.
+Use the free `pages.dev` hostname; a purchased domain is unnecessary. Do not enable Web Analytics, add analytics snippets or introduce unrelated cloud storage. Optional sync uses the separately protected Firebase project described above; Pages itself has no financial database binding. The build uses development dependencies as well as runtime dependencies: do not set npm to omit dev dependencies.
 
 The existing production address is:
 
@@ -131,26 +134,26 @@ The tested update replaced a precached application-shell revision and preserved 
 
 ## 6. Local data, recovery and troubleshooting
 
-The hosting project serves application assets and optionally proxies public
-CBK reference information. There is no application-owned financial-data backend
-or live synchronization service. Optional Google identity/Drive backup requires
-the application owner's shared OAuth setup in `docs/GOOGLE_DRIVE_SETUP.md`;
-users consent to their own Drive accounts and encrypted payloads go directly
-to Google, not hosting. Cloudflare still processes ordinary request metadata
-such as IP addresses; this is not anonymous browsing.
+The hosting project serves assets and proxies public CBK reference information,
+not financial records. Optional sync sends encrypted workspace snapshots directly
+to the protected Firebase backend only after explicit linking. Drive backup
+remains separate and requires the owner's OAuth setup in
+`docs/GOOGLE_DRIVE_SETUP.md`; users consent to their own Drive accounts.
+Cloudflare still processes ordinary request metadata such as IP addresses; this
+is not anonymous browsing.
 
-Your laptop, another phone and another browser profile have independent local databases, even at the same URL. Chrome and its installed PWA on the **same device/origin** can share storage. A different domain, preview hostname or browser profile is a different workspace. Choose a stable production hostname before starting real records, and use portable backups when changing origin/device.
+Devices/profiles have independent local databases until explicitly linked with the same Google account and sync passphrase. Chrome and its installed PWA on the **same device/origin** can share storage. A different hostname isolates local storage, not a Firebase workspace for the same project/Google UID. Keep the stable production hostname; export before linking or changing origin/device.
 
-| Problem                               | Check                                                                                                                                  |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare builds Engineering Academy | Select `joanmoturi/pennywise`, not `MyLearningApp`; leave root directory blank; output must be `dist`.                                 |
-| Missing compiler/Vite                 | Do not omit dev dependencies; check the explicit `npm ci` step.                                                                        |
-| npm TLS, 404 or integrity failure     | Fix registry/network access and verify available package versions. Do not disable TLS, ignore integrity or inject private credentials. |
-| Worker/manifest returns HTML          | Check generated output and MIME headers; do not rewrite existing assets to the SPA entry.                                              |
-| CSP errors from analytics             | Disable hosting-injected analytics; do not relax script or connection policies.                                                        |
-| Old version remains                   | Reconnect, foreground the app, check `sw.js` cache headers, save forms and accept the update.                                          |
-| Empty records on another URL/device   | Expected origin/device isolation; restore a full JSON backup.                                                                          |
-| Storage clearing needed               | First verify an external full backup. Never clear site data as the first troubleshooting step.                                         |
+| Problem                               | Check                                                                                                                                                          |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare builds Engineering Academy | Select `joanmoturi/pennywise`, not `MyLearningApp`; leave root directory blank; output must be `dist`.                                                         |
+| Missing compiler/Vite                 | Do not omit dev dependencies; check the explicit `npm ci` step.                                                                                                |
+| npm TLS, 404 or integrity failure     | Fix registry/network access and verify available package versions. Do not disable TLS, ignore integrity or inject private credentials.                         |
+| Worker/manifest returns HTML          | Check generated output and MIME headers; do not rewrite existing assets to the SPA entry.                                                                      |
+| CSP errors from analytics             | Disable hosting-injected analytics; do not relax script or connection policies.                                                                                |
+| Old version remains                   | Reconnect, foreground the app, check `sw.js` cache headers, save forms and accept the update.                                                                  |
+| Empty records on another URL/device   | Local storage is independent. Export first, then explicitly adopt the cloud workspace using the same Google account/passphrase, or restore a full JSON backup. |
+| Storage clearing needed               | First verify an external full backup. Never clear site data as the first troubleshooting step.                                                                 |
 
 ## Authoritative references
 

@@ -1,14 +1,14 @@
 # Encrypted cross-device workspace sync
 
-Implementation date: November 15, 2026. Branch:
-`feature/encrypted-cross-device-sync`. Not enabled or deployed to production.
-The branch includes the separate backup-health/daily-dashboard improvement.
+Implementation date: November 15, 2026. Released on `main` November 16 from
+`feature/encrypted-cross-device-sync`, including backup health/daily dashboard.
 
 Activation follow-up (November 16, 2026): the existing owner Firebase project's
 protected rules and Google provider are verified, with billing disabled and
-public settings configured for Preview only. See the setup/test guides for
-current staged evidence. Initial implementation statements below describe the
-design baseline; no production frontend activation is implied.
+public settings configured for Preview and Production. The owner explicitly
+requested production deployment before physical two-device acceptance, which
+remains unconfirmed. See the setup/test guides for hosted production evidence
+and remaining acceptance. Deployment leaves sync opt-in and local data intact.
 
 ## Scope and separation
 

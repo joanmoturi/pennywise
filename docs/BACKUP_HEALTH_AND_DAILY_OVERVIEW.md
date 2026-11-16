@@ -2,6 +2,8 @@
 
 Updated November 15, 2026. Branch: `feature/backup-health-daily-overview`.
 This is a presentation/usability enhancement, not a financial-engine rewrite.
+Released on `main` November 16 with the encrypted-sync candidate, at the existing
+production origin. Financial schemas and calculations remain unchanged.
 
 ## Daily use
 

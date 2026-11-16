@@ -1,15 +1,18 @@
 # Cross-device sync: owner setup and customer use
 
-November 15, 2026. Implementation is on `feature/encrypted-cross-device-sync`.
-**Not active on the live site.** Activation follow-up (November 16, 2026): the
-owner's Firebase project is configured, Google sign-in is enabled, and the
-tested owner-only rules have been published and read back successfully. The
-default Standard database is in `eur3`, its free-tier flag is true, and billing
-is disabled. Public Web settings are stored only in ignored local configuration
-and Pages Preview. Production configuration remains unchanged. Candidate
-`a795e1c` was deployed successfully through Pages Preview; hosted desktop and
-mobile-emulated checks opened the actual Google authorization popup. No account
-credentials were entered. Real two-device acceptance remains the next gate.
+**Live on November 16, 2026** at `https://pennywise-7lz.pages.dev/` after the
+owner's explicit deployment request. Implementation from
+`feature/encrypted-cross-device-sync` is on `main`, including daily dashboard
+and backup-health changes. The Firebase project, Google provider and published
+owner-only rules are verified. The Standard database is in `eur3`, its free-tier
+flag is true, and billing is disabled. Public Web settings are configured in
+Pages Preview and Production, preserving existing Drive configuration.
+
+Hosted desktop/mobile-emulated checks covered the actual Google popup, offline
+local records and portable backup recovery without entering account credentials.
+The owner requested release before performing real two-device acceptance;
+completed consent, physical-device delivery and real Drive recovery remain
+unconfirmed. Deployment does not enable sync or upload records automatically.
 
 ## One-time application-owner setup
 
@@ -70,8 +73,9 @@ Firebase Auth. Continue on the existing branch preview:
 Use the separately chosen **test Google account**, not the eventual real-data
 account, with synthetic records. Preview and production hostnames do not isolate
 Firestore workspaces if the Firebase project and Google UID are the same.
-Production build values and deployment still require explicit release approval
-after real acceptance. An existing Drive OAuth client is not a substitute for
+Production was released on explicit owner request before real acceptance;
+continue that acceptance with synthetic records, not an existing live workspace.
+An existing Drive OAuth client is not a substitute for
 Firebase setup; its own authorized JavaScript origins may also need the exact
 preview origin for a real Drive test. Never remove its production origin.
 

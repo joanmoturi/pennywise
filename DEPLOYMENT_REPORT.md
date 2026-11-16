@@ -2,7 +2,37 @@
 
 **Updated:** November 16, 2026 (UTC+3). Initial publication: November 1, 2026.
 
-## November 16 encrypted-sync backend activation and preview staging
+## November 16 encrypted-sync production release
+
+After reporting the physical two-device test was not performed, the owner
+explicitly requested deployment to the live site. This superseded waiting for
+that acceptance; it is not evidence that real-account sync passed. Main was
+fast-forwarded to `ac95eb246e08859ab3bc93a18ee0e86b276cfb06`. Cloudflare confirmed
+successful **Production** deployment `e859bdc0-4be5-4c11-ac2a-531212335d3f` at
+the unchanged `https://pennywise-7lz.pages.dev/`, serving
+`/assets/index-CvS3jm8O.js`. Only the three public Firebase build values were
+added; existing Production/Drive settings and Preview configuration were
+preserved. The release includes the daily dashboard and backup-health changes.
+
+Isolated desktop and Pixel 7-emulated production contexts passed local
+persistence, controlled-service-worker offline reload/saved edits, portable full
+backup/fresh-profile restore with safety export, actual Google authorization
+popup/helper loading, and viewport checks. Neither made external requests before
+opt-in; neither produced uncaught page errors. A synthetic account created with
+the previous application and then reopened with the new application at the same
+origin retained its exact stored account record. PWA assets and cache/MIME
+headers passed. No owner records, account credentials or cloud financial writes
+were involved. Real physical-device sync and real Drive recovery remain
+unconfirmed. Existing handled Zod `eval` diagnostics did not require weakening CSP.
+
+Rollback remains the previous Pages production deployment
+`2f8a5238-f34c-473b-8992-cddae8c82f1f`, serving `/assets/index-BofOZYVq.js`.
+Restore that deployment through the existing Pages project if needed; do not
+clear IndexedDB, delete remote ciphertext or change financial schemas. Customers
+should export before accepting an app update and before explicitly linking sync.
+Sync stays opt-in; deploying the frontend does not upload existing records.
+
+## November 16 backend activation and preview staging (historical)
 
 The owner approved staged activation, with a separate Google test account and
 synthetic records for preview. The existing live origin and production settings
@@ -28,8 +58,9 @@ opened the actual Google authorization popup without entering credentials or
 writing financial records. Headers, required helper scripts and PWA assets
 passed hosted checks; production main and `/assets/index-BofOZYVq.js` remain
 unchanged. Completed Google consent, two-device sync, safety recovery and owner
-release approval remain separate gates. This is not a production frontend sync
-release. See `docs/CROSS_DEVICE_SYNC_SETUP.md` and the sync test report for
+release approval were still separate gates at this staging checkpoint. The
+production release above supersedes this historical status. See
+`docs/CROSS_DEVICE_SYNC_SETUP.md` and the sync test report for
 current staged evidence; the older production release history follows.
 
 ## November 11 full end-to-end regression fixes

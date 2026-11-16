@@ -1,10 +1,45 @@
 # Cross-device sync test report
 
-Date: November 15, 2026. Feature branch: `feature/encrypted-cross-device-sync`.
-This reports local automated and hosted popup evidence, not successful
-real-account synchronization or a production rollout.
+Implementation evidence: November 15, 2026. Updated for the November 16 production
+release from `feature/encrypted-cross-device-sync` to `main`. Automated hosted
+evidence is not proof of completed Google consent or physical-device sync.
 
-## Activation follow-up: November 16, 2026
+## Production release and hosted evidence: November 16
+
+The owner reported two-device acceptance was not performed, then explicitly
+requested live deployment. The release proceeded with that gap documented, not
+by marking acceptance passed. Exact source
+`ac95eb246e08859ab3bc93a18ee0e86b276cfb06` deployed successfully to Pages
+**Production** as `e859bdc0-4be5-4c11-ac2a-531212335d3f`, at the existing
+`https://pennywise-7lz.pages.dev/`, with bundle `/assets/index-CvS3jm8O.js`.
+
+Fresh desktop Chromium and Pixel 7-emulated production contexts verified:
+
+- Local account persistence across reloads, activated-worker offline reloads,
+  saved offline edits and reconnect persistence.
+- Portable full JSON download and restore into a fresh isolated profile,
+  including the mandatory pre-replacement safety download.
+- Actual Google authorization popup, Firebase helper iframe and Google API
+  script, with zero external requests before opt-in and no uncaught page errors.
+- Viewport fit, exact CSP/helper origins, popup policy, PWA manifest/worker/icons,
+  expected MIME/cache headers and HTTP 200 assets.
+
+A separate isolated context served the previous application at the production
+origin, created a synthetic account, then loaded the new application at that
+same origin. The exact stored account record and UI entry were preserved. This
+is an isolated old/new storage compatibility check, not access to an owner's
+existing browser or a claim that every installed client has updated.
+
+No credentials were entered, no owner records were accessed and no cloud
+financial writes occurred. The handled Zod `eval` capability diagnostic remains;
+`unsafe-eval` was not enabled. Physical two-device delivery, completed Google
+consent and real Drive backup/recovery are still unconfirmed. Prior production
+deployment `2f8a5238-f34c-473b-8992-cddae8c82f1f` is retained for rollback without
+clearing IndexedDB or deleting ciphertext. Subsequent documentation-only commits
+may have newer deployment IDs; the application fingerprint identifies the
+hosted-tested runtime.
+
+## Backend activation and preview evidence: November 16 (before release)
 
 The release-readiness changes passed 291 unit/integration tests, 4 actual
 Firestore emulator rules/adapter tests, 62 full desktop/mobile browser cases
@@ -133,24 +168,24 @@ offline app shell and PWA upgrades, backups/restoration, Drive failure and
 recovery, CBK lookup, dashboard priorities and backup health. No existing ledger
 schema or financial calculation was changed by this work.
 
-## Not validated / release gates
+## Remaining acceptance and limitations
 
 At the original implementation test date, no real Firebase project or Web config
 was supplied and no cloud resources or rules were deployed. See the activation
-follow-up above for subsequently verified backend configuration. Real Firebase
-Google popup/consent, hosted
-CSP helper behavior, real cross-device delivery and production quota behavior
-remain untested. The owner's earlier real-account test applied to Google Drive,
-not this new Firebase sync implementation.
+follow-up and production evidence above for subsequently verified configuration,
+real popup loading and hosted CSP. Completed Firebase Google consent, physical
+cross-device delivery and production quota behavior remain untested. The owner's
+earlier real-account report applied to Drive, not this new sync implementation;
+detailed real Drive backup/restore outcomes also remain unconfirmed.
 
-Before enabling for customers: complete owner setup, deploy reviewed rules,
-rerun dependency audit, test a real Google account with synthetic financial data
-on two physical devices, verify independent safety-file restore and Drive
-recovery, monitor quota, and approve a staged release. No claim is made for
+Owner setup, reviewed rules, fresh audits and explicit release approval are
+complete. Still test a real Google account with synthetic financial data on two
+physical devices, verify independent encrypted safety-file/Drive recovery and
+monitor quota. No claim is made for
 Safari/iOS, embedded WebViews, large customer datasets, multi-person ledgers,
 unsaved forms in other tabs, continuous closed-app sync, automatic merging,
 lost-passphrase recovery or local-at-rest encryption.
 
-The feature remains an isolated branch; live `main` and its deployment were not
-updated. See [owner setup](CROSS_DEVICE_SYNC_SETUP.md) and
+The feature is deployed on live `main` following explicit owner approval despite
+the acceptance gap. See [owner setup](CROSS_DEVICE_SYNC_SETUP.md) and
 [architecture / rollback / retention](CROSS_DEVICE_SYNC_ARCHITECTURE.md).

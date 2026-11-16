@@ -1,7 +1,10 @@
 # Pennywise documentation
 
-All existing tracked root guides and documents are retained on the feature
-branch. Historical Kichella filenames are compatibility/history, not a product
+All existing tracked root guides and documents are retained in the repository.
+Daily dashboard, backup health and optional encrypted sync were released to
+production on November 16, 2026. Physical two-device/real Drive acceptance remains
+unconfirmed; see the sync test report. Historical Kichella filenames are
+compatibility/history, not a product
 rename. Current product name: Pennywise.
 
 ## Daily dashboard and backup health (November 15, 2026)
@@ -15,7 +18,7 @@ rename. Current product name: Pennywise.
 
 - [Encrypted cross-device sync setup](CROSS_DEVICE_SYNC_SETUP.md)
 - [Sync architecture, privacy and limitations](CROSS_DEVICE_SYNC_ARCHITECTURE.md)
-- [Sync test evidence and remaining release gates](CROSS_DEVICE_SYNC_TEST_REPORT.md)
+- [Sync production evidence and remaining acceptance](CROSS_DEVICE_SYNC_TEST_REPORT.md)
 
 - [Cloud architecture](CLOUD_BACKUP_ARCHITECTURE.md)
 - [Original architecture audit](CLOUD_BACKUP_ARCHITECTURE_AUDIT.md)
