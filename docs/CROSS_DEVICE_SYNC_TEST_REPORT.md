@@ -1,7 +1,8 @@
 # Cross-device sync test report
 
 Date: November 15, 2026. Feature branch: `feature/encrypted-cross-device-sync`.
-This reports local automated evidence, not a real-account or production rollout.
+This reports local automated and hosted popup evidence, not successful
+real-account synchronization or a production rollout.
 
 ## Activation follow-up: November 16, 2026
 
@@ -18,7 +19,8 @@ actual Firebase helper iframe and Google API script, with no credentials entered
 no financial writes and no uncaught page errors. The pre-existing Zod guarded
 dynamic-code capability probe produced a blocked `eval` CSP diagnostic and used
 its fallback; `unsafe-eval` was not enabled. This is popup readiness, not successful
-Google consent, hosted-header acceptance or a real-user sync claim.
+Google consent or a real-user sync claim. Hosted evidence is recorded separately
+below.
 
 Both CSP policies now permit the exact Google APIs script origin needed by the
 installed Firebase Auth GAPI loader. Playwright forwards all three Firebase
@@ -38,11 +40,36 @@ enabled, and the database is Standard/free-tier in `eur3` with billing disabled.
 Exact preview/production Auth domains were added. Pages Preview's public build
 settings were configured and read back; the production configuration and
 canonical deployment were verified unchanged. These backend/configuration
-checks do **not** prove successful real-user synchronization. Real Google popup,
-hosted CSP, two physical devices and independent safety/Drive recovery remain
-acceptance gates; no production frontend activation is claimed.
+checks do **not** prove successful real-user synchronization. Two physical
+devices and independent safety/Drive recovery remain acceptance gates; no
+production frontend activation is claimed.
 
-## Evidence
+### Hosted configured preview
+
+Pages deployed application candidate `a795e1cab95306637f00363293f995dbf7ee2ed2`
+successfully as deployment `5db94cee-f50d-48f4-8f85-44cc3e7adb7b`.
+Use the stable test origin
+`https://feature-encrypted-cross-devi.pennywise-7lz.pages.dev` on both devices,
+with the separate test Google account and synthetic records only.
+
+Fresh desktop Chromium and Pixel 7-emulated browser contexts opened the actual
+`accounts.google.com` popup, loaded the Firebase helper iframe and Google API
+script, and produced no uncaught page errors. Neither made external requests
+before opt-in; both fit the viewport. No credentials were entered and no
+financial records were written. Hosted CSP includes the exact required origins,
+excludes `unsafe-eval`, and retains `same-origin-allow-popups`. The existing
+handled Zod `eval` diagnostic remains; no other blocked resource was observed.
+These are mobile-emulated checks, not physical-device acceptance or completed
+Google consent.
+
+Preview JavaScript/CSS, manifest and service worker returned HTTP 200 with the
+expected content types. The preview application bundle is
+`/assets/index-CvS3jm8O.js`. Production still serves
+`/assets/index-BofOZYVq.js`, and remote main remains
+`82b1a1e5d336ad497f78126b603bfdac0ae0ce6e`. Backend and preview readiness do not
+activate customer synchronization on that unchanged production site.
+
+## Original implementation evidence (November 15)
 
 | Check                                                                       | Actual result                                                                                                               |
 | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
@@ -58,8 +85,9 @@ acceptance gates; no production frontend activation is claimed.
 
 The earlier complete dependency audit also reported 23 development-only
 advisories (2 low, 21 moderate), largely in the additional Firebase CLI toolchain.
-No forced major-version audit repair was applied. A current complete audit must
-be rerun from an environment with working registry access before release.
+No forced major-version audit repair was applied. The incomplete original audit
+refresh in the table is superseded by the successful activation-follow-up audits
+above; the development-only advisories remain open.
 Firebase CLI warns that its `superstatic` dependency lists Node 20/22/24 while
 local Node is 26.13.0; the local CLI/emulator checks completed successfully.
 

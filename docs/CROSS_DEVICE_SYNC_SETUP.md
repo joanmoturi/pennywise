@@ -6,8 +6,10 @@ owner's Firebase project is configured, Google sign-in is enabled, and the
 tested owner-only rules have been published and read back successfully. The
 default Standard database is in `eur3`, its free-tier flag is true, and billing
 is disabled. Public Web settings are stored only in ignored local configuration
-and Pages Preview. Production configuration remains unchanged. Configured
-preview publication and real two-device acceptance are separate release gates.
+and Pages Preview. Production configuration remains unchanged. Candidate
+`a795e1c` was deployed successfully through Pages Preview; hosted desktop and
+mobile-emulated checks opened the actual Google authorization popup. No account
+credentials were entered. Real two-device acceptance remains the next gate.
 
 ## One-time application-owner setup
 

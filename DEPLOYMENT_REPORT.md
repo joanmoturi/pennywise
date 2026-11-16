@@ -22,8 +22,12 @@ URLs without package-version/integrity changes. Validation: 291 unit/integration
 browser passes. Fresh runtime audit: zero findings; 23 development-only low/
 moderate advisories remain documented, with no forced tool downgrades.
 
-Feature code and the real-project local build are ready for a configured preview.
-Successful hosted Google sign-in, two-device sync, safety recovery and owner
+Pages deployed configured candidate `a795e1c` as preview deployment
+`5db94cee-f50d-48f4-8f85-44cc3e7adb7b`. Hosted desktop and mobile-emulated checks
+opened the actual Google authorization popup without entering credentials or
+writing financial records. Headers, required helper scripts and PWA assets
+passed hosted checks; production main and `/assets/index-BofOZYVq.js` remain
+unchanged. Completed Google consent, two-device sync, safety recovery and owner
 release approval remain separate gates. This is not a production frontend sync
 release. See `docs/CROSS_DEVICE_SYNC_SETUP.md` and the sync test report for
 current staged evidence; the older production release history follows.
