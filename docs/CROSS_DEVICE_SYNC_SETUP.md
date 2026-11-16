@@ -1,8 +1,13 @@
 # Cross-device sync: owner setup and customer use
 
 November 15, 2026. Implementation is on `feature/encrypted-cross-device-sync`.
-**Not active on the live site.** No Firebase project, real-user sync acceptance,
-cloud rules deployment or Pages deployment has been completed for this feature.
+**Not active on the live site.** Activation follow-up (November 16, 2026): the
+owner's Firebase project is configured, Google sign-in is enabled, and the
+tested owner-only rules have been published and read back successfully. The
+default Standard database is in `eur3`, its free-tier flag is true, and billing
+is disabled. Public Web settings are stored only in ignored local configuration
+and Pages Preview. Production configuration remains unchanged. Configured
+preview publication and real two-device acceptance are separate release gates.
 
 ## One-time application-owner setup
 
@@ -57,9 +62,16 @@ clients. These steps belong to the Pennywise application owner:
    approval copy the configuration to Production and merge/deploy. Do not
    migrate customer records or enable sync silently.
 
-Current configuration missing: all three real Firebase build values and a
-provisioned, rules-protected project. An already configured Google Drive OAuth
-client is not a substitute for Firebase project setup.
+The exact stable preview and canonical production hosts are now authorized in
+Firebase Auth. Continue on the existing branch preview:
+`https://feature-encrypted-cross-devi.pennywise-7lz.pages.dev`.
+Use the separately chosen **test Google account**, not the eventual real-data
+account, with synthetic records. Preview and production hostnames do not isolate
+Firestore workspaces if the Firebase project and Google UID are the same.
+Production build values and deployment still require explicit release approval
+after real acceptance. An existing Drive OAuth client is not a substitute for
+Firebase setup; its own authorized JavaScript origins may also need the exact
+preview origin for a real Drive test. Never remove its production origin.
 
 ## Customer flow after owner configuration
 

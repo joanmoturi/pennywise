@@ -3,6 +3,45 @@
 Date: November 15, 2026. Feature branch: `feature/encrypted-cross-device-sync`.
 This reports local automated evidence, not a real-account or production rollout.
 
+## Activation follow-up: November 16, 2026
+
+The release-readiness changes passed 291 unit/integration tests, 4 actual
+Firestore emulator rules/adapter tests, 62 full desktop/mobile browser cases
+(2 disabled-build-only cases skipped), and 8 explicitly unconfigured fallback
+cases (4 configured-only cases skipped). The fallback runs occurred with the
+owner's real configuration present in ignored `.env.local`; explicit empty
+build values prevented inheritance, and no Firebase-provider requests occurred.
+Lint, formatting, TypeScript and real-project/synthetic production builds passed.
+
+A fresh local real-SDK smoke check opened `accounts.google.com` through the
+actual Firebase helper iframe and Google API script, with no credentials entered,
+no financial writes and no uncaught page errors. The pre-existing Zod guarded
+dynamic-code capability probe produced a blocked `eval` CSP diagnostic and used
+its fallback; `unsafe-eval` was not enabled. This is popup readiness, not successful
+Google consent, hosted-header acceptance or a real-user sync claim.
+
+Both CSP policies now permit the exact Google APIs script origin needed by the
+installed Firebase Auth GAPI loader. Playwright forwards all three Firebase
+values explicitly and derives configuration metadata from their complete set.
+The lockfile's 679 organization-feed tarball URLs were normalized to public npm
+without changing package versions or integrity hashes.
+
+A fresh runtime audit completed successfully with zero vulnerabilities. The
+complete audit still reports 23 development-only advisories (2 low, 21 moderate),
+with no high/critical findings. These affect CLI, lint/build/archive dependencies,
+not the shipped runtime dependency tree. Automated forced downgrades of Firebase
+CLI/typescript-eslint were not applied; review the tooling risk before release.
+
+Owner OAuth access to the exact Firebase Web app was verified. The published
+Firestore rules were read back and matched the repository, Google provider is
+enabled, and the database is Standard/free-tier in `eur3` with billing disabled.
+Exact preview/production Auth domains were added. Pages Preview's public build
+settings were configured and read back; the production configuration and
+canonical deployment were verified unchanged. These backend/configuration
+checks do **not** prove successful real-user synchronization. Real Google popup,
+hosted CSP, two physical devices and independent safety/Drive recovery remain
+acceptance gates; no production frontend activation is claimed.
+
 ## Evidence
 
 | Check                                                                       | Actual result                                                                                                               |
@@ -68,8 +107,10 @@ schema or financial calculation was changed by this work.
 
 ## Not validated / release gates
 
-No real Firebase project or Web config was supplied. No cloud resources or rules
-were deployed. Real Firebase Google popup/consent, domain authorization, hosted
+At the original implementation test date, no real Firebase project or Web config
+was supplied and no cloud resources or rules were deployed. See the activation
+follow-up above for subsequently verified backend configuration. Real Firebase
+Google popup/consent, hosted
 CSP helper behavior, real cross-device delivery and production quota behavior
 remain untested. The owner's earlier real-account test applied to Google Drive,
 not this new Firebase sync implementation.

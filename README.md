@@ -9,8 +9,10 @@ Production: `https://pennywise-7lz.pages.dev/`. Financial records remain local t
 `feature/encrypted-cross-device-sync` adds Google account-based synchronization
 through an application-owned Firebase Spark project. It includes the earlier
 daily dashboard and backup-health branch. **This is not deployed to production.**
-Owner setup is still required; it has not been tested with a real Firebase
-project or customer account. Customers use the same Google account and separate
+The owner-configured Firebase backend now has verified protected rules and
+Google sign-in, with billing disabled. Preview build configuration is set;
+real-account/two-device acceptance and production approval are still pending.
+Customers use the same Google account and separate
 sync passphrase on each device, explicitly review the initial workspace, then
 one-sided edits synchronize while the app is open and unlocked. Concurrent edits
 stop for review instead of silently merging financial records. Local records,

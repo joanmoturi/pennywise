@@ -1,6 +1,32 @@
 # Pennywise deployment execution report
 
-**Updated:** November 11, 2026 (UTC+3). Initial publication: November 1, 2026.
+**Updated:** November 16, 2026 (UTC+3). Initial publication: November 1, 2026.
+
+## November 16 encrypted-sync backend activation and preview staging
+
+The owner approved staged activation, with a separate Google test account and
+synthetic records for preview. The existing live origin and production settings
+are retained. Firebase owner access to the supplied Web app was verified; Google
+sign-in is enabled, billing is disabled, and Standard/free-tier default Firestore
+is in `eur3`. Tested owner-only rules were published and their exact contents read
+back successfully. Only the exact branch-preview and production Auth domains
+were added to the existing list. No financial records were uploaded by setup.
+
+The existing Pages Preview environment now has the three public Firebase Web
+build values and the existing Drive client configuration. Production configuration
+and canonical deployment were verified unchanged after that update. The candidate
+adds the required Google API script origin to both CSP policies, isolates test
+builds from ignored real local configuration, and restores public npm dependency
+URLs without package-version/integrity changes. Validation: 291 unit/integration,
+4 actual emulator rules/adapter, 62 full desktop/mobile and 8 disabled-config
+browser passes. Fresh runtime audit: zero findings; 23 development-only low/
+moderate advisories remain documented, with no forced tool downgrades.
+
+Feature code and the real-project local build are ready for a configured preview.
+Successful hosted Google sign-in, two-device sync, safety recovery and owner
+release approval remain separate gates. This is not a production frontend sync
+release. See `docs/CROSS_DEVICE_SYNC_SETUP.md` and the sync test report for
+current staged evidence; the older production release history follows.
 
 ## November 11 full end-to-end regression fixes
 

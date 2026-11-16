@@ -140,6 +140,20 @@ test("unconfigured sync is optional, makes no cloud calls and preserves manual w
     Boolean(info.config.metadata.syncConfigured),
     "Checks the build with optional sync disabled",
   );
+  const providerRequests: string[] = [];
+  page.on("request", (request) => {
+    const host = new URL(request.url()).hostname;
+    if (
+      host.endsWith(".firebaseapp.com") ||
+      [
+        "identitytoolkit.googleapis.com",
+        "securetoken.googleapis.com",
+        "firestore.googleapis.com",
+        "apis.google.com",
+      ].includes(host)
+    )
+      providerRequests.push(host);
+  });
   await page.goto("/");
   await nav(page, "Backup Centre");
   await expect(panel(page)).toContainText("not configured in this build");
@@ -153,6 +167,7 @@ test("unconfigured sync is optional, makes no cloud calls and preserves manual w
   await expect(
     page.getByRole("heading", { name: "TEST local-only account", exact: true }),
   ).toBeVisible();
+  expect(providerRequests).toEqual([]);
 });
 
 test("independent devices explicitly link encrypted workspaces, automatically propagate edits and resolve offline conflicts", async ({

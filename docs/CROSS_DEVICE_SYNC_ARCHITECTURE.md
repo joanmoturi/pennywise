@@ -4,6 +4,12 @@ Implementation date: November 15, 2026. Branch:
 `feature/encrypted-cross-device-sync`. Not enabled or deployed to production.
 The branch includes the separate backup-health/daily-dashboard improvement.
 
+Activation follow-up (November 16, 2026): the existing owner Firebase project's
+protected rules and Google provider are verified, with billing disabled and
+public settings configured for Preview only. See the setup/test guides for
+current staged evidence. Initial implementation statements below describe the
+design baseline; no production frontend activation is implied.
+
 ## Scope and separation
 
 This is optional synchronization, not another financial engine. Existing schema-5
@@ -141,8 +147,10 @@ References checked November 15, 2026:
 
 ## Rollback and retention
 
-No production merge, resource provisioning or deployment was performed for this
-feature. Omit the three Firebase build values to keep the panel disabled, or
+No production frontend merge or deployment has been performed for this feature.
+The original implementation did not provision resources; the owner subsequently
+created the Firebase project and protected rules were published during staged
+activation. Omit the three Firebase build values to keep the panel disabled, or
 roll back the frontend commit while retaining existing financial schema-5
 storage. Never clear browser data as a rollback method. Keep existing Drive
 configuration intact. Remote ciphertext remains in Firestore after pause or

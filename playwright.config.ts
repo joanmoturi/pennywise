@@ -3,6 +3,11 @@ import { defineConfig, devices } from "@playwright/test";
 const googleClientId =
   process.env.VITE_GOOGLE_CLIENT_ID ??
   "synthetic-e2e.apps.googleusercontent.com";
+const firebaseEnv = {
+  VITE_FIREBASE_API_KEY: process.env.VITE_FIREBASE_API_KEY ?? "",
+  VITE_FIREBASE_PROJECT_ID: process.env.VITE_FIREBASE_PROJECT_ID ?? "",
+  VITE_FIREBASE_APP_ID: process.env.VITE_FIREBASE_APP_ID ?? "",
+};
 
 export default defineConfig({
   testDir: "./e2e",
@@ -11,7 +16,7 @@ export default defineConfig({
   workers: 1,
   metadata: {
     googleConfigured: Boolean(googleClientId),
-    syncConfigured: Boolean(process.env.VITE_FIREBASE_PROJECT_ID),
+    syncConfigured: Object.values(firebaseEnv).every(Boolean),
   },
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
@@ -25,7 +30,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run build && npm run preview -- --port 4179 --strictPort",
-    env: { VITE_GOOGLE_CLIENT_ID: googleClientId },
+    env: { VITE_GOOGLE_CLIENT_ID: googleClientId, ...firebaseEnv },
     url: "http://127.0.0.1:4179",
     reuseExistingServer: false,
     timeout: 120000,

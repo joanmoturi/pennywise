@@ -4,6 +4,19 @@ Use a **separate Cloudflare Pages project** for Pennywise. Development stays on 
 
 The existing Git-connected Pages project is `pennywise`; its actual production URL is `https://pennywise-7lz.pages.dev/`. Do not create another project or change this origin when updating the installed application.
 
+## Encrypted-sync activation status
+
+The `feature/encrypted-cross-device-sync` candidate uses an optional
+owner-configured Firebase backend, separate from Google Drive backups. Protected
+Firestore rules and Google Auth setup are verified; public Firebase build values
+are configured in **Preview only**. Existing production settings are unchanged.
+Use `docs/CROSS_DEVICE_SYNC_SETUP.md` for current setup and
+`docs/CROSS_DEVICE_SYNC_TEST_REPORT.md` for actual evidence. The local-only
+production instructions below remain the baseline until the staged sync release
+is explicitly approved. Do not copy real financial records or the intended
+real-data Google UID into preview: use the separate test account and synthetic
+records. A successful Pages build does not prove real cross-device delivery.
+
 ## 1. Publish the application from your laptop
 
 Pennywise uses its own **PUBLIC** source repository `joanmoturi/pennywise`, production branch `main`; the user explicitly confirmed retaining that visibility on November 3, 2026. Public source does not publish the browser's financial database. Engineering Academy remains in its original repository. Current publishing status and verified commit are recorded in `DEPLOYMENT_REPORT.md`.
