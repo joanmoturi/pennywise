@@ -1,5 +1,28 @@
 # Connected Pennywise local preview
 
+## Production follow-up: November 16 rental receipts
+
+For a payment-calendar item linked as a business distribution, Receive now asks
+**What was received?** Choose **Tenant/client payment into the business**, select
+the actual business account receiving rent, and confirm the amount/date. This
+posts business income, not an owner withdrawal, and does not require existing
+retained profit. Choose **Profit payout from the business to me** only for an
+actual owner payout; its existing profit/cash checks still apply.
+
+The client-payment choice corrects unpaid calendar setup for that income source.
+Posted history is not rewritten: if earlier receipts exist, unpaid events use a
+separate source labelled **(business receipts)**. An event that already contains
+a profit payout must not be reclassified silently; record a separate correctly
+configured client payment for that case. Subsequent receipts on corrected
+calendar entries follow the normal receipt form, including partial payments.
+For new tenant sources, choose the business receiving account and leave both
+distribution-only fields at None. Personal income and business revenue remain
+separate, and no existing account ownership or balance is automatically changed.
+
+This hotfix and its verified checks are recorded in
+[the deployment report](../DEPLOYMENT_REPORT.md). The original preview report
+below is retained as historical evidence.
+
 > Historical report for the original local preview. The later approved release
 > adds a separate-database copy so the old version remains usable for rollback.
 > See [the current release and rollback runbook](CONNECTED_FINANCE_RELEASE_AND_ROLLBACK.md)

@@ -2,6 +2,34 @@
 
 **Updated:** November 16, 2026 (UTC+3). Initial publication: November 1, 2026.
 
+## November 16 payment-calendar business-receipt hotfix
+
+The owner reported tenant rent blocked by the retained-profit check after
+choosing Receive in the payment calendar. A business-linked income source was
+being interpreted only as an owner profit payout. The receipt form now requires
+an explicit choice between a tenant/client payment into the business and a
+profit payout to the owner. Client receipts credit the selected account owned
+by that business as revenue, without requiring pre-existing profit or moving
+cash into a personal account. Genuine profit payouts retain their existing
+profit/cash safeguards. Income setup also explains the distinction.
+
+Correction is explicit, not a startup migration. Unposted calendar entries use
+the corrected source. If that source has earlier posted receipts, those records
+and their source remain intact, and a separate business-receipts source is
+created for unposted entries. An already-partially-posted profit event cannot be
+silently reinterpreted: the form gives a specific history-preservation message.
+No financial schema, Google configuration, authentication or sync rules changed.
+
+Validation: 296 unit/integration tests; four desktop/mobile browser checks
+covering the calendar fix and the existing complete connected workflow,
+including offline persistence and encrypted restore; TypeScript/build, lint
+and formatting passed. All test records are synthetic. Initial browser-run
+failures were test invocation/locator issues, corrected before release.
+Rollback is the preceding Production deployment
+`f4ccfec4-6c4d-4f48-b268-8d8226f0451a`, bundle `/assets/index-CvS3jm8O.js`.
+Rollback must not clear local records or delete cloud ciphertext. Owner-side
+confirmation on the original phone remains separate from automated evidence.
+
 ## November 16 encrypted-sync production release
 
 After reporting the physical two-device test was not performed, the owner

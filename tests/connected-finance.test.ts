@@ -6,6 +6,7 @@ import {
   budgetStats,
   forecast,
   receiveEvent,
+  receiveBusinessPayment,
   eventRemaining,
   summary,
   validateState,
@@ -72,6 +73,140 @@ function businessFixture() {
   );
   return s;
 }
+function clientPayment(
+  s: State,
+  type: State["incomes"][number]["type"] = "Rental income",
+) {
+  s.incomes.push({
+    id: "tenant",
+    businessId: "business",
+    sourceAccountId: "business-cash",
+    accountId: "cash",
+    name: "TEST tenant",
+    type,
+    amount: cash("10000"),
+    frequency: "monthly",
+    reliability: "confirmed",
+    active: true,
+    description: "",
+    notes: "",
+    taxBps: 0,
+  });
+  for (const [id, due] of [
+    ["rent", "2026-11-06"],
+    ["next-rent", "2026-12-06"],
+  ])
+    s.events.push({
+      id,
+      sourceId: "tenant",
+      kind: "income",
+      due,
+      amount: cash("10000"),
+      status: "expected",
+      reliability: "confirmed",
+      notes: "",
+    });
+}
+describe("calendar client payments into a business", () => {
+  it.each(["Rental income", "Investment distribution"] as const)(
+    "corrects an explicitly confirmed %s client receipt without requiring existing profit",
+    (type) => {
+      const s = businessFixture();
+      s.transactions = [];
+      clientPayment(s, type);
+      const personalCash = accountBalances(s).get("cash");
+      expect(() => receiveEvent(s, "rent", cash("5000"), "2026-11-06")).toThrow(
+        /retained profit/,
+      );
+      s.transactions.push(
+        receiveBusinessPayment(
+          s,
+          "rent",
+          cash("5000"),
+          "2026-11-06",
+          "business-cash",
+        ),
+      );
+      validateState(s);
+      expect(s.transactions[0]).toMatchObject({
+        type: "income",
+        accountId: "business-cash",
+        eventId: "rent",
+        relatedId: "tenant",
+      });
+      expect(s.transactions[0].businessMovement).toBeUndefined();
+      expect(s.incomes[0].businessId).toBeUndefined();
+      expect(s.incomes[0].sourceAccountId).toBeUndefined();
+      expect(businessStats(s, "business")).toMatchObject({
+        revenue: cash("5000"),
+        retained: cash("5000"),
+        cash: cash("5000"),
+      });
+      expect(accountBalances(s).get("cash")).toBe(personalCash);
+      expect(summary(s).income).toBe(0);
+      expect(eventRemaining(s, s.events[0])).toBe(cash("5000"));
+      s.transactions.push(receiveEvent(s, "rent", cash("5000"), "2026-11-06"));
+      validateState(s);
+      expect(eventRemaining(s, s.events[0])).toBe(0);
+      expect(businessStats(s, "business").revenue).toBe(cash("10000"));
+    },
+  );
+  it("preserves posted profit payouts and moves only unpaid client events to a corrected source", () => {
+    const s = businessFixture();
+    clientPayment(s);
+    s.events.push({ ...s.events[0], id: "previous", due: "2026-11-01" });
+    s.transactions.push(
+      receiveEvent(s, "previous", cash("10000"), "2026-11-01"),
+    );
+    const history = structuredClone(s.transactions);
+    const previous = structuredClone(s.events.at(-1));
+    const original = structuredClone(s.incomes[0]);
+    s.transactions.push(
+      receiveBusinessPayment(
+        s,
+        "rent",
+        cash("10000"),
+        "2026-11-06",
+        "business-cash",
+      ),
+    );
+    validateState(s);
+    expect(s.transactions.slice(0, -1)).toEqual(history);
+    expect(s.events.at(-1)).toEqual(previous);
+    expect(s.incomes[0]).toEqual(original);
+    expect(s.incomes).toHaveLength(2);
+    expect(s.events[0].sourceId).toBe(s.incomes[1].id);
+    expect(s.events[1].sourceId).toBe(s.incomes[1].id);
+    expect(s.transactions.at(-1)?.relatedId).toBe(s.incomes[1].id);
+    expect(s.incomes[1].accountId).toBe("business-cash");
+    expect(s.incomes[1].businessId).toBeUndefined();
+  });
+  it("rejects a personal destination without changing the source or calendar", () => {
+    const s = businessFixture();
+    clientPayment(s);
+    const before = structuredClone(s);
+    expect(() =>
+      receiveBusinessPayment(s, "rent", cash("10000"), "2026-11-06", "cash"),
+    ).toThrow(/business's account/);
+    expect(s).toEqual(before);
+  });
+  it("does not reinterpret an event that already contains a profit payout", () => {
+    const s = businessFixture();
+    clientPayment(s);
+    s.transactions.push(receiveEvent(s, "rent", cash("1000"), "2026-11-06"));
+    const before = structuredClone(s);
+    expect(() =>
+      receiveBusinessPayment(
+        s,
+        "rent",
+        cash("9000"),
+        "2026-11-06",
+        "business-cash",
+      ),
+    ).toThrow(/already has a posted receipt/);
+    expect(s).toEqual(before);
+  });
+});
 describe("business ownership and linked distributions", () => {
   it("keeps business revenue, costs, ownership share and actual personal payouts distinct", () => {
     const s = businessFixture();

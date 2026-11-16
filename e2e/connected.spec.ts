@@ -101,6 +101,137 @@ function categoryRow(page: Page, category: string) {
     .getByRole("row")
     .filter({ has: page.getByText(category, { exact: true }) });
 }
+test("calendar tenant payments credit business revenue without profit and preserve the payout guard", async ({
+  page,
+}) => {
+  page.setDefaultTimeout(15000);
+  await page.clock.setFixedTime(new Date("2026-11-06T09:00:00Z"));
+  await page.goto("/");
+  await nav(page, "Settings");
+  await page
+    .getByRole("button", { name: "Add account", exact: true })
+    .first()
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Name", { exact: true })
+    .fill("TEST personal bank");
+  await save(page);
+  await nav(page, "Businesses");
+  await page.getByRole("button", { name: "Add business", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Business name", { exact: true })
+    .fill("TEST rental business");
+  await save(page);
+  await page
+    .getByRole("button", { name: "Add business account", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Account name", { exact: true })
+    .fill("TEST rental bank");
+  await save(page);
+  await nav(page, "Income");
+  await page.getByRole("button", { name: "Add income", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Name", { exact: true }).fill("TEST tenant");
+  await dialog
+    .getByLabel("Income type", { exact: true })
+    .selectOption("Rental income");
+  await dialog.getByLabel("Expected net amount", { exact: true }).fill("10000");
+  await dialog
+    .getByLabel("Account", { exact: true })
+    .selectOption({ label: "TEST personal bank" });
+  await dialog
+    .getByLabel("Expected distribution from business (optional)", {
+      exact: true,
+    })
+    .selectOption({ label: "TEST rental business" });
+  await dialog
+    .getByLabel("Business source account (distributions only)", { exact: true })
+    .selectOption({ label: "TEST rental bank" });
+  await save(page);
+  await page
+    .getByRole("button", { name: "Add payment dates", exact: true })
+    .click();
+  dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("First payment date", { exact: true })
+    .fill("2026-11-06");
+  await dialog.getByLabel("Number of dates", { exact: true }).fill("2");
+  await dialog
+    .getByLabel("Schedule frequency", { exact: true })
+    .selectOption("monthly");
+  await save(page);
+  const row = (date: string) =>
+    page
+      .getByRole("row")
+      .filter({ hasText: "TEST tenant" })
+      .filter({ has: page.getByRole("cell", { name: date, exact: true }) });
+  const before = await state(page);
+  await row("2026-11-06")
+    .getByRole("button", { name: "Receive", exact: true })
+    .click();
+  dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("What was received?", { exact: true })
+    .selectOption("profit_distribution");
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("retained profit");
+  expect((await state(page)).transactions).toEqual(before.transactions);
+  await dialog
+    .getByLabel("What was received?", { exact: true })
+    .selectOption("business_income");
+  await dialog
+    .getByLabel("Business account receiving client payment", { exact: true })
+    .selectOption({ label: "TEST rental bank" });
+  await dialog
+    .getByLabel("Actual amount received", { exact: true })
+    .fill("4000");
+  await save(page);
+  await expect(row("2026-11-06")).toContainText("partially received");
+  let received = await state(page);
+  const business = received.businesses.find(
+    (b) => b.name === "TEST rental business",
+  )!;
+  const account = received.accounts.find((a) => a.name === "TEST rental bank")!;
+  expect(received.transactions).toHaveLength(1);
+  expect(received.transactions[0]).toMatchObject({
+    type: "income",
+    accountId: account.id,
+    amount: 400000,
+  });
+  expect(businessStats(received, business.id).revenue).toBe(400000);
+  expect(summary(received).income).toBe(0);
+  await page.reload();
+  await nav(page, "Income");
+  await row("2026-11-06")
+    .getByRole("button", { name: "Receive", exact: true })
+    .click();
+  dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByLabel("What was received?", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    dialog.getByLabel("Actual amount received", { exact: true }),
+  ).toHaveValue("6000.00");
+  await save(page);
+  received = await state(page);
+  expect(received.transactions).toHaveLength(2);
+  expect(businessStats(received, business.id).revenue).toBe(1000000);
+  expect(summary(received).income).toBe(0);
+  await expect(
+    row("2026-11-06").getByRole("button", { name: "Receive", exact: true }),
+  ).toHaveCount(0);
+  await row("2026-12-06")
+    .getByRole("button", { name: "Receive", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog").getByLabel("What was received?", { exact: true }),
+  ).toHaveCount(0);
+});
+
 test("complete connected monthly workflow reconciles every page, offline state and encrypted restore", async ({
   page,
   browser,

@@ -377,6 +377,72 @@ export function receiveEvent(
     recurringReference: "",
   };
 }
+export function receiveBusinessPayment(
+  s: State,
+  eventId: string,
+  amount: number,
+  date: string,
+  accountId: string,
+): Transaction {
+  const event = s.events.find((e) => e.id === eventId);
+  const income = s.incomes.find((i) => i.id === event?.sourceId);
+  const businessId = income?.businessId;
+  if (
+    !event ||
+    event.kind !== "income" ||
+    event.status === "cancelled" ||
+    !income ||
+    !businessId ||
+    income.type === "Loan repayment" ||
+    businessForAccount(s, accountId) !== businessId
+  )
+    throw new Error("Choose this business's account for the client payment.");
+  if (!Number.isSafeInteger(amount) || amount <= 0)
+    throw new Error("Receipt must be positive.");
+  if (s.transactions.some((t) => t.eventId === eventId))
+    throw new Error(
+      "This payment already has a posted receipt. Preserve that history and add a separate business-income payment instead.",
+    );
+
+  const hasHistory = s.transactions.some((t) => t.relatedId === income.id);
+  const corrected = {
+    ...income,
+    id: hasHistory ? uid() : income.id,
+    name: hasHistory
+      ? `${income.name.slice(0, 140)} (business receipts)`
+      : income.name,
+    type:
+      income.type === "Investment distribution"
+        ? ("Business income" as const)
+        : income.type,
+    accountId,
+  };
+  delete corrected.businessId;
+  delete corrected.sourceAccountId;
+  const incomes = hasHistory
+    ? [...s.incomes, corrected]
+    : s.incomes.map((i) => (i.id === income.id ? corrected : i));
+  const postedEvents = new Set(s.transactions.map((t) => t.eventId));
+  const events = hasHistory
+    ? s.events.map((e) =>
+        e.kind === "income" &&
+        e.sourceId === income.id &&
+        e.status !== "cancelled" &&
+        !postedEvents.has(e.id)
+          ? { ...e, sourceId: corrected.id }
+          : e,
+      )
+    : s.events;
+  const receipt = receiveEvent(
+    { ...s, incomes, events },
+    eventId,
+    amount,
+    date,
+  );
+  s.incomes = incomes;
+  s.events = events;
+  return receipt;
+}
 export function scheduleDates(
   first: string,
   frequency: string,

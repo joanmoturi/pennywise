@@ -10,7 +10,13 @@ import {
   type Scenario,
 } from "./domain";
 import type { AppContext, Field } from "./context";
-import { commitWindfall, coupon, receiveEvent, scheduleDates } from "./engine";
+import {
+  commitWindfall,
+  coupon,
+  receiveEvent,
+  receiveBusinessPayment,
+  scheduleDates,
+} from "./engine";
 import { generateOccurrences } from "./expense-engine";
 import { accountBalances } from "./engine";
 import { categoryPosition } from "./connected-finance";
@@ -81,7 +87,10 @@ export function recordFields(s: State, kind: Collection): Field[] {
       f("taxBps", "Tax assumption (%)", "rate", {
         help: "Reference only. Expected amounts are net; actual receipts are entered explicitly.",
       }),
-      account,
+      {
+        ...account,
+        help: "Choose the account receiving the money. Tenant rent and customer payments belong in the receiving business account, not the distribution fields below.",
+      },
       f("active", "Active", "checkbox"),
       f(
         "businessId",
@@ -90,6 +99,7 @@ export function recordFields(s: State, kind: Collection): Field[] {
         {
           required: false,
           options: s.businesses.map((b) => ({ value: b.id, label: b.name })),
+          help: "Only for profit paid from a business to you personally. Leave None for tenant rent or customer payments into the business.",
         },
       ),
       f(
@@ -894,24 +904,83 @@ export function addSchedule(
 }
 export function receive(app: AppContext, eventId: string) {
   const e = app.state.events.find((e) => e.id === eventId)!;
+  const income =
+    e.kind === "income"
+      ? app.state.incomes.find((i) => i.id === e.sourceId)
+      : undefined;
+  const linkedBusiness = Boolean(
+    income?.businessId && income.type !== "Loan repayment",
+  );
   const received = app.state.transactions
     .filter((t) => t.eventId === e.id)
     .reduce((sum, t) => sum + t.amount, 0);
   app.dialog({
     title: "Confirm actual receipt",
-    description:
-      "Enter only money actually received. Partial receipts remain outstanding; differing receipts reconcile to the ledger.",
+    description: linkedBusiness
+      ? "Choose whether this is a tenant/client payment into the business or a profit payout to you. A client payment corrects this source's unpaid calendar entries; previously posted receipts are preserved. No bank transfer is performed."
+      : "Enter only money actually received. Partial receipts remain outstanding; differing receipts reconcile to the ledger.",
     fields: [
+      ...(linkedBusiness
+        ? [
+            f("receiptKind", "What was received?", "select", {
+              options: [
+                { value: "", label: "Choose the payment type" },
+                {
+                  value: "business_income",
+                  label: "Tenant/client payment into the business",
+                },
+                {
+                  value: "profit_distribution",
+                  label: "Profit payout from the business to me",
+                },
+              ],
+            }),
+            f(
+              "businessAccountId",
+              "Business account receiving client payment",
+              "select",
+              {
+                options: app.state.accounts
+                  .filter((a) => a.businessId === income!.businessId)
+                  .map((a) => ({ value: a.id, label: a.name })),
+                help: "Used only for tenant/client payments. Profit payouts keep their existing source and personal destination.",
+              },
+            ),
+          ]
+        : []),
       f("amount", "Actual amount received", "money"),
       f("date", "Actual receipt date", "date"),
     ],
-    values: { amount: Math.max(0, e.amount - received), date: today() },
+    values: {
+      amount: Math.max(0, e.amount - received),
+      date: today(),
+      ...(linkedBusiness
+        ? { receiptKind: "", businessAccountId: income!.sourceAccountId }
+        : {}),
+    },
     submit: async (v) =>
-      app.mutate("Confirm actual expected-payment receipt", (s) =>
+      app.mutate("Confirm actual expected-payment receipt", (s) => {
+        if (
+          linkedBusiness &&
+          !["business_income", "profit_distribution"].includes(
+            String(v.receiptKind),
+          )
+        )
+          throw new Error(
+            "Choose whether this is a client payment or a profit payout.",
+          );
         s.transactions.push(
-          receiveEvent(s, e.id, Number(v.amount), String(v.date)),
-        ),
-      ),
+          v.receiptKind === "business_income"
+            ? receiveBusinessPayment(
+                s,
+                e.id,
+                Number(v.amount),
+                String(v.date),
+                String(v.businessAccountId),
+              )
+            : receiveEvent(s, e.id, Number(v.amount), String(v.date)),
+        );
+      }),
   });
 }
 export function transferReserve(
