@@ -61,9 +61,8 @@ Do not roll an upgraded browser back to the old application code, clear site
 data, or uninstall to troubleshoot a save. Export from the current application
 and test recovery in an independent browser profile first.
 
-## Pasted expense notes (feature branch)
+## Pasted expense notes
 
-Available on `feature/pasted-expense-review`; not deployed to production.
 In **Transactions > Paste expenses**, choose the paying account and date, then
 paste one expense per line, for example:
 
