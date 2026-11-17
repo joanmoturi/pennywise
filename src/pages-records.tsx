@@ -48,6 +48,7 @@ import { effectiveAllocations } from "./expense-engine";
 import { BudgetActivity, allocationDialog } from "./connected-ui";
 import { summary } from "./engine";
 import { editBond, addPublishedCouponDates } from "./bond-lookup-ui";
+import { pasteExpenses } from "./pasted-expenses-ui";
 
 export function AccountsPage() {
   const app = useApp();
@@ -183,9 +184,14 @@ export function TransactionsPage() {
         title="Transactions"
         subtitle="A traceable ledger. Transfers, borrowing and recoveries never inflate earned income."
         action={
-          <AddButton onClick={() => editTransaction(app)}>
-            Add transaction
-          </AddButton>
+          <div className="actions">
+            <Button secondary onClick={() => pasteExpenses(app)}>
+              Paste expenses
+            </Button>
+            <AddButton onClick={() => editTransaction(app)}>
+              Add transaction
+            </AddButton>
+          </div>
         }
       />
       <div className="toolbar" onChange={() => setOffset(0)}>

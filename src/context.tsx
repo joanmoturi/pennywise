@@ -17,6 +17,7 @@ export interface Field {
     | "select";
   options?: { value: string; label: string }[];
   required?: boolean;
+  maxLength?: number;
   help?: string;
   advanced?: boolean;
 }

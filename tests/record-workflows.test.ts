@@ -8,6 +8,7 @@ import {
 import { Repository, openDatabase } from "../src/storage";
 import type { AppContext, DialogSpec } from "../src/context";
 import { fixture, tx } from "./fixtures";
+import { pasteExpenses } from "../src/pasted-expenses-ui";
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -151,6 +152,109 @@ it("stale ledger edits cannot overwrite a concurrent correction", async () => {
       h.dialog().submit({ ...h.dialog().values, amount: 3000 }),
     ).rejects.toThrow(/another tab/);
     expect((await h.repo.read()).transactions[0].amount).toBe(2000);
+  } finally {
+    h.db.close();
+  }
+});
+
+it("pasted expenses exclude unchecked rows and save edited categories without a balance adjustment", async () => {
+  const h = await harness();
+  try {
+    pasteExpenses(h.app);
+    await h.dialog().submit({
+      accountId: "cash",
+      date: "2026-11-04",
+      text: "expenses today\nMaterials 10k\nLabour 3k\nnew balance 90k",
+    });
+    const review = h.dialog();
+    const key = (label: string) =>
+      review.fields.find((field) => field.label === label)!.key;
+    expect((await h.repo.read()).transactions).toHaveLength(0);
+    const values = {
+      ...review.values,
+      [key("Include expense 2")]: false,
+      [key("Expense 2 amount")]: undefined,
+      [key("Expense 2 description")]: "",
+      [key("Expense 2 category")]: "",
+      [key("Expense 1 description")]: "TEST edited supplies",
+      [key("Expense 1 category")]: "TEST operating costs",
+    };
+    expect(review.context!(values)).toContain("Balances match");
+    await review.submit(values);
+    const saved = await h.repo.read();
+    expect(saved.transactions).toHaveLength(1);
+    expect(saved.transactions[0]).toMatchObject({
+      type: "expense",
+      amount: 1000000,
+      description: "TEST edited supplies",
+      category: "TEST operating costs",
+      accountId: "cash",
+    });
+    expect(saved.accounts[0].opening).toBe(10000000);
+  } finally {
+    h.db.close();
+  }
+});
+
+it.each(["balance", "ownership"])(
+  "pasted expense review refuses concurrent account %s changes",
+  async (change) => {
+    const h = await harness();
+    try {
+      pasteExpenses(h.app);
+      await h.dialog().submit({
+        accountId: "cash",
+        date: "2026-11-04",
+        text: "Materials 10k\nLabour 3k",
+      });
+      const review = h.dialog();
+      await h.repo.update("TEST competing account edit", (state) => {
+        if (change === "balance") state.accounts[0].opening += 100;
+        else {
+          state.businesses.push({
+            id: "TEST-business",
+            name: "TEST business",
+            ownershipBps: 10000,
+            partners: [],
+            openingRetainedProfit: 0,
+            notes: "",
+          });
+          state.accounts[0].businessId = "TEST-business";
+        }
+      });
+      const before = await h.repo.read();
+      await expect(review.submit(review.values)).rejects.toThrow(
+        change === "balance" ? /balance changed/ : /ownership may have changed/,
+      );
+      expect(await h.repo.read()).toEqual(before);
+    } finally {
+      h.db.close();
+    }
+  },
+);
+
+it("a rejected pasted-expense batch leaves no partially written expenses", async () => {
+  const h = await harness();
+  try {
+    pasteExpenses(h.app);
+    await expect(
+      h.dialog().submit({
+        accountId: "cash",
+        date: "2026-11-04",
+        text: "business expenses today\nMaterials 10k",
+      }),
+    ).rejects.toThrow(/business-owned/);
+    await h.dialog().submit({
+      accountId: "cash",
+      date: "2026-11-04",
+      text: "Materials 10k\nLabour 3k",
+    });
+    const review = h.dialog();
+    const before = await h.repo.read();
+    await expect(
+      review.submit({ ...review.values, date: "invalid" }),
+    ).rejects.toThrow();
+    expect(await h.repo.read()).toEqual(before);
   } finally {
     h.db.close();
   }

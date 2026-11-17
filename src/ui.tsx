@@ -635,7 +635,7 @@ export function FormDialog({
                       }
                       defaultValue={display}
                       rows={3}
-                      maxLength={2000}
+                      maxLength={f.maxLength ?? 2000}
                     />
                   ) : f.type === "checkbox" ? (
                     <input

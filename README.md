@@ -61,6 +61,40 @@ Do not roll an upgraded browser back to the old application code, clear site
 data, or uninstall to troubleshoot a save. Export from the current application
 and test recovery in an independent browser profile first.
 
+## Pasted expense notes (feature branch)
+
+Available on `feature/pasted-expense-review`; not deployed to production.
+In **Transactions > Paste expenses**, choose the paying account and date, then
+paste one expense per line, for example:
+
+```text
+business spending expenses today
+materials- 10k
+labour 3k
+new balace 3k
+```
+
+Parsing happens locally, works offline and needs no Google sign-in, SMS access
+or AI service. `10k` means 10,000; plain amounts, comma grouping, two decimal
+places and optional KES/KSH prefixes are supported. Hyphens separate expense
+descriptions from positive amounts; refunds, transfers and income must use their
+normal transaction workflows. Use at most 50 expenses and 10,000 characters.
+Correct unsupported totals, extra notes or ambiguous multi-amount lines first.
+
+Review and edit descriptions, categories and amounts, or uncheck unwanted rows.
+Categories initially repeat the expense descriptions, not an inferred budget
+classification. A business header requires a business-owned account. Nothing is
+recorded before **Save reviewed expenses**, which saves the included rows together.
+The example proposes two expenses totalling 13,000; the reported 3,000 is only a
+comparison with the selected account's calculated balance on the chosen date.
+Differences need explicit acknowledgement, never an opening-balance edit or
+automatic adjustment. Negative reported balances are allowed as checks.
+
+An unchanged repeated batch for the same account and date is blocked using its
+saved review marker. This is not general duplicate detection: changing entries,
+the account/date, splitting batches or removing their markers can bypass it.
+If the account balance or ownership changes during review, start a fresh review.
+
 ## Optional Android SMS integration
 
 Transaction Inbox imports local companion JSON files, stages offline shares, reviews ambiguous candidates and evaluates explicitly configured deterministic rules. The separate Kotlin application under `android-companion` receives only new SMS broadcasts from explicitly enabled senders, using `RECEIVE_SMS`; it does not request `READ_SMS` or notification access. The PWA does not read SMS. The companion introduces no historical inbox scan or cloud synchronization; optional workspace sync is a separate PWA feature.

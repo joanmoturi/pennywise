@@ -698,7 +698,11 @@ export default function App() {
             <FormDialog
               key={dialog.title}
               spec={dialog}
-              close={() => setDialog(undefined)}
+              close={() =>
+                setDialog((current) =>
+                  current === dialog ? undefined : current,
+                )
+              }
             />
           )}
           {toast && (
