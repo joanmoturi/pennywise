@@ -16,6 +16,7 @@ import { editRecord, editTransaction } from "./forms";
 import { effectiveAllocations, undoCapture } from "./expense-engine";
 import { BudgetActivity, allocationDialog } from "./connected-ui";
 import { PageHead, Card, Button, AddButton, Metric, Empty } from "./ui";
+import { BusinessActivityHistory } from "./business-activity-ui";
 
 export function BusinessesPage() {
   const app = useApp();
@@ -403,6 +404,7 @@ export function BusinessesPage() {
                 Income & receipts
               </Button>
             </div>
+            <BusinessActivityHistory business={b} />
             <details>
               <summary>Distribution history</summary>
               {s.transactions

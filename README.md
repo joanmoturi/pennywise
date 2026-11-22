@@ -61,6 +61,23 @@ Do not roll an upgraded browser back to the old application code, clear site
 data, or uninstall to troubleshoot a save. Export from the current application
 and test recovery in an independent browser profile first.
 
+## Business expense and inflow history
+
+Each business card under **Businesses** includes **Business transaction history**.
+Expenses are shown by default, newest dates first, across all accounts owned by
+that business, including pasted expense batches. Use **Yesterday**, date/account
+filters or description/category/notes search to find a saved entry. **Entry details**
+shows its notes, reference and any receipt or payment-calendar link. History is
+paginated without truncating older records.
+
+Switch to **Inflows** for all money entering the business, explicitly labelled
+as revenue, capital/funding, borrowed funds, recoveries, refunds or adjustments.
+Incoming funds are not automatically profit. Opening balances, reserve earmarks
+and transfers between the same business's accounts are not new inflows.
+Distributions remain in their existing separate history. The views are read-only;
+missing entries may belong to a personal or different business account. Check the
+original transaction's account rather than silently reassigning its ownership.
+
 ## Pasted expense notes
 
 In **Transactions > Paste expenses**, choose the paying account and date, then
