@@ -11,6 +11,7 @@ import { WorkspaceSync, syncMarkers } from "./workspace-sync";
 import { SYNC_CONFIGURED } from "./sync-config";
 import { Card, Button, errorMessage } from "./ui";
 import { download } from "./storage";
+import { connectionGuidance } from "./connection-errors";
 
 const SyncContext = createContext<{
   controller: WorkspaceSync;
@@ -99,7 +100,7 @@ export function WorkspaceSyncPanel() {
     try {
       await run();
     } catch (error) {
-      setError(errorMessage(error));
+      setError(connectionGuidance(error) ?? errorMessage(error));
     } finally {
       setBusy(false);
     }

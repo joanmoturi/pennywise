@@ -135,6 +135,29 @@ async function receive(target: Awaited<ReturnType<typeof device>>) {
   await target.sync.choose("remote");
 }
 describe("encrypted account-bound workspace synchronization", () => {
+  it("explains provider quota failures, retains records and stops automatic retries", async () => {
+    const remote = new Remote();
+    const target = await device(remote);
+    await publish(target);
+    await target.repo.update("TEST queued local expense", (state) =>
+      state.transactions.push(tx("expense", "10")),
+    );
+    const before = await target.repo.read();
+    remote.failure = Object.assign(new Error("TEST-private-provider-context"), {
+      code: "resource-exhausted",
+    });
+    await target.sync.run();
+    expect(target.sync.status.phase).toBe("error");
+    expect(target.sync.status.message).toContain("Stop repeated retries");
+    expect(target.sync.status.message).not.toContain("TEST-private");
+    expect(await target.repo.read()).toEqual(before);
+    remote.failure = undefined;
+    await target.sync.run(true);
+    expect(remote.commits).toBe(1);
+    await target.sync.run();
+    expect(remote.commits).toBe(2);
+    expect(target.sync.status.phase).toBe("synced");
+  });
   it("keeps edits made immediately after an incoming commit queued for upload", async () => {
     const remote = new Remote();
     const a = await device(remote);

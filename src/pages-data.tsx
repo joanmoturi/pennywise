@@ -25,6 +25,7 @@ import {
   type ImportRow,
 } from "./import";
 import { AccountsPage } from "./pages-records";
+import { PrivacySupportPanel } from "./privacy-support-ui";
 import {
   PageHead,
   Card,
@@ -629,7 +630,7 @@ export function SettingsPage() {
     <>
       <PageHead
         title="Private by design"
-        subtitle="Your financial data stays on this device. Keep independent backups before resetting or changing browsers."
+        subtitle="Local-first records with optional encrypted cloud features. Keep independent backups before resetting or changing browsers."
       />
       <Card>
         <div className="card-head">
@@ -640,9 +641,10 @@ export function SettingsPage() {
           <Badge>Offline-first</Badge>
         </div>
         <p>
-          No bank credentials, analytics, cloud sync, external AI or
-          financial-data network requests. Core data lives in IndexedDB in this
-          browser profile. Local data is not application-encrypted at rest:
+          Core data lives in IndexedDB in this browser profile. No bank
+          credentials are needed. Cloud sync and Google Drive backup are
+          optional and send encrypted snapshots only after you connect and
+          authorize them. Local data is not application-encrypted at rest:
           protect your device and browser profile. Private browsing, clearing
           site data or storage eviction can erase records.
         </p>
@@ -674,6 +676,7 @@ export function SettingsPage() {
         </Button>
         <p role="status">{storageStatus}</p>
       </Card>
+      <PrivacySupportPanel />
       <div className="grid two">
         <Card>
           <h3>Preferences</h3>

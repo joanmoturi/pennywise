@@ -23,6 +23,7 @@ import { fullBackup, type BackupPreview } from "./backup";
 import { download } from "./storage";
 import { Card, Button, errorMessage } from "./ui";
 import { backupFilename } from "./pages-backup";
+import { connectionGuidance } from "./connection-errors";
 
 export function CloudBackupMonitor() {
   const { repo, state } = useApp();
@@ -86,7 +87,7 @@ export function CloudBackupPanel() {
       await run();
       await refresh();
     } catch (error) {
-      setError(errorMessage(error));
+      setError(connectionGuidance(error) ?? errorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -124,11 +125,12 @@ export function CloudBackupPanel() {
           if (active) refreshIdentity((n) => n + 1);
         },
         (error) => {
-          if (active) setError(errorMessage(error));
+          if (active)
+            setError(connectionGuidance(error) ?? errorMessage(error));
         },
       )
       .catch((error) => {
-        if (active) setError(errorMessage(error));
+        if (active) setError(connectionGuidance(error) ?? errorMessage(error));
       });
     return () => {
       active = false;

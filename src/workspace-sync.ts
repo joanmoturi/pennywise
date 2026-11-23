@@ -8,6 +8,7 @@ import {
   type SyncRemote,
 } from "./sync-protocol";
 import { auxiliaryRead, auxiliaryUpdate } from "./auxiliary-storage";
+import { connectionGuidance } from "./connection-errors";
 
 const bindingSchema = z
   .object({
@@ -203,9 +204,10 @@ export class WorkspaceSync {
   private fail(error: unknown) {
     this.show(
       error instanceof SyncConflict ? "conflict" : "error",
-      error instanceof Error
-        ? error.message
-        : "Sync could not finish. Local records and Drive backups remain available.",
+      connectionGuidance(error) ??
+        (error instanceof Error
+          ? error.message
+          : "Sync could not finish. Local records and Drive backups remain available."),
     );
   }
   async inspectConflict() {

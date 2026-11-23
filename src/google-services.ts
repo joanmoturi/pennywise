@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { connectionGuidance } from "./connection-errors";
 
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
@@ -223,9 +224,8 @@ export class GoogleSession {
         error_callback: (error) =>
           reject(
             new Error(
-              error.type === "popup_failed_to_open"
-                ? "Google's account chooser could not open. Allow popups for Pennywise and try again. Local records are unchanged."
-                : "Google Drive connection cancelled. Local records are unchanged.",
+              connectionGuidance({ code: error.type }) ??
+                "Google Drive's account chooser failed. Try connecting again in your normal browser. Local records are unchanged; do not clear site data.",
             ),
           ),
       });
@@ -236,7 +236,10 @@ export class GoogleSession {
       token.error ||
       !token.scope?.split(" ").includes(DRIVE_SCOPE)
     )
-      throw new Error("Google Drive permission was not granted");
+      throw new Error(
+        connectionGuidance({ code: token.error }) ??
+          "Google Drive permission was not granted. Reconnect and review Drive access if you want cloud backups. Local records and manual backups remain available.",
+      );
     const response = await fetch(
       "https://www.googleapis.com/oauth2/v3/userinfo",
       {

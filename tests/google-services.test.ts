@@ -101,6 +101,39 @@ describe("Google application identity validation", () => {
   });
 });
 describe("customer Google account authorization", () => {
+  it.each([
+    ["popup_failed_to_open", "Allow popups"],
+    ["popup_closed", "cancelled"],
+    ["unknown_provider_failure", "account chooser failed"],
+  ])(
+    "reports %s without treating every chooser failure as a cancellation",
+    async (type, message) => {
+      vi.stubEnv(
+        "VITE_GOOGLE_CLIENT_ID",
+        "synthetic-client.apps.googleusercontent.com",
+      );
+      vi.resetModules();
+      const { GoogleSession: ConfiguredSession } =
+        await import("../src/google-services");
+      vi.stubGlobal("google", {
+        accounts: {
+          oauth2: {
+            initTokenClient: (options: {
+              error_callback: (error: { type: string }) => void;
+            }) => ({
+              requestAccessToken: () => options.error_callback({ type }),
+            }),
+          },
+        },
+      });
+      const fetch = vi.fn();
+      vi.stubGlobal("fetch", fetch);
+      const session = new ConfiguredSession();
+      await expect(session.connectDrive()).rejects.toThrow(message);
+      expect(session.driveIdentity).toBeUndefined();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
   it("opens the account chooser without separate sign-in and rejects missing Drive permission", async () => {
     vi.stubEnv(
       "VITE_GOOGLE_CLIENT_ID",

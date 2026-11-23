@@ -1,4 +1,52 @@
 const NAME = "pennywise-reference-and-backup";
+
+export async function inspectAuxiliary(
+  keys: readonly string[],
+): Promise<Record<string, unknown>> {
+  const db = await new Promise<IDBDatabase | undefined>((resolve, reject) => {
+    let absent = false;
+    let blocked = false;
+    const request = indexedDB.open(NAME, 1);
+    request.onupgradeneeded = () => {
+      absent = true;
+      request.transaction!.abort();
+    };
+    request.onsuccess = () => {
+      if (blocked) request.result.close();
+      else resolve(request.result);
+    };
+    request.onerror = () =>
+      absent
+        ? resolve(undefined)
+        : reject(new Error("Optional feature status could not be read"));
+    request.onblocked = () => {
+      blocked = true;
+      reject(new Error("Optional feature status is blocked by another tab"));
+    };
+  });
+  if (!db) return {};
+  try {
+    return await new Promise<Record<string, unknown>>((resolve, reject) => {
+      const tx = db.transaction("metadata", "readonly");
+      const values: Record<string, unknown> = {};
+      for (const key of keys) {
+        const request = tx.objectStore("metadata").get(key);
+        request.onsuccess = () => {
+          values[key] = request.result;
+        };
+      }
+      tx.oncomplete = () => resolve(values);
+      tx.onabort = () =>
+        reject(new Error("Optional feature status could not be read"));
+      tx.onerror = () => {
+        /* onabort reports the terminal result. */
+      };
+    });
+  } finally {
+    db.close();
+  }
+}
+
 export async function auxiliaryUpdate<T>(
   key: string,
   update: (previous: unknown) => T,

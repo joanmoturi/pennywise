@@ -111,6 +111,29 @@ saved review marker. This is not general duplicate detection: changing entries,
 the account/date, splitting batches or removing their markers can bypass it.
 If the account balance or ownership changes during review, start a fresh review.
 
+## Privacy and troubleshooting
+
+**Settings > Privacy & support** explains what stays local, the separate opt-in
+Drive/sync services, passphrase recovery limits, and the difference between
+signing out, locking sync and deleting data. It does not claim that optional
+encrypted cloud features send no network traffic. Do not clear site data,
+reset records or uninstall to resolve a connection or save error.
+
+**Prepare technical report** creates a local preview only on request. Its
+separate download action exports the app/build identifier, browser capabilities
+and allowlisted backup/sync status flags, never financial records, balances,
+record counts, account identities, credentials, ciphertext, raw errors or logs.
+It does not read the financial database, connect to Google, upload telemetry or
+modify optional-feature metadata. Unreadable status is marked unavailable;
+neither this report nor a download starting proves successful backup or sync.
+Review the preview before sharing through your own trusted support channel.
+
+Known popup, connection, configuration, authorization and sync-quota errors now
+give specific next actions without weakening access rules or enabling billing.
+These are local guidance fixes, not proof that a real Google account or two
+physical devices work end to end. Cloud-sync deletion and physical-device /
+real-provider acceptance remain outside this local-only update.
+
 ## Optional Android SMS integration
 
 Transaction Inbox imports local companion JSON files, stages offline shares, reviews ambiguous candidates and evaluates explicitly configured deterministic rules. The separate Kotlin application under `android-companion` receives only new SMS broadcasts from explicitly enabled senders, using `RECEIVE_SMS`; it does not request `READ_SMS` or notification access. The PWA does not read SMS. The companion introduces no historical inbox scan or cloud synchronization; optional workspace sync is a separate PWA feature.
